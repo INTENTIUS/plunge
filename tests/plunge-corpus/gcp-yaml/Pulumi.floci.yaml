@@ -22,3 +22,4 @@ config:
   gcp:serviceUsageCustomEndpoint: http://localhost:4588/v1/
   corpus-gcp-yaml:flociGcpEndpoint: http://localhost:4588
   corpus-gcp-yaml:prefix: plc-gcp
+encryptionsalt: v1:d9UJOOSVfVM=:v1:fhS3KMtiN225lpBz:FNOqTB6P7IIATKm7ah+M/tvI2wflkQ==

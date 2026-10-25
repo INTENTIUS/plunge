@@ -1,0 +1,7 @@
+DIFF-INPUTS: 16 steps (pulumi), 16 steps (plunge)
+inputs differ: urn:pulumi:floci::corpus-aws-go::aws:ec2/securityGroup:SecurityGroup::app-sg: name
+inputs differ: urn:pulumi:floci::corpus-aws-go::aws:sqs/queue:Queue::events: name
+inputs differ: urn:pulumi:floci::corpus-aws-go::aws:sqs/queue:Queue::worker-0: name
+inputs differ: urn:pulumi:floci::corpus-aws-go::aws:sqs/queue:Queue::worker-1: name
+inputs differ: urn:pulumi:floci::corpus-aws-go::aws:sqs/queue:Queue::worker-2: name
+inputs differ: urn:pulumi:floci::corpus-aws-go::corpus:index:Site$aws:sns/topic:Topic::docs-notify: name
