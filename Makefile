@@ -354,3 +354,6 @@ work:
 		sdk/python/cmd/pulumi-language-python \
 		sdk/pcl \
 		tests
+
+# plunge: the plunge binary, its version stamping and language-host bundling.
+include build/plunge.mk

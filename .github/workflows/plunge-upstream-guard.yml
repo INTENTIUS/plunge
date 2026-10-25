@@ -1,0 +1,32 @@
+# Fails when an upstream pulumi/pulumi workflow is active in .github/workflows.
+#
+# plunge keeps upstream's workflows in .github/upstream-workflows, where GitHub doesn't run them: they
+# schedule crons, publish releases and use pulumi's secrets and infrastructure. git's rename detection
+# carries upstream edits of existing workflows into that directory at an upstream merge, but a workflow
+# file upstream adds lands in .github/workflows and would be live. This check catches it on the merge PR;
+# move the file with `git mv .github/workflows/<file> .github/upstream-workflows/`.
+name: plunge-upstream-guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Only plunge-* workflows are active
+        run: |
+          stray=$(find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) ! -name 'plunge-*' | sort)
+          if [ -n "$stray" ]; then
+            echo "Upstream workflows are active in .github/workflows:"
+            echo "$stray"
+            echo "Move them to .github/upstream-workflows/ (see that directory's README.md)."
+            exit 1
+          fi
+          echo "ok: no upstream workflows in .github/workflows"

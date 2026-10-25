@@ -107,3 +107,6 @@ yarn-error.log
 
 # Local mise.toml
 .mise.local.toml
+
+# plunge: scripts/plunge-baseline.sh output
+/plunge-baseline-out/
