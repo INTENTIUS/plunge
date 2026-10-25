@@ -62,7 +62,11 @@ func (sg *stepGenerator) plungeAutoname(
 	ctx context.Context, urn resource.URN, goal *pkgresource.Goal, inputs resource.PropertyMap,
 	prov plugin.Provider, opts **plugin.AutonamingOptions,
 ) error {
-	policy := sg.deployment.Target().Autonames
+	target := sg.deployment.Target()
+	if target == nil {
+		return nil
+	}
+	policy := target.Autonames
 	if policy == nil || !goal.Custom || sdkproviders.IsProviderType(goal.Type) || prov == nil {
 		return nil
 	}

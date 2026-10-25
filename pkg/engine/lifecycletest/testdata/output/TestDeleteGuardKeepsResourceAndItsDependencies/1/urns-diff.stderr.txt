@@ -1,0 +1,2 @@
+<{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resC: created by a newer program version<{%reset%}>
+<{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resB: urn:pulumi:test::test::pkgA:m:typA::resC, which is kept, refers to it<{%reset%}>

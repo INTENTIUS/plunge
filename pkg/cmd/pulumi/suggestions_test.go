@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/cmd"
+	"github.com/pulumi/pulumi/pkg/v3/plunge"
 )
 
 // An integration check that rattler.Install is wired into NewPulumiCmd: an
@@ -43,9 +44,10 @@ func TestUnknownCommandSuggestions(t *testing.T) {
 
 	err := pulumiCmd.Execute()
 	require.Error(t, err)
-	assert.ErrorContains(t, err, `unknown command "export" for "pulumi"`)
+	// plunge (INTENTIUS/plunge#3): the root command is named after the binary.
+	assert.ErrorContains(t, err, `unknown command "export" for "`+plunge.BinaryName+`"`)
 	assert.ErrorContains(t, err, "Did you mean this?")
-	assert.ErrorContains(t, err, "pulumi stack export")
+	assert.ErrorContains(t, err, plunge.BinaryName+" stack export")
 	assert.Equal(t, cmd.ExitCodeError, cmd.ExitCodeFor(err))
 }
 
@@ -92,6 +94,6 @@ func TestBareRootPrintsHelpAndFails(t *testing.T) {
 
 	err := pulumiCmd.Execute()
 	require.Error(t, err)
-	assert.ErrorContains(t, err, `"pulumi" requires a subcommand`)
+	assert.ErrorContains(t, err, `"`+plunge.BinaryName+`" requires a subcommand`)
 	assert.NotEmpty(t, stdout.String(), "help text should be printed")
 }

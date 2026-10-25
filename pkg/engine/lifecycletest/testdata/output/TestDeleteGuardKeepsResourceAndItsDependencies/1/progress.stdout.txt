@@ -1,0 +1,24 @@
+<{%fg 13%}><{%bold%}>View Live: <{%underline%}><{%fg 12%}>http://example.com<{%reset%}>
+
+
+ <{%bold%}><{%reset%}>  <{%reset%}> pkgA:m:typA resA <{%bold%}><{%reset%}><{%reset%}> 
+ <{%bold%}><{%reset%}>  <{%reset%}> pkgA:m:typA resC <{%bold%}><{%reset%}><{%reset%}> <{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resC: created by a newer program version<{%reset%}>
+ <{%bold%}><{%reset%}>  <{%reset%}> pkgA:m:typA resB <{%bold%}><{%reset%}><{%reset%}> <{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resB: urn:pulumi:test::test::pkgA:m:typA::resC, which is kept, refers to it<{%reset%}>
+ <{%bold%}><{%reset%}>  <{%reset%}> pkgA:m:typA resB <{%bold%}><{%reset%}><{%reset%}> <{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resB: urn:pulumi:test::test::pkgA:m:typA::resC, which is kept, refers to it<{%reset%}>
+ <{%bold%}><{%reset%}>  <{%reset%}> pkgA:m:typA resC <{%bold%}><{%reset%}><{%reset%}> <{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resC: created by a newer program version<{%reset%}>
+ <{%bold%}><{%fg 1%}>- <{%reset%}> pkgA:m:typA resD <{%bold%}><{%fg 1%}>deleting<{%reset%}> 
+ <{%fg 1%}>- <{%reset%}> pkgA:m:typA resD <{%fg 1%}>deleted<{%reset%}> 
+ <{%reset%}>  <{%reset%}> pulumi:pulumi:Stack project-stack <{%reset%}><{%reset%}> 
+<{%fg 13%}><{%bold%}>Diagnostics:<{%reset%}>
+  <{%fg 12%}>pkgA:m:typA (resB):<{%reset%}>
+    <{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resB: urn:pulumi:test::test::pkgA:m:typA::resC, which is kept, refers to it<{%reset%}>
+
+  <{%fg 12%}>pkgA:m:typA (resC):<{%reset%}>
+    <{%fg 3%}>warning: <{%reset%}><{%reset%}>not deleting urn:pulumi:test::test::pkgA:m:typA::resC: created by a newer program version<{%reset%}>
+
+<{%fg 13%}><{%bold%}>Resources:<{%reset%}>
+    <{%fg 1%}>- 1 deleted<{%reset%}>
+    3 unchanged
+
+<{%fg 13%}><{%bold%}>Duration:<{%reset%}> 1s
+

@@ -713,8 +713,12 @@ func getCLIMetadata(cmd *cobra.Command, environ []string, args []string) map[str
 		return nil
 	}
 
-	// Metadata keeps upstream's command names ("pulumi up") whatever the binary is called.
-	command := "pulumi" + strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name())
+	// Metadata keeps upstream's command names ("pulumi up") under plunge's root. Any other root (a bare command
+	// with no parent, say) keeps its own path, as upstream does.
+	command := cmd.CommandPath()
+	if cmd.Root().Name() == plunge.BinaryName {
+		command = "pulumi" + strings.TrimPrefix(command, plunge.BinaryName)
+	}
 
 	var flags strings.Builder
 	i := 0
