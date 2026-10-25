@@ -2683,11 +2683,11 @@ func (sg *stepGenerator) GenerateDeletes(targetsOpt UrnTargets, excludesOpt UrnT
 // it and the guard's reason. Pending-delete states (Delete set by a replacement) are never asked: their delete is
 // part of finishing a replacement, not a judgement about ownership.
 func (sg *stepGenerator) guardedFromDelete(isTargeted func(*pkgresource.State) bool) map[*pkgresource.State]bool {
-	guard := sg.deployment.target.DeleteGuard
-	prev := sg.deployment.prev
-	if guard == nil || prev == nil {
+	if sg.deployment.target == nil || sg.deployment.target.DeleteGuard == nil || sg.deployment.prev == nil {
 		return nil
 	}
+	guard := sg.deployment.target.DeleteGuard
+	prev := sg.deployment.prev
 
 	// The states this run would delete for not being registered, by URN.
 	candidates := map[resource.URN]*pkgresource.State{}
