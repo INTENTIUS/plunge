@@ -1,7 +1,7 @@
 {
   "comment": "The plunge corpus (INTENTIUS/plunge#4). One entry per program directory beside this file. A baseline script reads it; README.md says what each program exercises and how a baseline is recorded.",
   "stack": "floci",
-  "passphrase": "plunge-corpus",
+  "passphrase": "plunge-baseline",
   "programs": [
     {
       "name": "aws-ts",

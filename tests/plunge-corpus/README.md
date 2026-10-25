@@ -115,6 +115,11 @@ The maintainer runs this by hand. A baseline is stock `pulumi preview`
 against an empty stack on a local file backend, with floci running. Never
 Pulumi Cloud.
 
+`scripts/plunge-baseline.sh` (P-L0) does steps 2 and 3 for stock pulumi and
+plunge side by side, each on its own copy of the program and its own file
+backend, and writes a `VERDICT <program> ...` line per program. The steps
+below are the stock half by hand, for recording `baseline/` in the tree.
+
 1. Start the emulators at choudoufu's pinned images:
 
    ```sh
@@ -130,7 +135,7 @@ Pulumi Cloud.
    ```sh
    export STATE="$(mktemp -d)"
    pulumi login "file://$STATE"
-   export PULUMI_CONFIG_PASSPHRASE=plunge-corpus
+   export PULUMI_CONFIG_PASSPHRASE=plunge-baseline   # scripts/plunge-baseline.sh's default
    export PULUMI_SKIP_UPDATE_CHECK=true
    unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
    unset GOOGLE_APPLICATION_CREDENTIALS GOOGLE_OAUTH_ACCESS_TOKEN
