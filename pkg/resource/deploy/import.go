@@ -154,6 +154,9 @@ func NewImportDeployment(
 
 	// Create a new provider registry.
 	reg := providers.NewRegistry(ctx, opts.DryRun, builtins)
+	if target.ProviderIDs != nil {
+		reg.SetIDGenerator(target.ProviderIDs)
+	}
 
 	// Return the prepared deployment.
 	return &Deployment{

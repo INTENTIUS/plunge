@@ -671,6 +671,9 @@ func NewDeployment(
 	// old resource list, the registry itself will filter out other sorts of resources when processing the prior state,
 	// so we just pass all of the old resources.
 	reg := providers.NewRegistry(ctx, opts.DryRun, builtins)
+	if target.ProviderIDs != nil {
+		reg.SetIDGenerator(target.ProviderIDs)
+	}
 
 	deployment := &Deployment{
 		ctx:                             ctx,

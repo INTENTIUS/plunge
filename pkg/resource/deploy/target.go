@@ -15,6 +15,8 @@
 package deploy
 
 import (
+	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy/providers"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
@@ -28,6 +30,18 @@ type Target struct {
 	Decrypter    config.Decrypter  // decrypter for secret configuration values.
 	Snapshot     *Snapshot         // the last snapshot deployed to the target.
 	Tags         map[string]string // tags for the current stack.
+
+	// ProviderIDs, when set, names the ID a newly created provider resource gets in place of a random UUID. The
+	// plunge record backend sets it so that two runs creating the same default provider arrive at the same
+	// URN::ID reference (INTENTIUS/plunge#6). Nil keeps upstream's behaviour.
+	ProviderIDs providers.IDGenerator
+
+	// DeleteGuard, when set, is asked about every resource the step generator would delete because the program
+	// did not register it. A non-empty answer keeps the resource (as an untargeted same step) and is reported as
+	// a warning naming the resource. Pending-delete states from a replacement are never asked. The plunge record
+	// backend sets it so a run from an older program version cannot delete what a newer run created
+	// (INTENTIUS/plunge#6). Nil keeps upstream's behaviour.
+	DeleteGuard func(res *pkgresource.State) string
 }
 
 const (

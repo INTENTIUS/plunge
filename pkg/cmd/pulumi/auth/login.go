@@ -34,6 +34,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
 	"github.com/pulumi/pulumi/pkg/v3/backend/httpstate"
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/cmd"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/constrictor"
@@ -212,7 +213,7 @@ func NewLoginCmd(ws pkgWorkspace.Context, lm backend.LoginManager, store env.Env
 				}
 			}
 
-			if diy.IsDIYBackendURL(cloudURL) {
+			if diy.IsDIYBackendURL(cloudURL) || plunge.IsPlungeBackendURL(cloudURL) {
 				if oidcToken != "" || oidcOrg != "" || oidcTeam != "" || oidcUser != "" || oidcExpiration != "" {
 					return errors.New("oidc-token, oidc-org, oidc-team, oidc-user, " +
 						"and oidc-expiration flags are not supported for this type of backend")
@@ -249,7 +250,7 @@ func NewLoginCmd(ws pkgWorkspace.Context, lm backend.LoginManager, store env.Env
 				return loginError(cloudURL, urlSource, cwd, err)
 			}
 
-			if diy.IsDIYBackendURL(cloudURL) {
+			if diy.IsDIYBackendURL(cloudURL) || plunge.IsPlungeBackendURL(cloudURL) {
 				if defaultOrg != "" {
 					return errors.New("unable to set default org for this type of backend")
 				}
@@ -370,7 +371,7 @@ func unwrapBucketOpenError(err error, cloudURL string) error {
 }
 
 func validateCloudBackendType(typ string) error {
-	kind, _, _ := strings.Cut(typ, ":")
+	kind, _, _ := strings.Cut(strings.TrimPrefix(typ, plunge.URLPrefix), ":")
 	supportedKinds := []string{"azblob", "gs", "s3", "file", "https", "http", "postgres"}
 	if slices.Contains(supportedKinds, kind) {
 		return nil

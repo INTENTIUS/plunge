@@ -24,6 +24,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
@@ -49,7 +50,7 @@ func IsDIYBackend(ws pkgWorkspace.Context, opts display.Options) (bool, error) {
 		return false, fmt.Errorf("could not get cloud url: %w", err)
 	}
 
-	return diy.IsDIYBackendURL(url), nil
+	return diy.IsDIYBackendURL(url) || plunge.IsPlungeBackendURL(url), nil
 }
 
 func NonInteractiveCurrentBackend(

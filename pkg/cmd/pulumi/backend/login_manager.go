@@ -24,6 +24,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
 	"github.com/pulumi/pulumi/pkg/v3/backend/httpstate"
 	"github.com/pulumi/pulumi/pkg/v3/backend/httpstate/client"
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
@@ -90,6 +91,9 @@ type lm struct{}
 func (f *lm) Current(
 	ctx context.Context, ws pkgWorkspace.Context, sink diag.Sink, url string, project *workspace.Project, setCurrent bool,
 ) (backend.Backend, error) {
+	if plunge.IsPlungeBackendURL(url) {
+		return plunge.New(ctx, sink, url, project)
+	}
 	if diy.IsDIYBackendURL(url) {
 		return diy.New(ctx, sink, url, project)
 	}
@@ -112,6 +116,12 @@ func (f *lm) Login(
 		opt(&o)
 	}
 
+	if plunge.IsPlungeBackendURL(url) {
+		if setCurrent {
+			return plunge.Login(ctx, sink, url, project)
+		}
+		return plunge.New(ctx, sink, url, project)
+	}
 	if diy.IsDIYBackendURL(url) {
 		if setCurrent {
 			return diy.Login(ctx, sink, url, project)
