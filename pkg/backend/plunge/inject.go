@@ -519,3 +519,22 @@ func markerSummary(want map[string]string) string {
 	sort.Strings(parts)
 	return strings.Join(parts, ", ")
 }
+
+// mergeOwnership is the ownership a resource record should hold after this run: the ledger's entry when the run
+// made one, over what the record held. A bind or a missing lister is a fact about the run that created the
+// resource, so it stays on the record after later runs that neither bind nor list.
+func mergeOwnership(prior *ownershipEntry, l *ledger, urn resource.URN) *ownershipEntry {
+	e, ok := l.get(urn)
+	if !ok {
+		return prior
+	}
+	if prior != nil {
+		if e.Bound == "" {
+			e.Bound = prior.Bound
+		}
+		if e.Unlisted == "" {
+			e.Unlisted = prior.Unlisted
+		}
+	}
+	return &e
+}

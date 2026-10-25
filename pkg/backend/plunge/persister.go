@@ -88,6 +88,9 @@ type recordPersister struct {
 	// basePending is the pending operations each URN's record held when this run read it.
 	basePending map[resource.URN][]apitype.OperationV2
 	writes      int // conditional writes and deletes issued, for tests and logs
+	// ownership is this run's marker ledger (inject.go), written into each resource record it has an entry for.
+	// Nil for runs that inject no markers; a record's ownership is then carried forward unchanged.
+	ownership *ledger
 }
 
 var _ backend.SnapshotPersister = (*recordPersister)(nil)
@@ -157,7 +160,7 @@ func (p *recordPersister) Save(d apitype.TypedDeployment) error {
 
 	var gone []string
 	for key, k := range p.known {
-		if _, still := want[key]; still || k.secrets != nil {
+		if _, still := want[key]; still || k.secrets != nil || k.adoption != nil {
 			continue
 		}
 		gone = append(gone, key)
@@ -238,6 +241,11 @@ func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired,
 				p.operated[urn] = true
 			}
 		}
+		var prior *ownershipEntry
+		if k := p.known[key]; k != nil && k.resource != nil {
+			prior = k.resource.Ownership
+		}
+		r.Ownership = mergeOwnership(prior, p.ownership, urn)
 		want[key] = &desired{what: "resource " + string(urn), resource: r}
 	}
 	for _, s := range dep.Snippets {
