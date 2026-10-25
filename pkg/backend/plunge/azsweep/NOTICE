@@ -21,6 +21,7 @@ Files modified for plunge (each stays MPL-2.0):
                   (markers.TagStack) in place of choudoufu's tofu-estate.
   tags.go,        use a plain http.Client in place of OpenTofu's
   keyvault.go     internal/httpclient.
-  plunge.go       new: the marker key binding above.
+  plunge.go       new: the marker key binding above, and Credential and
+                  Scope exported for plunge's ARM lister.
 
 Not carried: every _test.go file.
