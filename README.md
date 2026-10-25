@@ -1,3 +1,10 @@
+# plunge
+Pulumi with per-resource ownership: marker tags and a per-resource record store instead of one locked checkpoint
+
+Forked from [pulumi/pulumi](https://github.com/pulumi/pulumi) at `7e12743da8`, with upstream history kept and an `upstream` remote. Upstream's README follows.
+
+---
+
 <p align="center">
     <a href="https://www.pulumi.com/?utm_source=github.com&utm_medium=referral&utm_campaign=pulumi-pulumi-github-repo&utm_content=top+logo" title="Pulumi - Modern Infrastructure as Code - AWS Azure Kubernetes Containers Serverless">
         <picture>
