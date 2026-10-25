@@ -116,6 +116,7 @@ func NewStackCmd() *cobra.Command {
 		&args.showStackName, "show-name", false, "Display only the stack name")
 	outputflag.VarP(cmd.Flags(), &output)
 
+	cmd.AddCommand(newStackAdoptCmd())
 	cmd.AddCommand(newStackExportCmd())
 	cmd.AddCommand(newStackGraphCmd())
 	cmd.AddCommand(newStackImportCmd(pkgWorkspace.Instance, cmdBackend.DefaultLoginManager, secrets.DefaultProvider))
