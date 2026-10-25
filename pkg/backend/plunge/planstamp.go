@@ -22,9 +22,13 @@ package plunge
 // any of those records has moved since. A record version moves exactly when a run wrote that record, so this is
 // the record-store counterpart of choudoufu's before/after gate (exit 3 there too).
 //
-// What lives here is the backend half: taking the stamp, checking it, and the refusal. Carrying the stamp inside the
-// plan file needs a field on apitype.DeploymentPlanV1 (sdk) and the load/save in pkg/cmd/pulumi/operations, which
-// is P-L4's seam; until it lands, nothing in the CLI calls StampPlan or VerifyPlan.
+// What lives here is the backend half: taking the stamp, checking it, and the refusal. The stamp rides in the plan
+// file as apitype.DeploymentPlanV1.RecordVersions (P-L4, INTENTIUS/plunge#7): `preview --save-plan` stamps it
+// through PlanStamper (pkg/cmd/pulumi/operations/preview.go), and `up --plan` verifies it before the update runs
+// (up.go). A plan with no stamp is refused on this backend, since nothing then says what it was approved against.
+//
+// The stamp is the versions the preview itself read, not a later re-read, so a write that lands between the preview
+// and the save is caught too.
 
 import (
 	"context"
@@ -32,6 +36,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
@@ -66,6 +71,60 @@ func (e *PlanMovedError) Error() string {
 
 // ExitCode is ExitPlanMoved.
 func (e *PlanMovedError) ExitCode() int { return ExitPlanMoved }
+
+// CustomExitCode is ExitPlanMoved; the CLI's exit-code mapping (pkg/cmd/pulumi/cmd/exit_codes.go) reads it.
+//
+// Note: 3 is choudoufu's code for this refusal and also stock Pulumi's ExitAuthenticationError. P-L3 chose it for
+// parity with choudoufu; whether plunge keeps it or moves to an unused code is the maintainer's call.
+func (e *PlanMovedError) CustomExitCode() int { return ExitPlanMoved }
+
+// UnstampedPlanError refuses a saved plan with no record-version stamp on the plunge backend.
+type UnstampedPlanError struct {
+	Path string
+}
+
+func (e *UnstampedPlanError) Error() string {
+	return fmt.Sprintf("plunge: the plan %s carries no record versions, so nothing says which records it was "+
+		"approved against; save it again with `plunge preview --save-plan` against this backend", e.Path)
+}
+
+// CustomExitCode is ExitPlanMoved: an unstamped plan is refused for the same reason a moved one is.
+func (e *UnstampedPlanError) CustomExitCode() int { return ExitPlanMoved }
+
+// PlanStamper is the plunge backend's saved-plan stamp, as the CLI reaches it.
+type PlanStamper interface {
+	// StampPlan returns the record version of each URN, as the stack's last preview in this process read them
+	// (or as the records are now, when there was none).
+	StampPlan(ctx context.Context, s backend.Stack, urns []resource.URN) (PlanRecordVersions, error)
+	// VerifyPlan refuses with *PlanMovedError when any stamped record has moved.
+	VerifyPlan(ctx context.Context, s backend.Stack, stamp PlanRecordVersions) error
+}
+
+var _ PlanStamper = (*plungeBackend)(nil)
+
+func (b *plungeBackend) StampPlan(
+	ctx context.Context, s backend.Stack, urns []resource.URN,
+) (PlanRecordVersions, error) {
+	keys, err := keysFor(s.Ref())
+	if err != nil {
+		return nil, err
+	}
+	l, ok := b.previewed(s.Ref().String())
+	if !ok {
+		if l, err = load(ctx, b.store, keys); err != nil {
+			return nil, err
+		}
+	}
+	return StampPlan(l, urns), nil
+}
+
+func (b *plungeBackend) VerifyPlan(ctx context.Context, s backend.Stack, stamp PlanRecordVersions) error {
+	keys, err := keysFor(s.Ref())
+	if err != nil {
+		return err
+	}
+	return VerifyPlan(ctx, b.store, keys, stamp)
+}
 
 // StampPlan returns the record version of each URN, as l read them.
 func StampPlan(l *loaded, urns []resource.URN) PlanRecordVersions {

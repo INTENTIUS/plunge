@@ -32,6 +32,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend/backenderr"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/httpstate"
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	"github.com/pulumi/pulumi/pkg/v3/backend/secrets"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/autonaming"
 	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
@@ -278,6 +279,20 @@ func NewUpCmd() *cobra.Command {
 				return err
 			}
 			opts.Engine.Plan = p
+
+			// plunge (INTENTIUS/plunge#7): refuse, with exit code 3, a plan whose records moved since it was saved.
+			if stamper, ok := s.Backend().(plunge.PlanStamper); ok {
+				stamp, err := plan.ReadStamp(planFilePath)
+				if err != nil {
+					return err
+				}
+				if stamp == nil {
+					return &plunge.UnstampedPlanError{Path: planFilePath}
+				}
+				if err := stamper.VerifyPlan(ctx, s, stamp); err != nil {
+					return err
+				}
+			}
 		}
 
 		start := time.Now()

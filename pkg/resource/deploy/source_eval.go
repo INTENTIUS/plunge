@@ -476,6 +476,12 @@ type resmon struct {
 	// cleared by the RegisterResourceOutputs publish step. Only populated when observer is non-nil.
 	componentAliases     map[resource.URN][]resource.URN
 	componentAliasesLock sync.Mutex
+
+	// markers is the target's plunge marker policy (INTENTIUS/plunge#7), nil for upstream backends. stackName and
+	// projectName build the URN it is handed, the way the step generator will.
+	markers     MarkerPolicy
+	stackName   tokens.QName
+	projectName tokens.PackageName
 }
 
 var _ SourceResourceMonitor = (*resmon)(nil)
@@ -538,6 +544,13 @@ func newResourceMonitor(
 		grpcDialOptions:         src.plugctx.DialOptions,
 		observer:                src.observer,
 		componentAliases:        map[resource.URN][]resource.URN{},
+	}
+	if target := src.runinfo.Target; target != nil && target.Markers != nil {
+		resmon.markers = target.Markers
+		resmon.stackName = target.Name.Q()
+		if src.runinfo.Proj != nil {
+			resmon.projectName = src.runinfo.Proj.Name
+		}
 	}
 
 	otelParent := func() oteltrace.Span {
@@ -2741,6 +2754,15 @@ func (rm *resmon) RegisterResource(ctx context.Context,
 				return nil, err
 			}
 			providerRefs[name] = ref.String()
+		}
+	}
+
+	// plunge's ownership markers (INTENTIUS/plunge#7) go in here: after every resource, parent and stack transform
+	// above has run, so none of them can strip or rewrite a marker, and before the registration reaches Check.
+	if custom && !remote {
+		props, err = rm.injectMarkers(ctx, custom, t, name, parent, providerRef, props)
+		if err != nil {
+			return nil, fmt.Errorf("plunge markers for %s: %w", label, err)
 		}
 	}
 

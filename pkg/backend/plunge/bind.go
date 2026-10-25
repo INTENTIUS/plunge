@@ -1,0 +1,220 @@
+// Copyright 2026, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package plunge
+
+// The marker-bind and collision phase (INTENTIUS/plunge#7, decision 2 of the parity comment on #2). Before the step
+// for a create is generated, the binder lists the type's live objects carrying the resource's markers:
+//
+//   - none: the create goes ahead.
+//   - one: it is bound. The create becomes an import of that object, which is how a run that crashed after the
+//     create, or a second run racing the first, converges on one object (claims C1 and C6).
+//   - two or more: a collision. The run is refused naming every ID (claim C2), as choudoufu's collisionProblem
+//     does. Nothing is created or deleted.
+//
+// Binding needs a listing that is consistent per type, so each family has one lister (listers.go):
+//
+//   - AWS and aws-native: Cloud Control ListResources on the CloudFormation type, filtered by tag client-side.
+//     aws-native names its CloudFormation type; a pulumi-aws type is joined to one through choudoufu's registry.
+//   - Azure and azure-native: ARM's own resource list filtered by the URN tag (not Resource Graph, whose index lags).
+//   - Kubernetes: a LIST of the kind by label selector, which the API server answers from a quorum read.
+//   - Google Cloud: Cloud Asset Inventory, which is eventually consistent. It binds, but it cannot carry the
+//     collision claim, and the ownership entry says so.
+//
+// SDKv2-bridged types have no provider List (pulumi-terraform-bridge pkg/tfbridge/provider.go:2065-2072), so the
+// provider is never asked. Decision taken: an SDKv2 type is covered exactly when its family lister covers its
+// cloud type (for pulumi-aws, when the registry joins it to a CloudFormation type Cloud Control lists without a
+// parent's input). A type with no lister is "unlisted": no bind or collision check runs, its record says why, and
+// C1, C2 and C6 do not cover it, the way choudoufu's readiness table carves out types it cannot list.
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
+
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+)
+
+// LiveObject is one live object a lister found carrying the markers asked for.
+type LiveObject struct {
+	ID   resource.ID
+	Tags map[string]string
+}
+
+// Lister lists one family's live objects of a type that carry a set of markers.
+type Lister interface {
+	// Covers reports whether the lister can list info's type. A false answer says why.
+	Covers(info TypeInfo) (bool, string)
+	// Consistent reports whether a listing is strongly consistent, which is what the collision claim needs.
+	Consistent() bool
+	// ListMarked returns every live object of info's type carrying want.
+	ListMarked(ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string) ([]LiveObject, error)
+}
+
+// CollisionError refuses a create whose markers are carried by more than one live object. It names every ID, so the
+// operator can see which objects claim to be the same resource.
+type CollisionError struct {
+	URN resource.URN
+	IDs []resource.ID
+}
+
+func (e *CollisionError) Error() string {
+	ids := make([]string, len(e.IDs))
+	for i, id := range e.IDs {
+		ids[i] = string(id)
+	}
+	return fmt.Sprintf("plunge: refusing to create %s: %d live objects already carry its ownership markers (%s), so "+
+		"there is no one object to bind it to. Delete the duplicates you do not want, or remove their markers, "+
+		"and re-run", e.URN, len(e.IDs), strings.Join(ids, " and "))
+}
+
+// binder is the plunge backend's deploy.MarkerBinder.
+type binder struct {
+	catalog *catalog
+	ledger  *ledger
+	listers map[Family]Lister
+}
+
+var _ deploy.MarkerBinder = (*binder)(nil)
+
+func newBinder(c *catalog, l *ledger, listers map[Family]Lister) *binder {
+	return &binder{catalog: c, ledger: l, listers: listers}
+}
+
+// defaultListers are the family listers, built lazily per provider configuration.
+func defaultListers() map[Family]Lister {
+	aws := &cloudControlLister{}
+	az := &armLister{}
+	return map[Family]Lister{
+		FamilyAWS:         aws,
+		FamilyAWSNative:   aws,
+		FamilyAzure:       az,
+		FamilyAzureNative: az,
+		FamilyKubernetes:  &kubeLister{},
+		FamilyGoogle:      &assetLister{},
+	}
+}
+
+// Bind implements deploy.MarkerBinder.
+func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID, error) {
+	info := b.catalog.lookup(ctx, req.Provider, req.Type)
+	if info.Shape != ShapeMap && info.Shape != ShapeKeyValueArray {
+		// No marker is written for the type, so there is nothing to bind by. Its record carries ownership.
+		return "", nil
+	}
+	if !carries(req.Inputs, info, mustMarkers(req.URN, info)) {
+		// The injector could not merge the markers (unknown tags at preview): nothing to look for yet.
+		return "", nil
+	}
+	want := mustMarkers(req.URN, info)
+	lister, ok := b.listers[info.Family]
+	reason := ""
+	if ok {
+		ok, reason = lister.Covers(info)
+	} else {
+		reason = fmt.Sprintf("plunge has no lister for the %q family", info.Family)
+	}
+	if !ok {
+		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Unlisted = reason })
+		return "", nil
+	}
+	found, err := lister.ListMarked(ctx, info, req, want)
+	if err != nil {
+		// A listing that failed is a coverage gap for this run, not grounds to refuse it or to bind.
+		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Unlisted = "the listing failed: " + err.Error() })
+		return "", nil
+	}
+	if !lister.Consistent() {
+		b.ledger.record(req.URN, func(e *ownershipEntry) {
+			e.Unlisted = fmt.Sprintf("the %s listing is eventually consistent, so it binds but does not prove the "+
+				"absence of a duplicate", info.Family)
+		})
+	}
+	switch len(found) {
+	case 0:
+		return "", nil
+	case 1:
+		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Bound = found[0].ID })
+		return found[0].ID, nil
+	}
+	ids := make([]resource.ID, len(found))
+	for i, o := range found {
+		ids[i] = o.ID
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	return "", &CollisionError{URN: req.URN, IDs: ids}
+}
+
+func mustMarkers(urn resource.URN, info TypeInfo) map[string]string {
+	m, err := markers.For(urn, info.Encoding())
+	if err != nil {
+		return map[string]string{markers.TagStack: "\x00unrepresentable"}
+	}
+	return m
+}
+
+// providerString reads a string-valued provider input.
+func providerString(inputs resource.PropertyMap, key string) string {
+	v, ok := inputs[resource.PropertyKey(key)]
+	if !ok {
+		return ""
+	}
+	v = unwrapValue(v)
+	if v.IsString() {
+		return v.StringValue()
+	}
+	return ""
+}
+
+// filterMarked keeps the objects carrying want.
+func filterMarked(objs []LiveObject, want map[string]string) []LiveObject {
+	var out []LiveObject
+	for _, o := range objs {
+		if markers.Carries(o.Tags, want) {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// listerCache is a keyed cache of per-configuration clients, built once.
+type listerCache[T any] struct {
+	mu    sync.Mutex
+	items map[string]*T
+}
+
+func (c *listerCache[T]) get(key string, build func() (*T, error)) (*T, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.items == nil {
+		c.items = map[string]*T{}
+	}
+	if v, ok := c.items[key]; ok {
+		return v, nil
+	}
+	v, err := build()
+	if err != nil {
+		return nil, err
+	}
+	c.items[key] = v
+	return v, nil
+}
+
+// typeModule is a token's module and member for a message.
+func typeModule(t tokens.Type) string { return string(t.Module()) + ":" + string(t.Name()) }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
@@ -44,6 +45,12 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
 )
 
+// EnvMarkers turns off marker injection and the bind phase when set to "false". It exists for diagnosing a
+// provider that misbehaves with the markers; a stack run with it off is not covered by the concurrency claims.
+const EnvMarkers = "PLUNGE_MARKERS"
+
+func markersEnabled() bool { return !strings.EqualFold(os.Getenv(EnvMarkers), "false") }
+
 // EnvRefresh turns off the plunge backend's default refresh before update and preview when set to "false".
 const EnvRefresh = "PLUNGE_REFRESH"
 
@@ -56,6 +63,27 @@ type plungeBackend struct {
 	d     diag.Sink
 	url   string
 	store staterecord.Store
+	// newListers builds the bind phase's family listers; tests replace it to stand in for the clouds.
+	newListers func() map[Family]Lister
+
+	// previews is the records each stack's last preview in this process read, by stack reference, for the saved
+	// plan's stamp (planstamp.go).
+	previews sync.Map
+}
+
+func (b *plungeBackend) previewed(ref string) (*loaded, bool) {
+	v, ok := b.previews.Load(ref)
+	if !ok {
+		return nil, false
+	}
+	return v.(*loaded), true
+}
+
+func (b *plungeBackend) listers() map[Family]Lister {
+	if b.newListers != nil {
+		return b.newListers()
+	}
+	return defaultListers()
 }
 
 // New opens the plunge backend a plunge+<diy url> names.
@@ -385,6 +413,14 @@ func (b *plungeBackend) apply(
 	if err != nil {
 		return nil, nil, err
 	}
+	// The adoption gate (adopt.go): a stock checkpoint at this root with no records is adopted first, never run
+	// against as if it were empty.
+	if err := b.requireAdopted(ctx, s, l, op.SecretsProvider); err != nil {
+		return nil, nil, err
+	}
+	if kind == apitype.PreviewUpdate || opts.DryRun {
+		b.previews.Store(ref.String(), l)
+	}
 
 	run, err := ProgramGeneration(ctx, op.Root, nil)
 	if err != nil {
@@ -407,6 +443,14 @@ func (b *plungeBackend) apply(
 	guard := programDriven(kind)
 	if guard {
 		target.DeleteGuard = deleteGuard(run, l.generations)
+	}
+	// Ownership markers and the bind phase (INTENTIUS/plunge#7) run where the program registers resources.
+	var marks *ledger
+	if programDriven(kind) && markersEnabled() {
+		marks = newLedger()
+		cat := newCatalog()
+		target.Markers = newMarkerPolicy(cat, snap, marks, b.d)
+		target.Binder = newBinder(cat, marks, b.listers())
 	}
 	update := engine.UpdateInfo{Root: op.Root, Project: op.Proj, Target: target}
 
@@ -450,6 +494,7 @@ func (b *plungeBackend) apply(
 			dec = op.SecretsManager.Decrypter()
 		}
 		persister := newRecordPersister(ctx, b.store, l, run, guard, dec)
+		persister.ownership = marks
 		manager = backend.NewSnapshotManager(persister, op.SecretsManager, snap, nil)
 		engineCtx.SnapshotManager = manager
 	}

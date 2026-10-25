@@ -39,6 +39,7 @@ type known struct {
 	secrets   *secretsRecord
 	snippet   *snippetRecord
 	extension *extensionRecord
+	adoption  *adoptionRecord
 }
 
 // generation is the stamp of the program that last wrote the record, or the zero stamp for records that carry none.
@@ -61,6 +62,8 @@ type loaded struct {
 	deployment apitype.TypedDeployment
 	// generations is the stamp on each URN's record, for the delete guard.
 	generations map[resource.URN]Generation
+	// adoption is the stack's adoption record, nil when it was never adopted from a stock checkpoint.
+	adoption *adoptionRecord
 }
 
 // MissingReferenceError refuses a snapshot assembled from records in which a resource refers to a parent, a
@@ -171,6 +174,13 @@ func assemble(keys stackKeys, raw map[string]staterecord.Record, now time.Time) 
 			}
 			k.secrets = &s
 			secrets = &apitype.SecretsProvidersV1{Type: s.Type, State: s.State}
+		case key == keys.adoption():
+			var a adoptionRecord
+			if err := decodeRecord(key, rec.Payload, adoptionFormat, &a); err != nil {
+				return nil, err
+			}
+			k.adoption = &a
+			l.adoption = &a
 		case strings.HasPrefix(key, keys.resourcePrefix()):
 			urn, ok := decodeSegment(key, keys.resourcePrefix())
 			if !ok {

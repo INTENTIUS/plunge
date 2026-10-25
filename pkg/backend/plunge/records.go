@@ -35,6 +35,7 @@ const (
 	secretsFormat   = "plunge-secrets-v1"
 	snippetFormat   = "plunge-snippet-v1"
 	extensionFormat = "plunge-extension-v1"
+	adoptionFormat  = "plunge-adoption-v1"
 )
 
 // keyEncoding turns a URN, an output name, a snippet UUID or an extension ref into one key segment. base64url
@@ -48,6 +49,7 @@ var keyEncoding = base64.RawURLEncoding
 //	stacks/<project>/<stack>/outputs/<name>        one root Stack output
 //	stacks/<project>/<stack>/snippets/<uuid>       one PCL snippet
 //	stacks/<project>/<stack>/extensions/<ref>      one extension blob
+//	stacks/<project>/<stack>/adoption              how the stack was adopted from a stock checkpoint (adopt.go)
 //
 // Nothing is shared between two URNs, two outputs or two snippets, which is what lets two runs that change different
 // resources both land.
@@ -65,6 +67,7 @@ func (k stackKeys) resourcePrefix() string  { return k.ns + "resources/" }
 func (k stackKeys) outputPrefix() string    { return k.ns + "outputs/" }
 func (k stackKeys) snippetPrefix() string   { return k.ns + "snippets/" }
 func (k stackKeys) extensionPrefix() string { return k.ns + "extensions/" }
+func (k stackKeys) adoption() string        { return k.ns + "adoption" }
 func (k stackKeys) resource(urn resource.URN) string {
 	return k.resourcePrefix() + keyEncoding.EncodeToString([]byte(urn))
 }
@@ -139,6 +142,9 @@ type resourceRecord struct {
 	Features   []string              `json:"features,omitempty"`
 	Generation Generation            `json:"generation"`
 	WrittenAt  string                `json:"writtenAt,omitempty"`
+	// Ownership is how the resource is known to be this stack's (INTENTIUS/plunge#7): by the markers on its live
+	// object, or, for a type that cannot carry one, by this record alone. Absent on records written before P-L4.
+	Ownership *ownershipEntry `json:"ownership,omitempty"`
 }
 
 // outputRecord is what an outputs/<name> key holds: one root Stack output, serialized exactly as it would be in the
@@ -251,19 +257,18 @@ func (p *plaintexts) unseal(ctx context.Context, v any) any {
 // operations. The generation, the write time and the feature list are bookkeeping and never make a record "changed"
 // on their own.
 func resourceContent(r *resourceRecord, ignoreTimes bool) any {
+	type content struct {
+		States    []apitype.ResourceV3
+		Pending   []apitype.OperationV2
+		Ownership *ownershipEntry `json:",omitempty"`
+	}
 	if !ignoreTimes {
-		return struct {
-			States  []apitype.ResourceV3
-			Pending []apitype.OperationV2
-		}{r.States, r.Pending}
+		return content{r.States, r.Pending, r.Ownership}
 	}
 	states := make([]apitype.ResourceV3, len(r.States))
 	for i, s := range r.States {
 		s.Created, s.Modified = nil, nil
 		states[i] = s
 	}
-	return struct {
-		States  []apitype.ResourceV3
-		Pending []apitype.OperationV2
-	}{states, r.Pending}
+	return content{states, r.Pending, r.Ownership}
 }

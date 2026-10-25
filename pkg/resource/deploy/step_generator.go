@@ -840,6 +840,12 @@ func (sg *stepGenerator) generateResourceSteps(
 	}
 	old, invalid, alias := sg.getOldResource(urn, goal.Name, goal.Type, goal.Parent, goal.Aliases)
 
+	// plunge (INTENTIUS/plunge#7): refuse a provider whose configuration would hide ownership markers, for
+	// default and explicit providers alike, before anything is created through it.
+	if err := sg.checkProviderMarkers(ctx, urn, goal); err != nil {
+		return nil, false, err
+	}
+
 	var aliasUrns []resource.URN
 	if alias != "" {
 		aliasUrns = []resource.URN{alias}
@@ -1184,6 +1190,20 @@ func (sg *stepGenerator) continueStepsFromRefresh(
 		contract.AssertNoErrorf(err, "failed to generate random seed")
 		contract.Assertf(n == len(randomSeed),
 			"generated fewer (%d) than expected (%d) random bytes", n, len(randomSeed))
+	}
+
+	// plunge's marker-bind phase (INTENTIUS/plunge#7): a create of a resource the base snapshot does not hold is
+	// first looked for by its markers. One live object carrying them is bound, and the create becomes an import of
+	// it; two are a collision and refuse the run naming both.
+	if old == nil && !recreating {
+		id, err := sg.bindMarkers(ctx, urn, goal, new, prov)
+		if err != nil {
+			return nil, false, err
+		}
+		if id != "" {
+			goal.ID = id
+			new.ImportID = id
+		}
 	}
 
 	// If the goal contains an ID, this may be an import. An import occurs if there is no old resource or if the old
