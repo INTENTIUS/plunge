@@ -2485,6 +2485,9 @@ func (sg *stepGenerator) GenerateDeletes(targetsOpt UrnTargets, excludesOpt UrnT
 		return true
 	}
 
+	// Resources the target's DeleteGuard keeps, with everything they need to stay valid in the snapshot.
+	guarded := sg.guardedFromDelete(isTargeted)
+
 	// Doesn't matter what order we build this list of steps in as we'll sort them in ScheduleDeletes.
 	deleteSteps := []Step{}
 	sameSteps := []Step{}
@@ -2493,6 +2496,14 @@ func (sg *stepGenerator) GenerateDeletes(targetsOpt UrnTargets, excludesOpt UrnT
 			if res.ViewOf != "" {
 				// This is a view of another resource, so we don't need to delete it.
 				// The owning resource is responsible for publishing delete steps for its views.
+				continue
+			}
+
+			if guarded[res] {
+				// Kept by the target's DeleteGuard: replicate the same step an untargeted resource gets.
+				new := res.Copy()
+				new.ID = ""
+				sameSteps = append(sameSteps, NewUntargetedSameStep(sg.deployment, nil, res, new, nil))
 				continue
 			}
 
@@ -2663,6 +2674,72 @@ func (sg *stepGenerator) GenerateDeletes(targetsOpt UrnTargets, excludesOpt UrnT
 	}
 
 	return sameSteps, deleteSteps, nil
+}
+
+// guardedFromDelete asks the target's DeleteGuard about every resource of the previous snapshot that this run would
+// delete because the program did not register it, and returns the ones it keeps. A kept resource also keeps its
+// parent, its provider and everything it depends on, when those would otherwise be deleted for the same reason, so
+// that the snapshot never refers to a resource this run removed. Each kept resource is reported as a warning naming
+// it and the guard's reason. Pending-delete states (Delete set by a replacement) are never asked: their delete is
+// part of finishing a replacement, not a judgement about ownership.
+func (sg *stepGenerator) guardedFromDelete(isTargeted func(*pkgresource.State) bool) map[*pkgresource.State]bool {
+	guard := sg.deployment.target.DeleteGuard
+	prev := sg.deployment.prev
+	if guard == nil || prev == nil {
+		return nil
+	}
+
+	// The states this run would delete for not being registered, by URN.
+	candidates := map[resource.URN]*pkgresource.State{}
+	for _, res := range prev.Resources {
+		if res.ViewOf != "" || res.Delete || sg.isOperatedOn(res.URN) || !isTargeted(res) {
+			continue
+		}
+		candidates[res.URN] = res
+	}
+
+	kept := map[*pkgresource.State]bool{}
+	var work []*pkgresource.State
+	for _, res := range prev.Resources {
+		if candidates[res.URN] != res {
+			continue
+		}
+		if reason := guard(res); reason != "" {
+			sg.deployment.Diag().Warningf(diag.RawMessage(res.URN,
+				fmt.Sprintf("not deleting %s: %s", res.URN, reason)))
+			kept[res] = true
+			work = append(work, res)
+		}
+	}
+
+	// Keep what the kept resources refer to.
+	for len(work) > 0 {
+		res := work[len(work)-1]
+		work = work[:len(work)-1]
+
+		var refs []resource.URN
+		provider, deps := res.GetAllDependencies()
+		for _, dep := range deps {
+			refs = append(refs, dep.URN)
+		}
+		if provider != "" {
+			if ref, err := sdkproviders.ParseReference(provider); err == nil {
+				refs = append(refs, ref.URN())
+			}
+		}
+		for _, urn := range refs {
+			dep, has := candidates[urn]
+			if !has || kept[dep] {
+				continue
+			}
+			sg.deployment.Diag().Warningf(diag.RawMessage(dep.URN,
+				fmt.Sprintf("not deleting %s: %s, which is kept, refers to it", dep.URN, res.URN)))
+			kept[dep] = true
+			work = append(work, dep)
+		}
+	}
+
+	return kept
 }
 
 // getTargetDependents returns the (transitive) set of dependents on the target resources.

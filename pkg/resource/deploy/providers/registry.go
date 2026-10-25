@@ -359,6 +359,9 @@ func GetProviderParameterization(
 type Registry struct {
 	plugin.NotForwardCompatibleProvider
 
+	// newID, when set, replaces the random UUID a created provider is registered under. See SetIDGenerator.
+	newID IDGenerator
+
 	pctx      *plugin.Context
 	isPreview bool
 	providers map[providers.Reference]plugin.Provider
@@ -471,6 +474,19 @@ func NewRegistry(pctx *plugin.Context, isPreview bool, builtins plugin.Provider)
 		builtins:  builtins,
 		aliases:   make(map[resource.URN]resource.URN),
 	}
+}
+
+// IDGenerator returns the ID a provider resource with the given URN and (filtered) configuration is created with.
+// It must be deterministic in its arguments, and must never return UnknownID or "".
+type IDGenerator func(urn resource.URN, inputs resource.PropertyMap) (resource.ID, error)
+
+// SetIDGenerator replaces the random UUID that Create assigns a new provider with gen. A nil gen restores the random
+// UUID. plunge's record backend uses it so two runs that both create one default provider agree on its ID
+// (INTENTIUS/plunge#6).
+func (r *Registry) SetIDGenerator(gen IDGenerator) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.newID = gen
 }
 
 // GetProvider returns the provider plugin that is currently registered under the given reference, if any.
@@ -955,7 +971,21 @@ func (r *Registry) Create(ctx context.Context, req plugin.CreateRequest) (plugin
 	}
 
 	id := resource.ID(UnknownID)
-	if !req.Preview {
+	r.m.RLock()
+	newID := r.newID
+	r.m.RUnlock()
+	if !req.Preview && newID != nil {
+		generated, err := newID(req.URN, FilterProviderConfig(properties))
+		if err != nil {
+			return plugin.CreateResponse{Status: resource.StatusOK},
+				fmt.Errorf("derive the ID of provider %v: %w", req.URN, err)
+		}
+		if generated == "" || generated == UnknownID {
+			return plugin.CreateResponse{Status: resource.StatusOK},
+				fmt.Errorf("derive the ID of provider %v: the generator returned %q", req.URN, generated)
+		}
+		id = generated
+	} else if !req.Preview {
 		// generate a new uuid
 		uuid, err := uuid.NewV4()
 		if err != nil {
