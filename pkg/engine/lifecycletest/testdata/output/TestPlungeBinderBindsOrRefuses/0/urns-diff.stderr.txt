@@ -1,0 +1,1 @@
+<{%reset%}>plunge: bound to the live object live-1, which already carries this resource's ownership markers<{%reset%}>

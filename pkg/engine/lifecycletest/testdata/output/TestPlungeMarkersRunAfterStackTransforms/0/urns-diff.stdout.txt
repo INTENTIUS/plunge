@@ -1,0 +1,13 @@
+<{%fg 2%}>+ urn:pulumi:test::test::my:comp:Comp::comp: (create)
+<{%fg 2%}>    tags: <{%reset%}><{%fg 2%}>{
+<{%reset%}><{%fg 2%}>        team: <{%reset%}><{%fg 2%}>"a"<{%reset%}><{%fg 2%}>
+<{%reset%}><{%fg 2%}>    }<{%reset%}><{%fg 2%}>
+<{%reset%}><{%reset%}>    <{%fg 2%}>+ urn:pulumi:test::test::my:comp:Comp$pkgA:m:typA::resA: (create)
+<{%fg 2%}>        tags: <{%reset%}><{%fg 2%}>{
+<{%reset%}><{%fg 2%}>            plunge-urn: <{%reset%}><{%fg 2%}>"urn:pulumi:test::test::my:comp:Comp$pkgA:m:typA::resA"<{%reset%}><{%fg 2%}>
+<{%reset%}><{%fg 2%}>            team      : <{%reset%}><{%fg 2%}>"a"<{%reset%}><{%fg 2%}>
+<{%reset%}><{%fg 2%}>        }<{%reset%}><{%fg 2%}>
+<{%reset%}><{%reset%}><{%fg 13%}><{%bold%}>Resources:<{%reset%}>
+    <{%fg 2%}>+ 2 created<{%reset%}>
+
+<{%fg 13%}><{%bold%}>Duration:<{%reset%}> 1s

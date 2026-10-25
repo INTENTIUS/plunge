@@ -114,7 +114,11 @@ func (rm *resmon) injectMarkers(
 
 // checkProviderMarkers is the step generator's call into Target.Markers.CheckProvider, for provider resources.
 func (sg *stepGenerator) checkProviderMarkers(ctx context.Context, urn resource.URN, goal *pkgresource.Goal) error {
-	policy := sg.deployment.Target().Markers
+	target := sg.deployment.Target()
+	if target == nil {
+		return nil
+	}
+	policy := target.Markers
 	if policy == nil || !sdkproviders.IsProviderType(goal.Type) {
 		return nil
 	}
@@ -130,7 +134,11 @@ func (sg *stepGenerator) checkProviderMarkers(ctx context.Context, urn resource.
 func (sg *stepGenerator) bindMarkers(
 	ctx context.Context, urn resource.URN, goal *pkgresource.Goal, new *pkgresource.State, prov plugin.Provider,
 ) (resource.ID, error) {
-	binder := sg.deployment.Target().Binder
+	target := sg.deployment.Target()
+	if target == nil {
+		return "", nil
+	}
+	binder := target.Binder
 	if binder == nil || goal.ID != "" || !goal.Custom || sdkproviders.IsProviderType(goal.Type) || prov == nil {
 		return "", nil
 	}

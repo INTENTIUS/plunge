@@ -139,10 +139,14 @@ func (c *fakeCloud) provider() *deploytest.Provider {
 		},
 		CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
 			props := resource.ToResourcePropertyMap(req.Properties)
-			name := props["name"].StringValue()
+			key := resource.PropertyKey("name")
 			if req.URN.Type() == bucketType {
-				name = props["bucket"].StringValue()
+				key = "bucket"
 			}
+			if !props[key].IsString() {
+				return plugin.CreateResponse{}, fmt.Errorf("%s has no %s", req.URN, key)
+			}
+			name := props[key].StringValue()
 			c.mu.Lock()
 			defer c.mu.Unlock()
 			if _, ok := c.byName[name]; ok {

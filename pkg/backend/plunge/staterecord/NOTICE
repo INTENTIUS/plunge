@@ -10,7 +10,7 @@ outside this directory takes on the MPL.
 
 Files carried unchanged: azureblob.go, azurecontract.go, bucketcontract.go,
 bucketowner.go, contract.go, doc.go, gcs.go, gcscontract.go, kmsdenied.go,
-local.go, objecttags.go, s3.go, store.go.
+objecttags.go, s3.go, store.go.
 
 Files modified for plunge (each stays MPL-2.0):
 
@@ -18,6 +18,11 @@ Files modified for plunge (each stays MPL-2.0):
   denied.go    dropped the Kubernetes legs of IsAccessDenied (the
                k8s.io/apimachinery import, AdmissionDeniedError and
                k8serrors.IsForbidden).
+  local.go     PutIfAbsent writes a temp file and hard-links it into place
+               instead of an O_CREATE|O_EXCL open followed by a write, so a
+               concurrent Get never reads the empty file (found by
+               TestTwoFirstRunsConvergeOnOneDefaultProvider; choudoufu's copy
+               has the same race).
   verbaccess.go  the VerbAccess type alone, lifted out of
                kubernetescontract.go because contract.go names it.
 

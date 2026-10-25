@@ -58,6 +58,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/util/cancel"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -161,7 +162,10 @@ func run(
 
 	p := &lt.TestPlan{}
 	project := p.GetProject()
-	target := p.GetTarget(t, snap)
+	// The target and the snapshot manager share one snapshot, as in backend.go's apply: the manager tracks the
+	// base states by identity, and GetTarget's clone would leave every base state in the saved snapshot twice.
+	target := p.GetTarget(t, nil)
+	target.Snapshot = snap
 	target.Config = config.Map{}
 	marks := cfg.marks
 	if cfg.markers {
@@ -188,7 +192,6 @@ func run(
 	}
 
 	host := hostF()
-	defer contract.IgnoreClose(host)
 
 	events := make(chan engine.Event)
 	var got []engine.Event
@@ -202,6 +205,9 @@ func run(
 
 	cancelCtx, cancelSrc := cancel.NewContext(ctx)
 	defer cancelSrc.Terminate()
+	// Close the host before Terminate: the engine also closes it once the cancel source terminates, and two
+	// concurrent deploytest pluginHost.Close calls both send on its stop channel, so one blocks for ever.
+	defer contract.IgnoreClose(host)
 	engineCtx := &engine.Context{
 		Cancel:        cancelCtx,
 		Events:        events,
@@ -494,7 +500,7 @@ type adoptFixture struct {
 func newAdoptFixture(t *testing.T, d *apitype.UntypedDeployment) *adoptFixture {
 	t.Helper()
 	ctx := context.Background()
-	sink := diag.DefaultSink(io.Discard, io.Discard, diag.FormatOptions{})
+	sink := diag.DefaultSink(io.Discard, io.Discard, diag.FormatOptions{Color: colors.Never})
 	dir := t.TempDir()
 	url := "file://" + filepath.ToSlash(dir)
 	inner, err := diy.New(ctx, sink, url, nil)
@@ -539,7 +545,10 @@ func stockDeployment(t *testing.T, createOnly bool) *apitype.UntypedDeployment {
 				Outputs:  map[string]any{"tags": []any{map[string]any{"key": "team", "value": "a"}}},
 			})
 	}
-	dep := apitype.DeploymentV3{Manifest: apitype.ManifestV1{Version: "test"}, Resources: resources}
+	// A checkpoint the stock CLI wrote carries the magic cookie its integrity check expects.
+	manifest := deploy.Manifest{Version: "test"}
+	manifest.Magic = manifest.NewMagic()
+	dep := apitype.DeploymentV3{Manifest: manifest.Serialize(), Resources: resources}
 	raw, err := json.Marshal(dep)
 	require.NoError(t, err)
 	return &apitype.UntypedDeployment{Version: 3, Deployment: raw}

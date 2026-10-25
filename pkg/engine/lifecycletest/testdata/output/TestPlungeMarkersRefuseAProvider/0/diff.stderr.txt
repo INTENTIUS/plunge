@@ -1,0 +1,1 @@
+<{%fg 1%}>error: <{%reset%}><{%reset%}>ignoreTags hides the markers<{%reset%}>

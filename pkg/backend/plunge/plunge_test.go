@@ -100,12 +100,21 @@ var testKeys = newStackKeys("test", "test")
 // update with the record persister, the deterministic provider IDs and the delete guard for run.
 func runUpdate(t *testing.T, store staterecord.Store, hostF deploytest.PluginHostFactory, run Generation) error {
 	t.Helper()
-	ctx := context.Background()
-
-	l, err := load(ctx, store, testKeys)
+	l, err := load(context.Background(), store, testKeys)
 	if err != nil {
 		return err
 	}
+	return runUpdateFrom(t, store, l, hostF, run)
+}
+
+// runUpdateFrom is runUpdate against records already loaded, so two runs can be given the same base.
+func runUpdateFrom(
+	t *testing.T, store staterecord.Store, l *loaded, hostF deploytest.PluginHostFactory, run Generation,
+) error {
+	t.Helper()
+	ctx := context.Background()
+
+	var err error
 	var snap *deploy.Snapshot
 	if len(l.records) > 0 {
 		snap, err = stack.DeserializeDeploymentV3(ctx, *l.deployment.Deployment, stack.Base64SecretsProvider{})
@@ -123,13 +132,15 @@ func runUpdate(t *testing.T, store staterecord.Store, hostF deploytest.PluginHos
 
 	p := &lt.TestPlan{}
 	project := p.GetProject()
-	target := p.GetTarget(t, snap)
+	// The target and the snapshot manager share one snapshot, as in backend.go's apply: the manager tracks the
+	// base states by identity, and GetTarget's clone would leave every base state in the saved snapshot twice.
+	target := p.GetTarget(t, nil)
+	target.Snapshot = snap
 	target.ProviderIDs = DeterministicProviderID
 	target.DeleteGuard = deleteGuard(run, l.generations)
 	target.Config = config.Map{}
 
 	host := hostF()
-	defer contract.IgnoreClose(host)
 
 	events := make(chan engine.Event)
 	drained := make(chan struct{})
@@ -141,6 +152,9 @@ func runUpdate(t *testing.T, store staterecord.Store, hostF deploytest.PluginHos
 
 	cancelCtx, cancelSrc := cancel.NewContext(ctx)
 	defer cancelSrc.Terminate()
+	// Close the host before Terminate: the engine also closes it once the cancel source terminates, and two
+	// concurrent deploytest pluginHost.Close calls both send on its stop channel, so one blocks for ever.
+	defer contract.IgnoreClose(host)
 	engineCtx := &engine.Context{
 		Cancel:          cancelCtx,
 		Events:          events,
@@ -245,14 +259,19 @@ func TestTwoConcurrentUpdatesOnDisjointResourcesBothLand(t *testing.T) {
 	require.NoError(t, runUpdate(t, store,
 		deploytest.NewPluginHostF(nil, nil, program("1", "1", false), nil, nil, testLoaders(nil)...), gen))
 
-	// Two runs from the same base, at the same time: one changes resX only, the other resY only.
+	// Two runs from the same base, at the same time: one changes resX only, the other resY only. Both read the
+	// records before either starts, so neither sees the other's change: a run that read the first run's resX=2 would
+	// plan resX back to its own program's 1, which is a later run winning, not two concurrent ones.
 	var wg sync.WaitGroup
 	errs := make([]error, 2)
 	for i, prog := range []deploytest.LanguageRuntimeFactory{program("2", "1", false), program("1", "2", false)} {
+		base, err := load(context.Background(), store, testKeys)
+		require.NoError(t, err)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			errs[i] = runUpdate(t, store, deploytest.NewPluginHostF(nil, nil, prog, nil, nil, testLoaders(nil)...), gen)
+			errs[i] = runUpdateFrom(t, store, base,
+				deploytest.NewPluginHostF(nil, nil, prog, nil, nil, testLoaders(nil)...), gen)
 		}()
 	}
 	wg.Wait()
