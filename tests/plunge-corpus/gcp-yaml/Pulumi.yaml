@@ -1,0 +1,96 @@
+# plunge corpus program gcp-yaml (INTENTIUS/plunge#4): GCP classic against the
+# lex00/floci-gcp emulator. Whether pulumi-gcp runs against floci-gcp at all
+# is unknown (design record INTENTIUS/plunge#9, lane L1); this program is the
+# smallest one that answers it. Every GCP name is client-chosen, so there is
+# no server-assigned ID case here.
+name: corpus-gcp-yaml
+description: plunge corpus, YAML program against the floci-gcp emulator (INTENTIUS/plunge#4)
+runtime: yaml
+
+config:
+  flociGcpEndpoint:
+    type: string
+    default: http://localhost:4588
+  prefix:
+    type: string
+    default: plc-gcp
+
+resources:
+  # Client-named, with a map of labels.
+  site-bucket:
+    type: gcp:storage:Bucket
+    properties:
+      name: ${prefix}-site
+      location: US-CENTRAL1
+      forceDestroy: true
+      labels:
+        corpus-program: gcp-yaml
+        corpus-owner: plunge
+    options:
+      version: 10.2.0
+
+  events:
+    type: gcp:pubsub:Topic
+    properties:
+      name: ${prefix}-events
+      labels:
+        corpus-program: gcp-yaml
+        corpus-owner: plunge
+    options:
+      version: 10.2.0
+
+  events-sub:
+    type: gcp:pubsub:Subscription
+    properties:
+      name: ${prefix}-events-sub
+      topic: ${events.id}
+      labels:
+        corpus-program: gcp-yaml
+        corpus-owner: plunge
+    options:
+      version: 10.2.0
+
+  # Untaggable: a service account has no labels.
+  app-sa:
+    type: gcp:serviceaccount:Account
+    properties:
+      accountId: ${prefix}-app
+      displayName: plunge corpus app
+    options:
+      version: 10.2.0
+
+  # Explicit provider beside the default one.
+  europe:
+    type: pulumi:providers:gcp
+    properties:
+      project: plc-corpus
+      region: europe-west1
+      accessToken: chdf-corpus-fake-token
+      storageCustomEndpoint: ${flociGcpEndpoint}/storage/v1/
+      pubsubCustomEndpoint: ${flociGcpEndpoint}/v1/
+      iamBetaCustomEndpoint: ${flociGcpEndpoint}/v1/
+      cloudBillingCustomEndpoint: ${flociGcpEndpoint}/v1/
+      resourceManagerCustomEndpoint: ${flociGcpEndpoint}/v1/
+      serviceUsageCustomEndpoint: ${flociGcpEndpoint}/v1/
+    options:
+      version: 10.2.0
+
+  alerts-europe:
+    type: gcp:pubsub:Topic
+    properties:
+      name: ${prefix}-alerts-europe
+      labels:
+        corpus-program: gcp-yaml
+        corpus-owner: plunge
+    options:
+      provider: ${europe}
+      version: 10.2.0
+
+outputs:
+  siteBucketUrl: ${site-bucket.url}
+  eventsTopicId: ${events.id}
+  eventsSubscriptionId: ${events-sub.id}
+  appServiceAccountEmail: ${app-sa.email}
+  alertsEuropeId: ${alerts-europe.id}
+  fakeTokenIsSecret:
+    fn::secret: chdf-corpus-fake-token

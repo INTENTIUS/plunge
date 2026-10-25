@@ -1,0 +1,197 @@
+# plunge corpus program aws-yaml (INTENTIUS/plunge#4). The same resources
+# under the same logical names as aws-ts, minus what YAML can't express: no
+# component resource, no resource created inside apply(), and the three
+# worker queues are written out rather than looped. The README beside this
+# directory maps each resource to what it exercises.
+name: corpus-aws-yaml
+description: plunge corpus, YAML program against the floci AWS emulator (INTENTIUS/plunge#4)
+runtime: yaml
+
+config:
+  flociEndpoint:
+    type: string
+    default: http://localhost:4566
+  prefix:
+    type: string
+    default: plc-yaml
+  eventsRetentionSeconds:
+    type: integer
+    default: 3600
+
+variables:
+  dbPassword:
+    fn::secret: corpus-placeholder-password
+
+resources:
+  # Client-named (C1).
+  site-bucket:
+    type: aws:s3:Bucket
+    properties:
+      bucket: ${prefix}-site
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+    options:
+      version: 7.51.1
+
+  app-role:
+    type: aws:iam:Role
+    properties:
+      name: ${prefix}-app
+      assumeRolePolicy:
+        fn::toJSON:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: sts:AssumeRole
+              Principal:
+                Service: ec2.amazonaws.com
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+    options:
+      version: 7.51.1
+
+  # Untaggable (coverage-only).
+  site-bucket-policy:
+    type: aws:s3:BucketPolicy
+    properties:
+      bucket: ${site-bucket.id}
+      policy:
+        fn::toJSON:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: ${app-role.arn}
+              Action:
+                - s3:GetObject
+              Resource:
+                - ${site-bucket.arn}/*
+    options:
+      version: 7.51.1
+
+  # Server-assigned IDs (C2).
+  main:
+    type: aws:ec2:Vpc
+    properties:
+      cidrBlock: 10.42.0.0/16
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+        Name: ${prefix}-main
+    options:
+      version: 7.51.1
+
+  app-sg:
+    type: aws:ec2:SecurityGroup
+    properties:
+      vpcId: ${main.id}
+      description: plunge corpus app security group
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+    options:
+      version: 7.51.1
+
+  # Autonamed.
+  events:
+    type: aws:sqs:Queue
+    properties:
+      messageRetentionSeconds: ${eventsRetentionSeconds}
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+    options:
+      version: 7.51.1
+
+  # The other programs' count-like loop, written out.
+  worker-0:
+    type: aws:sqs:Queue
+    properties:
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+        corpus-index: "0"
+    options:
+      version: 7.51.1
+  worker-1:
+    type: aws:sqs:Queue
+    properties:
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+        corpus-index: "1"
+    options:
+      version: 7.51.1
+  worker-2:
+    type: aws:sqs:Queue
+    properties:
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+        corpus-index: "2"
+    options:
+      version: 7.51.1
+
+  # Explicit provider beside the default one.
+  west:
+    type: pulumi:providers:aws
+    properties:
+      region: us-west-2
+      accessKey: test
+      secretKey: test
+      skipCredentialsValidation: true
+      skipRequestingAccountId: true
+      skipRegionValidation: true
+      skipMetadataApiCheck: true
+      s3UsePathStyle: true
+      endpoints:
+        - ec2: ${flociEndpoint}
+          iam: ${flociEndpoint}
+          s3: ${flociEndpoint}
+          sns: ${flociEndpoint}
+          sqs: ${flociEndpoint}
+          ssm: ${flociEndpoint}
+          sts: ${flociEndpoint}
+    options:
+      version: 7.51.1
+
+  alerts-west:
+    type: aws:sns:Topic
+    properties:
+      name: ${prefix}-alerts-west
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+    options:
+      version: 7.51.1
+      provider: ${west}
+
+  # A secret.
+  db-password:
+    type: aws:ssm:Parameter
+    properties:
+      name: /${prefix}/db-password
+      type: SecureString
+      value: ${dbPassword}
+      tags:
+        corpus-program: aws-yaml
+        corpus-owner: plunge
+    options:
+      version: 7.51.1
+
+outputs:
+  siteBucketName: ${site-bucket.bucket}
+  sitePolicyBucket: ${site-bucket-policy.bucket}
+  appRoleArn: ${app-role.arn}
+  vpcId: ${main.id}
+  securityGroupId: ${app-sg.id}
+  eventsQueueUrl: ${events.url}
+  workerQueueUrls:
+    - ${worker-0.url}
+    - ${worker-1.url}
+    - ${worker-2.url}
+  westAlertsArn: ${alerts-west.arn}
+  dbPasswordParameter: ${db-password.name}
+  dbPasswordValue: ${dbPassword}

@@ -1,0 +1,3 @@
+name: corpus-aws-csharp
+description: plunge corpus, C# program against the floci AWS emulator (INTENTIUS/plunge#4)
+runtime: dotnet
