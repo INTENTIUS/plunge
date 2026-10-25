@@ -78,9 +78,16 @@ type recordPersister struct {
 	crypto *plaintexts
 	now    func() time.Time
 
-	mu     sync.Mutex
-	known  map[string]*known
-	writes int // conditional writes and deletes issued, for tests and logs
+	mu    sync.Mutex
+	known map[string]*known
+	// operated is every URN this run has acted on: it held a pending operation on it, or changed its states.
+	// A URN it has not acted on keeps the pending operations its record already holds, which may be another
+	// run's operation in flight; the snapshot manager drops a base snapshot's non-create pending operations,
+	// and writing that drop back would erase the other run's marker (and make the other run's own write fail).
+	operated map[resource.URN]bool
+	// basePending is the pending operations each URN's record held when this run read it.
+	basePending map[resource.URN][]apitype.OperationV2
+	writes      int // conditional writes and deletes issued, for tests and logs
 }
 
 var _ backend.SnapshotPersister = (*recordPersister)(nil)
@@ -89,8 +96,12 @@ func newRecordPersister(
 	ctx context.Context, store staterecord.Store, l *loaded, run Generation, guard bool, dec config.Decrypter,
 ) *recordPersister {
 	k := make(map[string]*known, len(l.records))
+	basePending := map[resource.URN][]apitype.OperationV2{}
 	for key, rec := range l.records {
 		k[key] = rec
+		if rec.resource != nil && len(rec.resource.Pending) > 0 {
+			basePending[rec.resource.URN] = rec.resource.Pending
+		}
 	}
 	return &recordPersister{
 		ctx:    ctx,
@@ -101,6 +112,9 @@ func newRecordPersister(
 		crypto: newPlaintexts(dec),
 		now:    time.Now,
 		known:  k,
+
+		operated:    map[resource.URN]bool{},
+		basePending: basePending,
 	}
 }
 
@@ -125,7 +139,10 @@ func (p *recordPersister) Save(d apitype.TypedDeployment) error {
 		return err
 	}
 
-	want := p.split(d)
+	want, err := p.split(d)
+	if err != nil {
+		return err
+	}
 
 	keys := make([]string, 0, len(want))
 	for k := range want {
@@ -155,7 +172,7 @@ func (p *recordPersister) Save(d apitype.TypedDeployment) error {
 }
 
 // split turns a deployment into the records it implies, keyed by store key.
-func (p *recordPersister) split(d apitype.TypedDeployment) map[string]*desired {
+func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired, error) {
 	dep := d.Deployment
 	want := map[string]*desired{}
 
@@ -196,7 +213,32 @@ func (p *recordPersister) split(d apitype.TypedDeployment) map[string]*desired {
 		r.Pending = append(r.Pending, op)
 	}
 	for _, urn := range order {
-		want[p.keys.resource(urn)] = &desired{what: "resource " + string(urn), resource: byURN[urn]}
+		key := p.keys.resource(urn)
+		r := byURN[urn]
+		// The snapshot manager carries the base snapshot's pending creates forward; those are not this run's.
+		own, err := p.ownPending(urn, r.Pending)
+		if err != nil {
+			return nil, err
+		}
+		if own {
+			p.operated[urn] = true
+		}
+		if k := p.known[key]; !p.operated[urn] && k != nil && k.resource != nil {
+			mine, err := p.crypto.canonical(p.ctx, r.States)
+			if err != nil {
+				return nil, err
+			}
+			theirs, err := p.crypto.canonical(p.ctx, k.resource.States)
+			if err != nil {
+				return nil, err
+			}
+			if bytes.Equal(mine, theirs) {
+				r.Pending = k.resource.Pending
+			} else {
+				p.operated[urn] = true
+			}
+		}
+		want[key] = &desired{what: "resource " + string(urn), resource: r}
 	}
 	for _, s := range dep.Snippets {
 		want[p.keys.snippet(s.UUID)] = &desired{
@@ -210,7 +252,30 @@ func (p *recordPersister) split(d apitype.TypedDeployment) map[string]*desired {
 			extension: &extensionRecord{Format: extensionFormat, Ref: ref, Extension: ext},
 		}
 	}
-	return want
+	return want, nil
+}
+
+// ownPending reports whether ops holds a pending operation that was not already in urn's record when this run read
+// it.
+func (p *recordPersister) ownPending(urn resource.URN, ops []apitype.OperationV2) (bool, error) {
+	base := map[string]bool{}
+	for _, op := range p.basePending[urn] {
+		c, err := p.crypto.canonical(p.ctx, op)
+		if err != nil {
+			return false, err
+		}
+		base[string(c)] = true
+	}
+	for _, op := range ops {
+		c, err := p.crypto.canonical(p.ctx, op)
+		if err != nil {
+			return false, err
+		}
+		if !base[string(c)] {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // content is what decides whether a record changed, in canonical form.

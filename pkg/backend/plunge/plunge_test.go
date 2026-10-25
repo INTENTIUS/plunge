@@ -483,3 +483,43 @@ func TestAssembleOrdersParentsFirst(t *testing.T) {
 	assert.True(t, exists)
 	assert.NotEmpty(t, version)
 }
+
+// Another run's operation in flight on a resource this run does not touch stays in that resource's record. The
+// snapshot manager drops a base snapshot's pending updates, and writing that drop back would erase the marker and
+// make the other run's own write fail.
+func TestAnotherRunsPendingOperationIsLeftAlone(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := newCountingStore(t)
+	urnX := resource.URN("urn:pulumi:test::test::pkgA:m:typA::resX")
+	urnY := resource.URN("urn:pulumi:test::test::pkgA:m:typA::resY")
+	x := apitype.ResourceV3{URN: urnX, Type: "pkgA:m:typA", Custom: true, ID: "x-1"}
+	y := apitype.ResourceV3{URN: urnY, Type: "pkgA:m:typA", Custom: true, ID: "y-1"}
+
+	// The other run has written its pending update on resX.
+	l, err := load(ctx, store, testKeys)
+	require.NoError(t, err)
+	other := newRecordPersister(ctx, store, l, Generation{}, true, nil)
+	require.NoError(t, other.Save(apitype.TypedDeployment{Deployment: &apitype.DeploymentV3{
+		Resources:         []apitype.ResourceV3{x, y},
+		PendingOperations: []apitype.OperationV2{{Resource: x, Type: apitype.OperationTypeUpdating}},
+	}}))
+
+	// This run read that, and changes resY only. Its deployment no longer carries the pending update on resX.
+	l, err = load(ctx, store, testKeys)
+	require.NoError(t, err)
+	before := store.writes[testKeys.resource(urnX)]
+	mine := newRecordPersister(ctx, store, l, Generation{}, true, nil)
+	y2 := y
+	y2.Outputs = map[string]any{"v": "2"}
+	require.NoError(t, mine.Save(apitype.TypedDeployment{Deployment: &apitype.DeploymentV3{
+		Resources: []apitype.ResourceV3{x, y2},
+	}}))
+
+	assert.Equal(t, before, store.writes[testKeys.resource(urnX)], "resX's record was rewritten")
+	l, err = load(ctx, store, testKeys)
+	require.NoError(t, err)
+	require.Len(t, l.deployment.Deployment.PendingOperations, 1)
+	assert.Equal(t, urnX, l.deployment.Deployment.PendingOperations[0].Resource.URN)
+}
