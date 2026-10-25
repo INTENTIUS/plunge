@@ -49,6 +49,52 @@ from `PLUNGE_PROGRAM_COMMIT` and `PLUNGE_PROGRAM_TIME`) of the run that last
 wrote it. A run deletes a resource it no longer declares only when that stamp
 is not newer than its own.
 
+## C1: two creates of one client-named resource
+
+Two runs creating the same resource of a covered type ask the cloud for the
+same name. The cloud's uniqueness constraint refuses the second create, and
+the loser's next run binds the winner's object by its ownership markers
+(`plunge-stack`, `plunge-urn`) and creates nothing. When the winner's record
+has landed, the next run plans against that record instead.
+
+plunge gets there by naming the resource itself. In place of upstream's random
+suffix, the provider's Check is proposed `<name>-<hash>`, where `<name>` is the
+URN's name and `<hash>` is seven hex digits of a SHA-256 over the project, the
+stack, the URN's qualified type and the name. The same inputs give the same
+name on every run and every machine, and two stacks sharing an account get
+different names. Where the schema gives a maximum length, the name part is cut
+to fit (leaving room for a suffix the provider appends, such as `.fifo`) and
+the hash is kept. A replacement of such a resource deletes the old object
+before creating the new one, since both would need the same name; the run
+warns once per replaced resource when the provider alone would have created
+the replacement first.
+
+A type is covered when all of these hold:
+
+| Family | Name evidence |
+|---|---|
+| pulumi-aws, pulumi-azure, pulumi-gcp (bridged) | the field the bridge's `GetMapping("terraform")` marks autonamed, whose Terraform argument forces a new resource, and which choudoufu's `pkg/identity` builds the type's import identity from (or names as its `UniqueName`) |
+| aws-native | metadata.json's `autoNamingSpec` property is in the type's `primaryIdentifier` (206 types at v1.83.1); `maxLength` is read from the same spec |
+
+and the type carries ownership markers (a map or key/value-array tags
+property, not classed markerless by `pkg/identity`), and its family's lister
+lists it consistently (see the bind phase in `pkg/backend/plunge/bind.go`), so
+the loser can find the winner. The provider has to support autonaming
+configuration; the engine warns about one that does not.
+
+What the program and the user say comes first. A name the program sets is used
+as given. A `pulumi:autonaming` config is used as given when it has no random
+part. One with a random part (`${hex(n)}`, `${alphanum(n)}`, `${string(n)}`,
+`${num(n)}`, `${uuid}`) on a covered type is refused by name
+(`RandomAutonamePatternError`); `PLUNGE_ALLOW_RANDOM_AUTONAMES=true` keeps it,
+and those resources are then outside C1.
+
+Every resource record says where its name came from and whether C1 covers it,
+with the reason when it does not (`ownership.autoname`: `by`, `name`, `c1`,
+`uncovered`). Types C1 does not cover keep upstream's autonaming; where their
+family lister covers them, a duplicate create is caught by the marker listing
+instead.
+
 ## Reading a stack
 
 The snapshot is assembled from the records on every read, in an order where

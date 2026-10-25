@@ -444,7 +444,8 @@ func (b *plungeBackend) apply(
 	if guard {
 		target.DeleteGuard = deleteGuard(run, l.generations)
 	}
-	// Ownership markers and the bind phase (INTENTIUS/plunge#7) run where the program registers resources.
+	// Ownership markers and the bind phase (INTENTIUS/plunge#7) run where the program registers resources, and the
+	// autonaming policy (autoname.go, claim C1) runs before each resource's Check.
 	var marks *ledger
 	if programDriven(kind) && markersEnabled() {
 		marks = newLedger()

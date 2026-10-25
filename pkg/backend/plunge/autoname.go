@@ -63,7 +63,9 @@ import (
 // covered by C1, and their records say so.
 const EnvAllowRandomAutonames = "PLUNGE_ALLOW_RANDOM_AUTONAMES"
 
-func randomAutonamesAllowed() bool { return strings.EqualFold(os.Getenv(EnvAllowRandomAutonames), "true") }
+func randomAutonamesAllowed() bool {
+	return strings.EqualFold(os.Getenv(EnvAllowRandomAutonames), "true")
+}
 
 // AutonameSource is where a resource's name came from in one run.
 type AutonameSource string
