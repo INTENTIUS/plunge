@@ -1,0 +1,1872 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package ints
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/creack/pty"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/pulumi/pulumi/pkg/v3/codegen/schema"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/testing/test"
+	"github.com/pulumi/pulumi/pkg/v3/testing/integration"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/providers"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	ptesting "github.com/pulumi/pulumi/sdk/v3/go/common/testing"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/fsutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/python/toolchain"
+	"github.com/pulumi/pulumi/tests/testutil"
+)
+
+// TestStackTagValidation verifies various error scenarios related to stack names and tags.
+func TestStackTagValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Error_StackName", func(t *testing.T) {
+		t.Parallel()
+		e := ptesting.NewEnvironment(t)
+		defer e.DeleteIfNotFailed()
+		e.RunCommand("git", "init")
+
+		e.ImportDirectory("stack_project_name")
+		e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+		stdout, stderr := e.RunCommandExpectError("pulumi", "stack", "init", "invalid name (spaces, parens, etc.)")
+		assert.Equal(t, "", stdout)
+		assert.Contains(t, stderr,
+			"a stack name may only contain alphanumeric, hyphens, underscores, or periods")
+	})
+
+	t.Run("Error_DescriptionLength", func(t *testing.T) {
+		t.Parallel()
+
+		// This test requires the service, as only the service supports stack tags.
+		if os.Getenv("PULUMI_ACCESS_TOKEN") == "" {
+			t.Skipf("Skipping: PULUMI_ACCESS_TOKEN is not set")
+		}
+		if os.Getenv("PULUMI_TEST_OWNER") == "" {
+			t.Skipf("Skipping: PULUMI_TEST_OWNER is not set")
+		}
+
+		e := ptesting.NewEnvironment(t)
+		defer e.DeleteIfNotFailed()
+		stackName, err := resource.NewUniqueHex("test-", 8, -1)
+		contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+		e.RunCommand("git", "init")
+		e.ImportDirectory("stack_project_name")
+
+		prefix := "lorem ipsum dolor sit amet"     // 26
+		prefix = prefix + prefix + prefix + prefix // 104
+		prefix = prefix + prefix + prefix + prefix // 416 + the current Pulumi.yaml's description
+
+		// Change the contents of the Description property of Pulumi.yaml.
+		yamlPath := filepath.Join(e.CWD, "Pulumi.yaml")
+		err = integration.ReplaceInFile("description: ", "description: "+prefix, yamlPath)
+		require.NoError(t, err)
+
+		stdout, stderr := e.RunCommandExpectError("pulumi", "stack", "init", stackName)
+		assert.Equal(t, "", stdout)
+		assert.Contains(t, stderr, "error: could not create stack:")
+		assert.Contains(t, stderr, "validating stack properties:")
+		assert.Contains(t, stderr, "stack tag \"pulumi:description\" value is too long (max length 256 characters)")
+	})
+}
+
+// TestStackInitValidation verifies various error scenarios related to init'ing a stack.
+func TestStackInitValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Error_InvalidStackYaml", func(t *testing.T) {
+		t.Parallel()
+		e := ptesting.NewEnvironment(t)
+		defer e.DeleteIfNotFailed()
+		e.RunCommand("git", "init")
+
+		e.ImportDirectory("stack_project_name")
+		e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+		// Starting a yaml value with a quote string and then more data is invalid
+		invalidYaml := "\"this is invalid\" yaml because of trailing data after quote string"
+
+		// Change the contents of the Description property of Pulumi.yaml.
+		yamlPath := filepath.Join(e.CWD, "Pulumi.yaml")
+		err := integration.ReplaceInFile("description: ", "description: "+invalidYaml, yamlPath)
+		require.NoError(t, err)
+
+		stdout, stderr := e.RunCommandExpectError("pulumi", "stack", "init", "valid-name")
+		assert.Equal(t, "", stdout)
+		assert.Contains(t, stderr, "invalid YAML file")
+	})
+}
+
+// TestConfigPaths ensures that config commands with paths work as expected.
+func TestConfigPaths(t *testing.T) {
+	t.Parallel()
+
+	type testArgs struct {
+		Key                   string
+		Value                 string
+		Secret                bool
+		Path                  bool
+		TopLevelKey           string
+		TopLevelExpectedValue string
+		ExpectFailure         bool
+	}
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	// Initialize an empty stack.
+	path := filepath.Join(e.RootPath, "Pulumi.yaml")
+	err := (&workspace.Project{
+		Name:    "testing-config",
+		Runtime: workspace.NewProjectRuntimeInfo("nodejs", nil),
+	}).Save(path)
+	require.NoError(t, err)
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", "testing")
+
+	tests := []testArgs{
+		{ // Test case 1: Neither --path nor --secret
+			Key:                   "plainValue",
+			Value:                 "a simple string value",
+			TopLevelKey:           "plainValue",
+			TopLevelExpectedValue: "a simple string value",
+		},
+		{ // Test case 2: --path only
+			Key:                   "ns:nested.inner",
+			Value:                 "nested value",
+			Path:                  true,
+			TopLevelKey:           "ns:nested",
+			TopLevelExpectedValue: `{"inner":"nested value"}`,
+		},
+		{ // Test case 3: --secret only
+			Key:                   "secretValue",
+			Value:                 "this is a secret",
+			Secret:                true,
+			TopLevelKey:           "secretValue",
+			TopLevelExpectedValue: "this is a secret",
+		},
+		{ // Test case 4: Both --path and --secret
+			Key:                   "ns:tokens[0]",
+			Value:                 "secret token",
+			Path:                  true,
+			Secret:                true,
+			TopLevelKey:           "ns:tokens",
+			TopLevelExpectedValue: `["secret token"]`,
+		},
+		{ // Test case 5: Invalid value (malformed path)
+			Key:           "root[",
+			Value:         "value",
+			Path:          true,
+			ExpectFailure: true,
+		},
+	}
+
+	for _, test := range tests {
+		args := []string{"config", "set"}
+		if test.Secret {
+			args = append(args, "--secret")
+		}
+		if test.Path {
+			args = append(args, "--path")
+		}
+		args = append(args, test.Key, test.Value)
+
+		if test.ExpectFailure {
+			stdout, stderr := e.RunCommandExpectError("pulumi", args...)
+			assert.Empty(t, stdout)
+			assert.NotEqual(t, "", stderr)
+			return
+		}
+
+		stdout, stderr := e.RunCommand("pulumi", args...)
+		assert.Empty(t, stdout, "stdout")
+		assert.Empty(t, stderr, "stderr")
+
+		// Validate that the config was correct
+		stdout, stderr = e.RunCommand("pulumi", "config", "get", test.TopLevelKey)
+		assert.Equal(t, test.TopLevelExpectedValue+"\n", stdout)
+		assert.Empty(t, stderr)
+	}
+}
+
+func testDestroyStackRef(e *ptesting.Environment, organization string) {
+	e.ImportDirectory("empty/nodejs")
+
+	stackName, err := resource.NewUniqueHex("rm-test-", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	if organization != "" {
+		qualifiedStackName := fmt.Sprintf("%s/%s", organization, stackName)
+		e.RunCommand("pulumi", "stack", "init", qualifiedStackName)
+	} else {
+		e.RunCommand("pulumi", "stack", "init", stackName)
+	}
+
+	e.InstallDependencies()
+
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes")
+	e.CWD = os.TempDir()
+	stackRef := stackName
+	if organization != "" {
+		stackRef = organization + "/emptyjs/" + stackName
+	}
+
+	e.RunCommand("pulumi", "destroy", "--skip-preview", "--yes", "-s", stackRef)
+	e.RunCommand("pulumi", "stack", "rm", "--yes", "-s", stackRef)
+}
+
+func TestDestroyStackRef_LocalProject(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	testDestroyStackRef(e, "organization")
+}
+
+func TestDestroyStackRef_LocalNonProject_NewEnv(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.Env = []string{
+		"PULUMI_DIY_BACKEND_LEGACY_LAYOUT=true",
+		"PULUMI_DIY_BACKEND_IGNORE_DEPRECATION_ERROR=true",
+	}
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	testDestroyStackRef(e, "")
+}
+
+func TestDestroyStackRef_LocalNonProject_OldEnv(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.Env = []string{
+		"PULUMI_SELF_MANAGED_STATE_LEGACY_LAYOUT=true",
+		"PULUMI_DIY_BACKEND_IGNORE_DEPRECATION_ERROR=true",
+	}
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	testDestroyStackRef(e, "")
+}
+
+func TestDestroyStackRef_Cloud(t *testing.T) {
+	t.Parallel()
+
+	if os.Getenv("PULUMI_ACCESS_TOKEN") == "" {
+		t.Skipf("Skipping: PULUMI_ACCESS_TOKEN is not set")
+	}
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	output, _ := e.RunCommand("pulumi", "whoami")
+	organization := strings.TrimSpace(output)
+	testDestroyStackRef(e, organization)
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestJSONOutput(t *testing.T) {
+	stdout := &bytes.Buffer{}
+
+	// Test without env var for streaming preview (should print previewSummary).
+	integration.ProgramTest(t, &integration.ProgramTestOptions{
+		Dir:          filepath.Join("stack_outputs", "nodejs"),
+		Dependencies: []string{"@pulumi/pulumi"},
+		Stdout:       stdout,
+		Verbose:      true,
+		JSONOutput:   true,
+		ExtraRuntimeValidation: func(t *testing.T, stack integration.RuntimeValidationStackInfo) {
+			output := stdout.String()
+
+			// Check that the previewSummary is present.
+			assert.Regexp(t, previewSummaryRegex, output)
+
+			// Check that each event present in the event stream is also in stdout.
+			for _, evt := range stack.Events {
+				assertOutputContainsEvent(t, evt, output)
+			}
+		},
+	})
+}
+
+func TestProviderDownloadURL(t *testing.T) {
+	t.Parallel()
+
+	validate := func(t *testing.T, stdout []byte) {
+		deployment := &apitype.UntypedDeployment{}
+		err := json.Unmarshal(stdout, deployment)
+		require.NoError(t, err)
+		data := &apitype.DeploymentV3{}
+		err = json.Unmarshal(deployment.Deployment, data)
+		require.NoError(t, err)
+		urlKey := "pluginDownloadURL"
+		getPluginDownloadURL := func(inputs map[string]any) string {
+			internal, ok := inputs["__internal"].(map[string]any)
+			if ok {
+				pluginDownloadURL, _ := internal[urlKey].(string)
+				return pluginDownloadURL
+			}
+			return ""
+		}
+		for _, resource := range data.Resources {
+			switch {
+			case providers.IsDefaultProvider(resource.URN):
+				assert.Equalf(t, "get.example.test", getPluginDownloadURL(resource.Inputs), "Inputs")
+				assert.Equalf(t, "", getPluginDownloadURL(resource.Outputs), "Outputs")
+				assert.Equalf(t, nil, resource.Inputs[urlKey], "Outputs")
+				assert.Equalf(t, nil, resource.Outputs[urlKey], "Outputs")
+			case providers.IsProviderType(resource.Type):
+				assert.Equalf(t, "get.pulumi.test/providers", getPluginDownloadURL(resource.Inputs), "Inputs")
+				assert.Equalf(t, "", getPluginDownloadURL(resource.Outputs), "Outputs")
+				assert.Equalf(t, nil, resource.Inputs[urlKey], "Outputs")
+				assert.Equalf(t, nil, resource.Outputs[urlKey], "Outputs")
+			default:
+				_, hasURL := resource.Inputs[urlKey]
+				assert.False(t, hasURL)
+				_, hasURL = resource.Outputs[urlKey]
+				assert.False(t, hasURL)
+			}
+		}
+		assert.Greater(t, len(data.Resources), 1, "We should construct more then just the stack")
+	}
+
+	languages := []struct {
+		name       string
+		dependency string
+	}{
+		{"python", filepath.Join("..", "..", "sdk", "python")},
+		{"nodejs", "@pulumi/pulumi"},
+		{"go", "github.com/pulumi/pulumi/sdk/v3"},
+	}
+
+	//nolint:paralleltest // uses parallel programtest
+	for _, lang := range languages {
+		t.Run(lang.name, func(t *testing.T) {
+			dir := filepath.Join("gather_plugin", lang.name)
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:                    dir,
+				ExportStateValidator:   validate,
+				SkipPreview:            true,
+				SkipEmptyPreviewUpdate: true,
+				Dependencies:           []string{lang.dependency},
+			})
+		})
+	}
+}
+
+func TestExcludeProtected(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.ImportDirectory("exclude_protected")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	e.RunCommand("pulumi", "stack", "init", "dev")
+
+	e.InstallDependencies()
+
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes")
+
+	// We run the command but _also_ exclude a resource.
+	urn := "urn:pulumi:dev::exclude-protected::my:module:Resource$my:module:Resource::my-bucket-child"
+	stdout, _ := e.RunCommand("pulumi", "destroy", "--skip-preview", "--yes", "--exclude-protected", "--exclude", urn)
+	assert.Contains(t, stdout, "All unprotected resources were destroyed. There are still 7 protected resources")
+	stdout, _ = e.RunCommand("pulumi", "stack", "--show-urns")
+	assert.Contains(t, stdout, urn+"\n")
+
+	// We run the command again, but without the exclude.
+	stdout, _ = e.RunCommand("pulumi", "destroy", "--skip-preview", "--yes", "--exclude-protected")
+	assert.Contains(t, stdout, "All unprotected resources were destroyed. There are still 7 protected resources")
+	stdout, _ = e.RunCommand("pulumi", "stack", "--show-urns")
+	assert.NotContains(t, stdout, urn+"\n")
+
+	// We run the command again, but this time there are not unprotected resources to destroy.
+	stdout, _ = e.RunCommand("pulumi", "destroy", "--skip-preview", "--yes", "--exclude-protected")
+	assert.Contains(t, stdout, "There were no unprotected resources to destroy. There are still 7")
+}
+
+func TestUnprotect(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.ImportDirectory("protect_resources/step1")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	e.RunCommand("pulumi", "stack", "init", "dev")
+
+	e.RunCommand("pulumi", "install")
+
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes")
+
+	_, _, err := e.RunCommandReturnExpectedError("pulumi", "destroy", "--skip-preview", "--yes")
+	assert.Error(t, err, "expect error from pulumi destroy")
+	assert.ErrorContains(t, err, "exit status 1")
+
+	e.RunCommand("pulumi", "state", "unprotect", "--all", "--yes")
+	e.RunCommand("pulumi", "destroy", "--skip-preview", "--yes")
+}
+
+func TestUnprotectProtect(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.ImportDirectory("protect_resources/step1")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	e.RunCommand("pulumi", "stack", "init", "dev")
+
+	e.RunCommand("pulumi", "install")
+
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes")
+
+	_, _, err := e.RunCommandReturnExpectedError("pulumi", "destroy", "--skip-preview", "--yes")
+	assert.Error(t, err, "expect error from pulumi destroy")
+	assert.ErrorContains(t, err, "exit status 1")
+
+	e.RunCommand("pulumi", "state", "unprotect", "--all", "--yes")
+	e.RunCommand("pulumi", "state", "protect", "--all", "--yes")
+
+	_, _, err = e.RunCommandReturnExpectedError("pulumi", "destroy", "--skip-preview", "--yes")
+	assert.Error(t, err, "expect error from pulumi destroy")
+	assert.ErrorContains(t, err, "exit status 1")
+}
+
+func TestInvalidPluginError(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	pulumiProject := `
+name: invalid-plugin
+runtime: yaml
+description: A Pulumi program referencing an invalid plugin.
+plugins:
+  providers:
+    - name: fakeplugin
+      bin: ./does/not/exist/bin # key should be 'path'
+`
+
+	integration.CreatePulumiRepo(e, pulumiProject)
+	e.SetBackend(e.LocalURL())
+	{
+		_, stderr := e.RunCommandExpectError("pulumi", "stack", "init", "invalid-resources")
+		assert.NotContains(t, stderr, "panic: ")
+		assert.Contains(t, stderr, "error: ")
+	}
+	{
+		_, stderr := e.RunCommandExpectError("pulumi", "pre")
+		assert.NotContains(t, stderr, "panic: ")
+		assert.Contains(t, stderr, "error: ")
+	}
+}
+
+// Regression test for https://github.com/pulumi/pulumi/issues/12632.
+func TestPassphraseSetAllGet(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	e.Passphrase = "test-passphrase"
+	defer e.DeleteIfNotFailed()
+
+	pulumiProject := `
+name: passphrase-test
+runtime: yaml
+description: A Pulumi program testing passphrase config.
+`
+
+	integration.CreatePulumiRepo(e, pulumiProject)
+	e.SetBackend(e.LocalURL())
+	// Init a new stack, then set a secret config value, then try to get it.
+	e.RunCommand("pulumi", "stack", "init", "passphrase-test")
+	// Clear the config file so that "config set-all" has to re-initialize the passphrase config.
+	err := os.Remove(filepath.Join(e.RootPath, "Pulumi.passphrase-test.yaml"))
+	require.NoError(t, err)
+	// Set a secret config value, then try to get it.
+	e.RunCommand("pulumi", "config", "set-all", "--secret", "foo=bar")
+	stdout, _ := e.RunCommand("pulumi", "config", "get", "foo")
+	assert.Contains(t, stdout, "bar")
+}
+
+// Similar to TestPassphraseSetAllGet but covering for "set" instead of "set-all".
+func TestPassphraseSetGet(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	e.Passphrase = "test-passphrase"
+	defer e.DeleteIfNotFailed()
+
+	pulumiProject := `
+name: passphrase-test
+runtime: yaml
+description: A Pulumi program testing passphrase config.
+`
+
+	integration.CreatePulumiRepo(e, pulumiProject)
+	e.SetBackend(e.LocalURL())
+	// Init a new stack, then set a secret config value, then try to get it.
+	e.RunCommand("pulumi", "stack", "init", "passphrase-test")
+	// Clear the config file so that "config set" has to re-initialize the passphrase config.
+	err := os.Remove(filepath.Join(e.RootPath, "Pulumi.passphrase-test.yaml"))
+	require.NoError(t, err)
+	// Set a secret config value, then try to get it.
+	e.RunCommand("pulumi", "config", "set", "--secret", "foo", "bar")
+	stdout, _ := e.RunCommand("pulumi", "config", "get", "foo")
+	assert.Contains(t, stdout, "bar")
+}
+
+// Tests that "config rm" and "config rm-all" work as expected.
+func TestConfigRmRmAll(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	e.Passphrase = "test-passphrase"
+	defer e.DeleteIfNotFailed()
+
+	pulumiProject := `
+name: config-rm-test
+runtime: yaml
+description: A Pulumi program testing config rm and config rm-all.
+`
+
+	integration.CreatePulumiRepo(e, pulumiProject)
+	e.SetBackend(e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", "config-rm-test")
+	// Clear the config file so that "config set" has to re-initialize the passphrase config.
+	err := os.Remove(filepath.Join(e.RootPath, "Pulumi.config-rm-test.yaml"))
+	require.NoError(t, err)
+
+	configCmd := func(cmd string) func(args ...string) []string {
+		return func(args ...string) []string {
+			return append([]string{"config", cmd}, args...)
+		}
+	}
+
+	configSet := configCmd("set")
+	configSetAll := configCmd("set-all")
+	configGet := configCmd("get")
+	configRm := configCmd("rm")
+	configRmAll := configCmd("rm-all")
+
+	var stdout, stderr string
+
+	// Set a single plaintext value, then try to remove it.
+	e.RunCommand("pulumi", configSet("foo", "bar")...)
+
+	e.RunCommand("pulumi", configRm("foo")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+
+	// Set a single secret value, then try to remove it.
+	e.RunCommand("pulumi", configSet("--secret", "foo", "bar")...)
+
+	e.RunCommand("pulumi", configRm("foo")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+
+	// Set multiple values, then remove one plaintext value.
+	e.RunCommand("pulumi", configSetAll("--plaintext", "foo=bar", "--secret", "baz=quux")...)
+
+	e.RunCommand("pulumi", configRm("foo")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+	stdout, _ = e.RunCommand("pulumi", configGet("baz")...)
+	assert.Contains(t, stdout, "quux")
+
+	// Set multiple values, then remove one secret value.
+	e.RunCommand("pulumi", configSetAll("--plaintext", "foo=bar", "--secret", "baz=quux")...)
+
+	e.RunCommand("pulumi", configRm("baz")...)
+	stdout, _ = e.RunCommand("pulumi", configGet("foo")...)
+	assert.Contains(t, stdout, "bar")
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("baz")...)
+	assert.Contains(t, stderr, "'baz' not found")
+
+	// Set multiple values, then remove them all.
+	e.RunCommand("pulumi", configSetAll("--plaintext", "foo=bar", "--secret", "baz=quux")...)
+
+	e.RunCommand("pulumi", configRmAll("foo", "baz")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("baz")...)
+	assert.Contains(t, stderr, "'baz' not found")
+}
+
+// Tests that "config rm" and "config rm-all" work as expected with an explicit --config-file.
+func TestConfigRmRmAllExplicitConfig(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	e.Passphrase = "test-passphrase"
+	defer e.DeleteIfNotFailed()
+
+	pulumiProject := `
+name: config-rm-test
+runtime: yaml
+description: A Pulumi program testing config rm and config rm-all.
+`
+
+	integration.CreatePulumiRepo(e, pulumiProject)
+	e.SetBackend(e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", "config-rm-test")
+	configFile := t.TempDir() + "/Pulumi.config-rm-test.yaml"
+
+	configCmd := func(cmd string) func(args ...string) []string {
+		return func(args ...string) []string {
+			return append([]string{"config", "--config-file", configFile, cmd}, args...)
+		}
+	}
+
+	configSet := configCmd("set")
+	configSetAll := configCmd("set-all")
+	configGet := configCmd("get")
+	configRm := configCmd("rm")
+	configRmAll := configCmd("rm-all")
+
+	var stdout, stderr string
+
+	// Set a single plaintext value, then try to remove it.
+	e.RunCommand("pulumi", configSet("foo", "bar")...)
+
+	e.RunCommand("pulumi", configRm("foo")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+
+	// Set a single secret value, then try to remove it.
+	e.RunCommand("pulumi", configSet("--secret", "foo", "bar")...)
+
+	e.RunCommand("pulumi", configRm("foo")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+
+	// Set multiple values, then remove one plaintext value.
+	e.RunCommand("pulumi", configSetAll("--plaintext", "foo=bar", "--secret", "baz=quux")...)
+
+	e.RunCommand("pulumi", configRm("foo")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+	stdout, _ = e.RunCommand("pulumi", configGet("baz")...)
+	assert.Contains(t, stdout, "quux")
+
+	// Set multiple values, then remove one secret value.
+	e.RunCommand("pulumi", configSetAll("--plaintext", "foo=bar", "--secret", "baz=quux")...)
+
+	e.RunCommand("pulumi", configRm("baz")...)
+	stdout, _ = e.RunCommand("pulumi", configGet("foo")...)
+	assert.Contains(t, stdout, "bar")
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("baz")...)
+	assert.Contains(t, stderr, "'baz' not found")
+
+	// Set multiple values, then remove them all.
+	e.RunCommand("pulumi", configSetAll("--plaintext", "foo=bar", "--secret", "baz=quux")...)
+
+	e.RunCommand("pulumi", configRmAll("foo", "baz")...)
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("foo")...)
+	assert.Contains(t, stderr, "'foo' not found")
+	_, stderr = e.RunCommandExpectError("pulumi", configGet("baz")...)
+	assert.Contains(t, stderr, "'baz' not found")
+}
+
+func TestConfigSetAllJSON(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	e.Passphrase = "test-passphrase"
+	defer e.DeleteIfNotFailed()
+
+	pulumiProject := `
+name: config-set-all-json-test
+runtime: yaml
+description: A Pulumi program testing config set-all --json.
+`
+
+	integration.CreatePulumiRepo(e, pulumiProject)
+	e.SetBackend(e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", "config-set-all-json-test")
+
+	configCmd := func(cmd string) func(args ...string) []string {
+		return func(args ...string) []string {
+			if cmd != "" {
+				return append([]string{"config", cmd}, args...)
+			}
+
+			return append([]string{"config"}, args...)
+		}
+	}
+
+	configShow := configCmd("")
+	configSetAll := configCmd("set-all")
+
+	// Set configuration all at once using the --json flag.
+	jsonInput := `{
+  "pulumi-test:key1": {
+    "value": "value1",
+    "secret": false
+  },
+  "pulumi-test:myList": {
+    "value": "[\"foo\"]",
+    "objectValue": [
+      "foo"
+    ],
+    "secret": false
+  },
+  "pulumi-test:myList[0]": {
+    "value": "foo",
+    "secret": false
+  },
+  "pulumi-test:my_token": {
+    "value": "my_secret_token",
+    "secret": true
+  },
+  "pulumi-test:outer": {
+    "value": "{\"inner\":\"value2\"}",
+    "objectValue": {
+      "inner": "value2"
+    },
+    "secret": false
+  },
+  "pulumi-test:outer.inner": {
+    "value": "value2",
+    "secret": false
+  }
+}
+`
+
+	e.RunCommand("pulumi", configSetAll("--json", jsonInput)...)
+
+	// Retrieve configuration, including secrets, in JSON format and unmarshal it.
+	jsonOutputWithSecrets, _ := e.RunCommand("pulumi", configShow("--json", "--show-secrets")...)
+	var config map[string]any
+	err := json.Unmarshal([]byte(jsonOutputWithSecrets), &config)
+	assert.Nil(t, err)
+	assert.Equal(t, jsonInput, jsonOutputWithSecrets)
+
+	// When secrets are included, the retrieved configuration should match that we sent in exactly.
+	assert.Equal(t, jsonInput, jsonOutputWithSecrets)
+
+	// Retrieve configuration, not including secrets, in JSON format and unmarshal it.
+	jsonOutputWithoutSecrets, _ := e.RunCommand("pulumi", configShow("--json")...)
+	var configWithoutSecrets map[string]any
+	err = json.Unmarshal([]byte(jsonOutputWithoutSecrets), &configWithoutSecrets)
+	assert.Nil(t, err)
+
+	// Assert that key1, a scalar, has the correct value.
+	key1, ok := config["pulumi-test:key1"].(map[string]any)
+	assert.Truef(t, ok, "key1 should be a JSON object")
+
+	assert.Equal(t, "value1", key1["value"])
+
+	// Assert that myList, a nested list, has the correct value.
+	myList, ok := config["pulumi-test:myList"].(map[string]any)
+	assert.Truef(t, ok, "myList should be a JSON object")
+
+	assert.Equal(t, "[\"foo\"]", myList["value"])
+	myListObjectValue := myList["objectValue"].([]any)
+	assert.Contains(t, myListObjectValue, "foo")
+	require.Len(t, myListObjectValue, 1)
+
+	// Assert that myList[0], a scalar (--json input does _not_ set --path), has the correct value.
+	myList0, ok := config["pulumi-test:myList[0]"].(map[string]any)
+	assert.Truef(t, ok, "myList[0] should be a JSON object")
+
+	assert.Equal(t, "foo", myList0["value"])
+	_, ok = myList0["objectValue"]
+	assert.Falsef(t, ok, "myList[0] should not have an objectValue key")
+
+	// Assert that my_token, a scalar secret, has the correct value in the configuration we loaded with secrets.
+	myToken, ok := config["pulumi-test:my_token"].(map[string]any)
+	assert.Truef(t, ok, "my_token should be a JSON object")
+
+	assert.Equal(t, "my_secret_token", myToken["value"])
+	secretValue := myToken["secret"]
+	secret, ok := secretValue.(bool)
+	assert.Truef(t, ok && secret, "my_token should be a secret in the configuration with secrets")
+
+	// Assert that my_token, a scalar secret, does not have a value in the configuration we loaded without secrets.
+	_, ok = configWithoutSecrets["pulumi-test:my_token"].(map[string]any)["value"]
+	assert.Falsef(t, ok, "my_token should not have a value in the configuration without secrets")
+
+	// Assert that outer, an object value, has the correct value.
+	outer, ok := config["pulumi-test:outer"].(map[string]any)
+	assert.Truef(t, ok, "outer should be a JSON object")
+
+	outerObjectValue := outer["objectValue"].(map[string]any)
+	assert.Equal(t, "value2", outerObjectValue["inner"])
+
+	// Assert that outer.inner, a scalar (--json input does _not_ set --path), has the correct value.
+	outerInner, ok := config["pulumi-test:outer.inner"].(map[string]any)
+	assert.Truef(t, ok, "outer.inner should be a JSON object")
+
+	assert.Equal(t, "value2", outerInner["value"])
+	_, ok = outerInner["objectValue"]
+	assert.Falsef(t, ok, "outer.inner should not have an objectValue key")
+}
+
+// Regression test for https://github.com/pulumi/pulumi/issues/12593.
+//
+// Verifies that a "provider" option passed to a remote component
+// is properly propagated to the component's children.
+//
+// Language-specific tests should call this function with the
+// appropriate parameters.
+func testConstructProviderPropagation(t *testing.T, lang string, deps []string) {
+	const (
+		testDir      = "construct_component_provider_propagation"
+		componentDir = "testcomponent-go"
+	)
+
+	integration.ProgramTest(t, &integration.ProgramTestOptions{
+		Dir:          filepath.Join(testDir, lang),
+		Dependencies: deps,
+		LocalProviders: []integration.LocalDependency{
+			{
+				Package: "testcomponent",
+				Path:    filepath.Join(testDir, componentDir),
+			},
+		},
+		Quick:      true,
+		NoParallel: true, // already called by tests
+		ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+			gotProviders := make(map[string]string) // resource name => provider name
+
+			for _, res := range stackInfo.Deployment.Resources {
+				if res.URN.Type() == "testprovider:index:Random" {
+					ref, err := providers.ParseReference(res.Provider)
+					require.NoError(t, err)
+					if err == nil {
+						gotProviders[res.URN.Name()] = ref.URN().Name()
+					}
+				}
+			}
+
+			assert.Equal(t, map[string]string{
+				"uses_default":       "default",
+				"uses_provider":      "explicit",
+				"uses_providers":     "explicit",
+				"uses_providers_map": "explicit",
+			}, gotProviders)
+		},
+	})
+}
+
+// Test to validate that various resource options are propagated for MLCs.
+func testConstructResourceOptions(t *testing.T, dir string, deps []string) {
+	const (
+		testDir      = "construct_component_resource_options"
+		componentDir = "testcomponent-go"
+	)
+
+	validate := func(t *testing.T, resources []apitype.ResourceV3) {
+		urns := make(map[string]resource.URN) // name => URN
+		for _, res := range resources {
+			urns[res.URN.Name()] = res.URN
+		}
+
+		for _, res := range resources {
+			switch name := res.URN.Name(); name {
+			case "Protect":
+				assert.True(t, res.Protect, "Protect(%s)", name)
+
+			case "DependsOn":
+				wantDeps := []resource.URN{urns["Dep1"], urns["Dep2"]}
+				assert.ElementsMatch(t, wantDeps, res.Dependencies,
+					"DependsOn(%s)", name)
+
+			case "AdditionalSecretOutputs":
+				assert.Equal(t,
+					[]resource.PropertyKey{"foo"}, res.AdditionalSecretOutputs,
+					"AdditionalSecretOutputs(%s)", name)
+
+			case "CustomTimeouts":
+				ct := res.CustomTimeouts
+				require.NotNil(t, ct, "CustomTimeouts(%s)", name)
+				assert.Equal(t, float64(60), ct.Create, "CustomTimeouts.Create(%s)", name)
+				assert.Equal(t, float64(120), ct.Update, "CustomTimeouts.Update(%s)", name)
+				assert.Equal(t, float64(180), ct.Delete, "CustomTimeouts.Delete(%s)", name)
+
+			case "DeletedWith":
+				assert.Equal(t, urns["getDeletedWithMe"], res.DeletedWith, "DeletedWith(%s)", name)
+
+			case "RetainOnDelete":
+				assert.True(t, res.RetainOnDelete, "RetainOnDelete(%s)", name)
+			}
+		}
+	}
+
+	integration.ProgramTest(t, &integration.ProgramTestOptions{
+		Dir:          filepath.Join(testDir, dir),
+		Dependencies: deps,
+		LocalProviders: []integration.LocalDependency{
+			{
+				Package: "testcomponent",
+				Path:    filepath.Join(testDir, componentDir),
+			},
+		},
+		Quick:                   true,
+		NoParallel:              true, // already called by tests
+		DestroyExcludeProtected: true, // test contains protected resources
+		SkipStackRemoval:        true, // protected resources prevent stack removal
+		ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+			validate(t, stackInfo.Deployment.Resources)
+		},
+	})
+}
+
+func testProjectRename(e *ptesting.Environment, organization string) {
+	e.ImportDirectory("empty/nodejs")
+
+	stackName, err := resource.NewUniqueHex("rm-test-", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	if organization != "" {
+		qualifiedStackName := fmt.Sprintf("%s/%s", organization, stackName)
+		e.RunCommand("pulumi", "stack", "init", qualifiedStackName)
+	} else {
+		e.RunCommand("pulumi", "stack", "init", stackName)
+	}
+
+	e.InstallDependencies()
+
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes")
+	newProjectName := "new_emptyjs"
+	stackRef := organization + "/" + newProjectName + "/" + stackName
+
+	e.RunCommand("pulumi", "stack", "rename", stackRef)
+
+	// Rename the project name in the yaml file
+	projFilename := filepath.Join(e.CWD, "Pulumi.yaml")
+	proj, err := workspace.LoadProject(projFilename)
+	require.NoError(e, err)
+	proj.Name = tokens.PackageName(newProjectName)
+	err = proj.Save(projFilename)
+	require.NoError(e, err)
+
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes", "--expect-no-changes", "-s", stackRef)
+	e.RunCommand("pulumi", "stack", "rm", "--force", "--yes", "-s", stackRef)
+}
+
+func TestProjectRename_LocalProject(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	testProjectRename(e, "organization")
+}
+
+//nolint:paralleltest // TODO: https://github.com/pulumi/pulumi-service/issues/31668
+func TestProjectRename_Cloud(t *testing.T) {
+	t.Skip("https://github.com/pulumi/pulumi/issues/20410")
+	if os.Getenv("PULUMI_ACCESS_TOKEN") == "" {
+		t.Skipf("Skipping: PULUMI_ACCESS_TOKEN is not set")
+	}
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	output, _ := e.RunCommand("pulumi", "whoami")
+	organization := strings.TrimSpace(output)
+	testProjectRename(e, organization)
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestParentRename_issue13179(t *testing.T) {
+	// This test is a reproduction of the issue reported in
+	// https://github.com/pulumi/pulumi/issues/13179.
+	//
+	// It creates a stack with a resource that has a parent
+	// and then renames the parent resource with 'pulumi state rename'.
+
+	var parentURN resource.URN
+	pt := integration.ProgramTestManualLifeCycle(t, &integration.ProgramTestOptions{
+		Dir: "state_rename_parent",
+		Dependencies: []string{
+			"github.com/pulumi/pulumi/sdk/v3",
+		},
+		LocalProviders: []integration.LocalDependency{
+			{Package: "testprovider", Path: testutil.TestProviderDir(t)},
+		},
+		// Only run up:
+		SkipRefresh: true,
+		Quick:       true,
+		ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+			for _, res := range stackInfo.Deployment.Resources {
+				if res.URN.Name() == "parent" {
+					parentURN = res.URN
+				}
+			}
+		},
+	})
+
+	require.NoError(t, pt.TestLifeCyclePrepare(), "prepare")
+	t.Cleanup(pt.TestCleanUp)
+
+	require.NoError(t, pt.TestLifeCycleInitialize(), "initialize")
+
+	require.NoError(t, pt.TestPreviewUpdateAndEdits(), "update")
+
+	// PreviewUpdateAndEdits calls ExtraRuntimeValidation,
+	// so we should have captured the parent URN.
+	require.NotEmpty(t, parentURN, "no parent URN captured")
+
+	// Rename the parent resource.
+	require.NoError(t,
+		pt.RunPulumiCommand("state", "rename", "-y", string(parentURN), "newParent"),
+		"rename failed")
+}
+
+func testStackRmConfig(e *ptesting.Environment, organization string) {
+	// We need to create two projects for this test
+	goDir := filepath.Join(e.RootPath, "emptygo")
+	err := os.Mkdir(goDir, 0o700)
+	require.NoError(e, err)
+
+	jsDir := filepath.Join(e.RootPath, "emptyjs")
+	err = os.Mkdir(jsDir, 0o700)
+	require.NoError(e, err)
+
+	stackName, err := resource.NewUniqueHex("rm-test-", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	qualifiedStackName := fmt.Sprintf("%s/%s", organization, stackName)
+	// Create a stack in the go project
+	e.CWD = goDir
+	e.ImportDirectory("empty/go")
+	e.RunCommand("pulumi", "stack", "init", qualifiedStackName)
+	// Create a config value to ensure there's a Pulumi.<name>.yaml file.
+	e.RunCommand("pulumi", "config", "set", "key", "value")
+
+	// Now create the js project
+	e.CWD = jsDir
+	e.ImportDirectory("empty/nodejs")
+	e.RunCommand("pulumi", "stack", "init", qualifiedStackName)
+	// Create a config value to ensure there's a Pulumi.<name>.yaml file.
+	e.RunCommand("pulumi", "config", "set", "key", "value")
+
+	// Now try and remove the go stack while still in the js directory
+	stackRef := organization + "/emptygo/" + stackName
+	e.RunCommand("pulumi", "stack", "rm", "--yes", "-s", stackRef)
+
+	// And check that Pulumi.<name>.yaml file is still there for the js project
+	_, err = os.Stat(filepath.Join(jsDir, "Pulumi."+stackName+".yaml"))
+	require.NoError(e, err)
+}
+
+func TestStackRmConfig_LocalProject(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	testStackRmConfig(e, "organization")
+}
+
+func TestStackRmConfig_Cloud(t *testing.T) {
+	t.Parallel()
+
+	if os.Getenv("PULUMI_ACCESS_TOKEN") == "" {
+		t.Skipf("Skipping: PULUMI_ACCESS_TOKEN is not set")
+	}
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	output, _ := e.RunCommand("pulumi", "whoami")
+	organization := strings.TrimSpace(output)
+	testStackRmConfig(e, organization)
+}
+
+func TestAdvisoryPolicyPack(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("single_resource")
+	e.ImportDirectory("policy")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	stackName, err := resource.NewUniqueHex("advisory-policy-pack", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	e.RunCommand("pulumi", "stack", "init", stackName)
+
+	_, _, err = e.GetCommandResultsIn(filepath.Join(e.CWD, "advisory_policy_pack"), "npm", "install")
+	require.NoError(t, err)
+
+	e.InstallDependencies()
+
+	stdout, _, err := e.GetCommandResults(
+		"pulumi", "up", "--skip-preview", "--yes", "--policy-pack", "advisory_policy_pack",
+	)
+	require.NoError(t, err)
+	assert.Contains(t, stdout, "Failing advisory policy pack for testing\n          foobar")
+}
+
+func TestMandatoryPolicyPack(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("single_resource")
+	e.ImportDirectory("policy")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	stackName, err := resource.NewUniqueHex("mandatory-policy-pack", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	e.RunCommand("pulumi", "stack", "init", stackName)
+
+	_, _, err = e.GetCommandResultsIn(filepath.Join(e.CWD, "mandatory_policy_pack"), "npm", "install")
+	require.NoError(t, err)
+
+	e.InstallDependencies()
+
+	stdout, _, err := e.GetCommandResults(
+		"pulumi", "up", "--skip-preview", "--yes", "--policy-pack", "mandatory_policy_pack",
+	)
+	assert.Error(t, err)
+	assert.Contains(t, stdout, "error: update failed")
+	assert.Contains(t, stdout, "❌ typescript@v0.0.1 (local: mandatory_policy_pack)")
+}
+
+func TestBunMandatoryPolicyPack(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("single_resource")
+	e.ImportDirectory("policy")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	stackName, err := resource.NewUniqueHex("bun-mandatory-policy-pack", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	e.RunCommand("pulumi", "stack", "init", stackName)
+
+	_, _, err = e.GetCommandResultsIn(filepath.Join(e.CWD, "bun_mandatory_policy_pack"), "bun", "install")
+	require.NoError(t, err)
+
+	e.InstallDependencies()
+
+	stdout, _, err := e.GetCommandResults(
+		"pulumi", "up", "--skip-preview", "--yes", "--policy-pack", "bun_mandatory_policy_pack",
+	)
+	assert.Error(t, err)
+	assert.Contains(t, stdout, "error: update failed")
+	assert.Contains(t, stdout, "❌ bun@v0.0.1 (local: bun_mandatory_policy_pack)")
+}
+
+func TestMultiplePolicyPacks(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("single_resource")
+	e.ImportDirectory("policy")
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	stackName, err := resource.NewUniqueHex("multiple-policy-pack", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+
+	e.RunCommand("pulumi", "stack", "init", stackName)
+
+	_, _, err = e.GetCommandResultsIn(filepath.Join(e.CWD, "advisory_policy_pack"), "npm", "install")
+	require.NoError(t, err)
+	_, _, err = e.GetCommandResultsIn(filepath.Join(e.CWD, "mandatory_policy_pack"), "npm", "install")
+	require.NoError(t, err)
+
+	e.InstallDependencies()
+
+	stdout, _, err := e.GetCommandResults("pulumi", "up", "--skip-preview", "--yes",
+		"--policy-pack", "advisory_policy_pack",
+		"--policy-pack", "mandatory_policy_pack")
+	assert.Error(t, err)
+	assert.Contains(t, stdout, "Failing advisory policy pack for testing\n          foobar")
+	assert.Contains(t, stdout, "error: update failed")
+	assert.Contains(t, stdout, "❌ typescript@v0.0.1 (local: advisory_policy_pack; mandatory_policy_pack)")
+}
+
+// regression test for https://github.com/pulumi/pulumi/issues/11092
+// and https://github.com/pulumi/pulumi/issues/20367
+func TestPolicyPluginExtraArguments(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("single_resource")
+	e.ImportDirectory("policy")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	stackName, err := resource.NewUniqueHex("policy-plugin-extra-args", 8, -1)
+	contract.AssertNoErrorf(err, "resource.NewUniqueHex should not fail with no maximum length is set")
+	e.RunCommand("pulumi", "stack", "init", stackName)
+	e.InstallDependencies()
+	require.NoError(t, err)
+	// Create a venv for the policy package and install the current python SDK into it
+	tc, err := toolchain.ResolveToolchain(toolchain.PythonOptions{
+		Toolchain:  toolchain.Pip,
+		Root:       filepath.Join(e.CWD, "python_policy_pack"),
+		Virtualenv: "venv",
+	})
+	require.NoError(t, err)
+	require.NoError(t, tc.InstallDependencies(t.Context(),
+		filepath.Join(e.CWD, "python_policy_pack"), false /*useLanguageVersionTools*/, false, /*showOutput */
+		os.Stdout, os.Stderr))
+	sdkDir, err := filepath.Abs(filepath.Join("..", "..", "sdk", "python"))
+	require.NoError(t, err)
+	gotSdk, err := test.PathExists(sdkDir)
+	require.NoError(t, err)
+	if !gotSdk {
+		t.Log("This test requires Python SDK to be built; please `cd sdk/python && make ensure build install`")
+		t.FailNow()
+	}
+	cmd, err := tc.ModuleCommand(t.Context(), "pip", "install", "-e", sdkDir)
+	require.NoError(t, err)
+	require.NoError(t, cmd.Run())
+
+	// Run with extra arguments
+	_, _, err = e.GetCommandResults("pulumi", "--logflow", "preview", "--logtostderr",
+		"-v9", "--policy-pack", "python_policy_pack", "--tracing", "file:/trace.log")
+	require.NoError(t, err)
+}
+
+func TestPolicyPackNewGenerateOnly(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	require.False(t, e.PathExists("venv"))
+	stdout, _ := e.RunCommand("pulumi", "policy", "new", "aws-python", "--force", "--generate-only")
+	require.Contains(t, stdout, "To install dependencies for the Policy Pack, run `pulumi install`")
+	require.False(t, e.PathExists("venv"))
+}
+
+func TestPolicyPackNew(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	require.False(t, e.PathExists("venv"))
+	stdout, _ := e.RunCommand(
+		"pulumi", "policy", "new", "aws-python", "--force", "--runtime-options", "toolchain=uv")
+	require.NotContains(t, stdout, "To install dependencies for the Policy Pack, run `pulumi install`")
+	require.Contains(t, stdout, "Finished installing dependencies")
+	require.True(t, e.PathExists("venv"))
+}
+
+func TestPolicyPackPublish(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("PULUMI_ACCESS_TOKEN") == "" {
+		t.Skipf("Skipping: PULUMI_ACCESS_TOKEN is not set")
+	}
+	testOrg := os.Getenv("PULUMI_TEST_ORG")
+	if testOrg == "" {
+		t.Skipf("Skipping: PULUMI_TEST_ORG is not set")
+	}
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.RunCommand("pulumi", "policy", "new", "aws-typescript", "--force")
+	// Change the name of the policy in case `aws-typescript` is already published
+	// and so that we have a clear indication that this is coming from a test.
+	// We do our best to clean up the policy after the test completes;
+	name := fmt.Sprintf("test-policy-pack-publish-%d", time.Now().UnixNano())
+	policyIndexPath := filepath.Join(e.RootPath, "index.ts")
+	policyContent, err := os.ReadFile(policyIndexPath)
+	require.NoError(t, err)
+	newContent := strings.Replace(string(policyContent),
+		`new PolicyPack("aws-typescript"`,
+		fmt.Sprintf(`new PolicyPack("%s"`, name),
+		1)
+	err = os.WriteFile(policyIndexPath, []byte(newContent), 0o600)
+	require.NoError(t, err)
+
+	stdout, stderr := e.RunCommand("pulumi", "policy", "publish", testOrg)
+	t.Logf("stdout: %s\nstderr: %s", stdout, stderr)
+
+	stdout, stderr = e.RunCommand("pulumi", "policy", "rm", testOrg+"/"+name, "all", "--yes")
+	t.Logf("stdout: %s\nstderr: %s", stdout, stderr)
+}
+
+func TestPolicyPackInstallDependencies(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("policy/python_policy_pack")
+	require.False(t, e.PathExists("venv"))
+	stdout, _ := e.RunCommand("pulumi", "install")
+	require.Contains(t, stdout, "Finished installing dependencies")
+	require.True(t, e.PathExists("venv"))
+}
+
+// Regression test for https://github.com/pulumi/pulumi/issues/24949
+//
+// A virtual environment that uv creates does not contain pip, so the install must not run pip.
+func TestPolicyPackInstallDependenciesUvBuildSystem(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("policy/python_policy_pack_build_system")
+	require.False(t, e.PathExists(".venv"))
+	// RunCommand fails the test if `pulumi install` exits with a non-zero status.
+	e.RunCommand("pulumi", "install")
+	require.True(t, e.PathExists(".venv"))
+}
+
+func TestProjectInstallDependencies(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("single_resource")
+	require.False(t, e.PathExists("node_modules"))
+	stdout, _ := e.RunCommand("pulumi", "install")
+	require.Contains(t, stdout, "Finished installing dependencies")
+	require.True(t, e.PathExists("node_modules"))
+}
+
+func TestInstallDependenciesForPolicyPackWithParentProject(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	// create a directory structure with a pulumi project and a nested policy pack
+	require.NoError(t, fsutil.CopyFile(e.RootPath, "nodejs/esm-ts", nil))
+	policyPackPath := filepath.Join(e.RootPath, "policy")
+	require.NoError(t, os.Mkdir(policyPackPath, 0o700))
+	require.NoError(t, fsutil.CopyFile(policyPackPath, "policy/mandatory_policy_pack", nil))
+
+	// chdir to the policy pack directory and run pulumi install
+	e.CWD = policyPackPath
+	stdout, _ := e.RunCommand("pulumi", "install")
+
+	e.CWD = e.RootPath
+	require.Contains(t, stdout, "Finished installing dependencies")
+	require.False(t, e.PathExists("node_modules"), "node_modules should not exist in the root path")
+	require.True(t, e.PathExists(filepath.Join("policy", "node_modules")), "node_modules should exist in the policy pack")
+}
+
+func TestInstallDependenciesProjectWithParentPolicyPack(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	// create a directory structure with a policy pack and a nested project
+	require.NoError(t, fsutil.CopyFile(e.RootPath, "policy/mandatory_policy_pack", nil))
+	projectPath := filepath.Join(e.RootPath, "project")
+	require.NoError(t, os.Mkdir(projectPath, 0o700))
+	require.NoError(t, fsutil.CopyFile(projectPath, "nodejs/esm-ts", nil))
+
+	// chdir to the project directory and run pulumi install
+	e.CWD = projectPath
+	stdout, _ := e.RunCommand("pulumi", "install")
+
+	e.CWD = e.RootPath
+	require.Contains(t, stdout, "Finished installing dependencies")
+	require.False(t, e.PathExists("node_modules"), "node_modules should not exist in the root path")
+	require.True(t, e.PathExists(filepath.Join("project", "node_modules")),
+		"node_modules should exist in the project path")
+}
+
+// Regression test for https://github.com/pulumi/pulumi/issues/17862
+func TestPulumiNewLocalTemplatePath(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	// Clone the `python` folder from https://github.com/pulumi/templates into a temporary directory
+	templateDir := e.TempDir()
+	cwd := e.CWD
+	e.CWD = templateDir
+	e.RunCommand("git", "init")
+	e.RunCommand("git", "remote", "add", "origin", "https://github.com/pulumi/templates")
+	e.RunCommand("git", "config", "core.sparseCheckout", "true")
+	e.RunCommand("git", "sparse-checkout", "set", "python")
+	e.RunCommand("git", "pull", "origin", "master")
+	e.CWD = cwd
+
+	templatePath := filepath.Join(templateDir, "python")
+	stdout, stderr := e.RunCommand("pulumi", "new", templatePath, "--generate-only", "--yes", "--force")
+	require.Empty(t, stderr)
+	require.Contains(t, stdout, "Your new project is ready to go")
+}
+
+func TestPulumiInstallInstallsPackagesIntoTheCorrectDirectory(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+
+	e.ImportDirectory("packageadd-remote")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.Env = append(e.Env, "PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION=false")
+	e.RunCommand("pulumi", "stack", "select", "organization/packageadd-remote", "--create")
+
+	e.RunCommand("pulumi", "package", "add",
+		"github.com/pulumi/component-test-providers/test-provider@52a8a71555d964542b308da197755c64dbe63352")
+
+	// Remove the plugin from the local cache and try to install it using `pulumi install`
+	e.RunCommand("pulumi", "plugin", "rm", "--all", "--yes")
+	stdout, _ := e.RunCommand("pulumi", "plugin", "ls")
+	require.NotContains(t, stdout, "github.com_pulumi_component-test-providers")
+
+	e.RunCommand("pulumi", "install")
+	stdout, _ = e.RunCommand("pulumi", "plugin", "ls")
+	require.Contains(t, stdout, "github.com_pulumi_component-test-providers")
+	require.Contains(t, stdout, "0.0.0-x52a8a71555d964542b308da197755c64dbe63352")
+
+	e.RunCommand("pulumi", "up", "--non-interactive", "--skip-preview")
+}
+
+func TestPulumiInstallInstallsPackagesWithExperimentalRegistry(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+
+	e.ImportDirectory("packageadd-remote")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.Env = append(e.Env, "PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION=false")
+	e.Env = append(e.Env, "PULUMI_EXPERIMENTAL=true")
+	e.RunCommand("pulumi", "stack", "select", "organization/packageadd-remote", "--create")
+
+	// Manually modify Pulumi.yaml to include a GitHub URL in packages section
+	pulumiYamlContent := `name: package-add-remote-test
+description: A minimal TypeScript Pulumi program
+runtime:
+  name: nodejs
+packages:
+  test-provider: github.com/pulumi/component-test-providers/test-provider@52a8a71555d964542b308da197755c64dbe63352
+`
+	e.WriteTestFile("Pulumi.yaml", pulumiYamlContent)
+
+	// Remove the plugin from the local cache and try to install it using `pulumi install`
+	e.RunCommand("pulumi", "plugin", "rm", "--all", "--yes")
+	stdout, _ := e.RunCommand("pulumi", "plugin", "ls")
+	require.NotContains(t, stdout, "github.com_pulumi_component-test-providers")
+
+	e.RunCommand("pulumi", "install")
+	stdout, _ = e.RunCommand("pulumi", "plugin", "ls")
+	require.Contains(t, stdout, "github.com_pulumi_component-test-providers")
+	require.Contains(t, stdout, "0.0.0-x52a8a71555d964542b308da197755c64dbe63352")
+}
+
+func TestOverrideComponentNamespace(t *testing.T) {
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	t.Setenv("PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION", "false")
+	stdout, _ := e.RunCommand("pulumi", "package", "get-schema",
+		"github.com/pulumi/component-test-providers/test-provider@52a8a71555d964542b308da197755c64dbe63352")
+	var packageSpec schema.PackageSpec
+	err := json.Unmarshal([]byte(stdout), &packageSpec)
+	require.NoError(t, err)
+	// Without the override in the `package` command we'd expect the namespace to be empty here. Check that
+	// it is 'pulumi', which we get from `github.com/*pulumi*/....
+	require.Equal(t, "pulumi", packageSpec.Namespace)
+}
+
+func TestOverrideNamespaceLowercase(t *testing.T) {
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	t.Setenv("PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION", "false")
+	stdout, _ := e.RunCommand("pulumi", "package", "get-schema",
+		"github.com/Pulumi/component-test-providers/test-provider@52a8a71555d964542b308da197755c64dbe63352")
+	var packageSpec schema.PackageSpec
+	err := json.Unmarshal([]byte(stdout), &packageSpec)
+	require.NoError(t, err)
+	// Without the override in the `package` command we'd expect the namespace to be empty here. Check that
+	// it is 'pulumi', which we get from `github.com/*Pulumi*/....; note that namespaces only allow lowercasee
+	// characters, so we lowercase it automatically.
+	require.Equal(t, "pulumi", packageSpec.Namespace)
+}
+
+func TestTaggedComponent(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.ImportDirectory(filepath.Join("external_tagged_component"))
+
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	e.RunCommand("pulumi", "stack", "init", "organization/external_tagged_component/test")
+	e.Env = []string{"PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION=false"}
+	e.RunCommand("pulumi", "install")
+	stdout, _ := e.RunCommand("pulumi", "plugin", "ls")
+	// Make sure we have exactly the plugin we expect installed
+	assert.Equal(t, 1, strings.Count(stdout, "github.com_pulumi_pulumi-yaml.git"))
+
+	e.RunCommand("pulumi", "up", "--non-interactive", "--skip-preview", "--yes")
+
+	stdout, _ = e.RunCommand("pulumi", "plugin", "ls")
+	// Make sure we have no additional plugins after the up
+	assert.Equal(t, 1, strings.Count(stdout, "github.com_pulumi_pulumi-yaml.git"))
+
+	stdout, _ = e.RunCommand("pulumi", "stack", "output", "randomPet")
+	// We expect 4 words separated by dashes.
+	require.Len(t, strings.Split(stdout, "-"), 4)
+	require.Equal(t, "test-", stdout[:5])
+
+	stdout, _ = e.RunCommand("pulumi", "stack", "output", "randomString")
+	require.Len(t, strings.TrimSuffix(stdout, "\n"), 8, fmt.Sprintf("expected %s to have 8 characters", stdout))
+}
+
+func TestGetSchemaUsesCorrectVersion(t *testing.T) {
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	t.Setenv("PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION", "false")
+	stdout, _ := e.RunCommand("pulumi", "package", "get-schema", "terraform-provider@0.10.0", "hashicorp/random", "3.6.0")
+	var packageSpec schema.PackageSpec
+	err := json.Unmarshal([]byte(stdout), &packageSpec)
+	require.NoError(t, err)
+	require.Equal(t, "3.6.0", packageSpec.Version)
+	require.Equal(t, "0.10.0", packageSpec.Parameterization.BaseProvider.Version)
+
+	stdout, _ = e.RunCommand("pulumi", "package", "get-schema", "terraform-provider", "hashicorp/random", "3.6.0")
+	err = json.Unmarshal([]byte(stdout), &packageSpec)
+	require.NoError(t, err)
+	require.Equal(t, "3.6.0", packageSpec.Version)
+}
+
+// Regression test for https://github.com/pulumi/pulumi/issues/19905
+func TestComponentProviderErrorInResourceRegistration(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	// The component provider creates a command:local:Command resource, so the
+	// command plugin must be installable.
+	e.SetEnvVars("PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION=false")
+
+	programPath := filepath.Join(e.RootPath, "program")
+	providerPath := filepath.Join(e.RootPath, "provider")
+
+	e.ImportDirectory("component-error-resource")
+	ptesting.InstallDependencies(t, providerPath)
+	e.CWD = programPath
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", "dev")
+	e.RunCommand("pulumi", "plugin", "install", "resource", "command", "1.0.4")
+	e.RunCommand("pulumi", "package", "add", providerPath)
+
+	// The regression caused a hang where a remote component construct would
+	// never return. Only the update is under the timeout, so slow dependency
+	// installs above cannot trip it.
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
+	defer cancel()
+
+	cmd := e.SetupCommandIn(ctx, programPath, "pulumi", "up", "--skip-preview", "--yes", "--non-interactive")
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, ctx.Err(), "pulumi up did not finish in time:\n%s", out)
+	require.ErrorContains(t, err, "exit status 1", "%s", out)
+	require.Contains(t, string(out), "exiting with error")
+}
+
+// Test that we correctly detect an error in from a resource during an
+// automation API run and don't hang.
+//
+// Regression test for https://github.com/pulumi/pulumi/issues/20151
+func TestAutomationAPIErrorInResource(t *testing.T) {
+	t.Parallel()
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	e.ImportDirectory(filepath.Join("automation", "error"))
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+
+	// This is an Automation-API host program (package.json, no Pulumi.yaml), so it can't use
+	// e.InstallDependencies (which runs `pulumi install`). Install + link the SDK directly.
+	ptesting.InstallDependencies(t, e.CWD)
+
+	// The bug was causing a hang, ensure the test times out
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
+	defer cancel()
+
+	cmd := e.SetupCommandIn(ctx, e.CWD, "node", "index.js")
+	out, err := cmd.CombinedOutput()
+	require.ErrorContains(t, err, "exit status 1")
+	require.Contains(t, string(out), "error: Oops")
+}
+
+// TestRunningViaCLIWrapper tests that we can interrupt an operation when
+// running via a CLI wrapper tool like the 1Password CLI.
+//
+// Regression test for https://github.com/pulumi/pulumi/issues/20154
+func TestRunningViaCLIWrapper(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+
+	programPath := filepath.Join(e.RootPath, "program")
+	providerPath := filepath.Join(e.RootPath, "provider")
+
+	e.ImportDirectory("interrupt")
+	// Install the provider's dependencies
+	ptesting.InstallDependencies(t, providerPath)
+	e.CWD = programPath
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", "dev")
+	e.RunCommand("pulumi", "stack", "select", "-s", "dev")
+	e.InstallDependencies()
+	e.RunCommand("pulumi", "package", "add", providerPath)
+	e.CWD = e.RootPath
+
+	// Run pulumi via a wrapper that does not start Pulumi in its own process group.
+	// This simulates the behaviour of the 1password CLI.
+	cmd := e.SetupCommandIn(t.Context(), filepath.Join(e.RootPath, "wrapper"), "go", "run", ".",
+		"pulumi", "-C", programPath, "up", "--skip-preview", "-s", "dev")
+	t.Logf("Running command %s", cmd.String())
+
+	// This test requires being run via a "real" terminal
+	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{
+		Rows: 24,
+		Cols: 80,
+	})
+	require.NoError(t, err)
+	defer ptmx.Close()
+
+	timeout := 3 * time.Minute
+	wait := 100 * time.Millisecond
+
+	go func() {
+		// Wait for the program to be ready before sending the interrupt signal.
+		end := time.Now().Add(timeout)
+		for time.Now().Before(end) {
+			if _, err := os.Stat(filepath.Join(programPath, "ready.txt")); err == nil {
+				t.Logf("Found `ready.txt`")
+				break
+			}
+			time.Sleep(wait)
+		}
+
+		n, err := ptmx.Write([]byte{3}) // Ctrl+C
+		require.NoError(t, err)
+		require.Equal(t, 1, n)
+	}()
+
+	processFinished := make(chan error, 1)
+	out := make(chan string, 1)
+
+	go func() {
+		var output strings.Builder
+		buf := make([]byte, 1024)
+		for {
+			n, err := ptmx.Read(buf)
+			if n > 0 {
+				output.Write(buf[:n])
+			}
+			if err != nil {
+				break
+			}
+		}
+		out <- output.String()
+	}()
+
+	go func() {
+		processFinished <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-processFinished:
+		t.Logf("Process finished with error: %s, output: %s", err, <-out)
+		require.ErrorContains(t, err, "exit status 1")
+
+	case <-time.After(timeout):
+		// This is the bug - process hung trying to control terminal
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			<-processFinished
+		}
+
+		require.Failf(t, "up hung", "pulumi up hung after %s - likely trying to set raw mode without foreground control."+
+			" Output so far: %s", timeout.String(), <-out)
+	}
+}
+
+func TestPluginLs(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	e.Env = append(e.Env, "PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION=false")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "plugin", "install", "resource", "random", "4.16.7")
+
+	stdout, _ := e.RunCommand("pulumi", "plugin", "ls", "--json")
+	plugins := []map[string]any{}
+	err := json.Unmarshal([]byte(stdout), &plugins)
+
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	random := plugins[0]
+	require.Equal(t, "random", random["name"].(string))
+	require.Equal(t, "resource", random["kind"].(string))
+	require.Greater(t, random["size"].(float64), 0.0)
+}
+
+func TestConfigFlag(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("config_flag")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "install")
+
+	e.RunCommand("pulumi", "stack", "init", "config-flag-test")
+	stdout, _ := e.RunCommand(
+		"pulumi", "up", "--skip-preview", "--yes", "--config", "config-flag:example=an-example",
+	)
+	require.Contains(t, stdout, "an-example")
+
+	configPath := filepath.Join(e.CWD, "Pulumi.config-flag-test.yaml")
+	configContent, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	require.Contains(t, string(configContent), "config-flag:example: an-example")
+
+	e.RunCommand("rm", "Pulumi.config-flag-test.yaml")
+
+	e.RunCommandExpectError("pulumi", "refresh", "--run-program", "--yes")
+	stdout, _ = e.RunCommand("pulumi", "refresh", "--run-program", "--yes", "--config", "config-flag:example=an-example")
+	require.Contains(t, stdout, "an-example")
+
+	configContent, err = os.ReadFile(configPath)
+	require.NoError(t, err)
+	require.Contains(t, string(configContent), "config-flag:example: an-example")
+
+	e.RunCommand("rm", "Pulumi.config-flag-test.yaml")
+
+	e.RunCommandExpectError("pulumi", "destroy", "--run-program", "--yes")
+	stdout, _ = e.RunCommand("pulumi", "destroy", "--run-program", "--yes", "--config", "config-flag:example=an-example")
+	require.Contains(t, stdout, "an-example")
+
+	configContent, err = os.ReadFile(configPath)
+	require.NoError(t, err)
+	require.Contains(t, string(configContent), "config-flag:example: an-example")
+}
+
+// TestRefreshDestroySkipConfigValidationByDefault verifies that refresh and destroy no longer
+// validate stack config against the project config schema unless the program is being run.
+// This allows stacks with missing or invalid config to be refreshed and destroyed, e.g. in
+// ephemeral PR environments where config may diverge between branches.
+func TestRefreshDestroySkipConfigValidationByDefault(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("config_flag")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "install")
+
+	e.RunCommand("pulumi", "stack", "init", "config-flag-test")
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes", "--config", "config-flag:example=an-example")
+
+	// Remove the stack config so the required `config-flag:example` key is missing.
+	e.RunCommand("rm", "Pulumi.config-flag-test.yaml")
+
+	// Without --run-program, refresh and destroy must not validate config and should succeed.
+	e.RunCommand("pulumi", "refresh", "--yes")
+	e.RunCommand("pulumi", "destroy", "--yes")
+
+	// With --run-program, config validation runs again and the missing key is reported.
+	e.RunCommandExpectError("pulumi", "refresh", "--run-program", "--yes")
+}
+
+// TestSkipConfigValidation verifies the --skip-config-validation flag (and its
+// PULUMI_SKIP_CONFIG_VALIDATION env var equivalent) on preview, up, refresh, and destroy.
+// It uses a project whose config schema declares a required key that the program never reads,
+// so config validation fails when the key is unset, but the program itself runs successfully
+// once validation is skipped.
+func TestSkipConfigValidation(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("config_skip_validation")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "install")
+
+	e.RunCommand("pulumi", "stack", "init", "skip-validation-test")
+
+	// The required `config-skip-validation:example` key is unset, so the default behavior
+	// is to fail config validation for preview and up.
+	_, stderr := e.RunCommandExpectError("pulumi", "preview")
+	require.Contains(t, stderr, "validating stack config")
+	_, stderr = e.RunCommandExpectError("pulumi", "up", "--skip-preview", "--yes")
+	require.Contains(t, stderr, "validating stack config")
+
+	// --skip-config-validation lets both proceed; the program does not read the key.
+	e.RunCommand("pulumi", "preview", "--skip-config-validation")
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes", "--skip-config-validation")
+
+	// --skip-config-validation also overrides --run-program, where validation would otherwise
+	// run for refresh and destroy. The program runs but does not read the missing key.
+	e.RunCommand("pulumi", "refresh", "--run-program", "--skip-config-validation", "--yes")
+
+	// The flag is also exposed automatically as an env var (PULUMI_OPTION_<FLAG>).
+	e.Env = append(e.Env, "PULUMI_OPTION_SKIP_CONFIG_VALIDATION=true")
+	e.RunCommand("pulumi", "up", "--skip-preview", "--yes")
+	e.Env = e.Env[:len(e.Env)-1]
+
+	// Tear the stack down, skipping validation so the missing key does not block destroy.
+	e.RunCommand("pulumi", "destroy", "--run-program", "--yes", "--skip-config-validation")
+}
+
+func TestValidatePulumiVersionRange(t *testing.T) {
+	t.Parallel()
+	e := ptesting.NewEnvironment(t)
+	defer e.DeleteIfNotFailed()
+	e.ImportDirectory("required_pulumi_version")
+	e.RunCommand("pulumi", "login", "--cloud-url", e.LocalURL())
+	e.RunCommand("pulumi", "stack", "init", ptesting.RandomStackName())
+
+	_, stderr := e.RunCommandExpectError("pulumi", "preview")
+	require.Regexp(t, "Pulumi CLI version .* does not satisfy the version range \"<1.0.0\"", stderr)
+}

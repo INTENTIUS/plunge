@@ -1,0 +1,13 @@
+package-lock.json
+go.sum
+go.mod
+# Parameterized SDK tests commit the codegen-emitted go.mod so the golden comparison covers it.
+!go-parameterized-*/go/go.mod
+*/go/tests
+*/python/tests
+*/python/venv
+*/python/*.egg-info
+*/python/.pytest_cache
+*/python/requirements.txt
+*/dotnet/Tests
+*/nodejs/tests

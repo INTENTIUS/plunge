@@ -1,0 +1,10 @@
+{
+  "name": "nodejs-resource-type-name",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "4.9.5"
+  },
+  "peerDependencies": {
+    "@pulumi/pulumi": "latest"
+  }
+}

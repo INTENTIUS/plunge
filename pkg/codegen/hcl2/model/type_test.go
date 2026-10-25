@@ -1,0 +1,1513 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package model
+
+import (
+	"testing"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/zclconf/go-cty/cty"
+)
+
+func testTraverse(t *testing.T, receiver Traversable, traverser hcl.Traverser, expected Traversable, expectDiags bool) {
+	actual, diags := receiver.Traverse(traverser)
+	if a, ok := actual.(Type); ok {
+		assert.True(t, a.Equals(expected.(Type)))
+	} else {
+		assert.Equal(t, expected, actual)
+	}
+	if expectDiags {
+		assert.Greater(t, len(diags), 0)
+	} else {
+		assert.Empty(t, diags)
+	}
+}
+
+func TestDynamicType(t *testing.T) {
+	t.Parallel()
+
+	// Test that DynamicType is assignable to and from itself.
+	assert.True(t, DynamicType.AssignableFrom(DynamicType))
+
+	// Test that DynamicType is assignable from any type.
+	assert.True(t, DynamicType.AssignableFrom(BoolType))
+	assert.True(t, DynamicType.AssignableFrom(IntType))
+	assert.True(t, DynamicType.AssignableFrom(NumberType))
+	assert.True(t, DynamicType.AssignableFrom(StringType))
+
+	assert.True(t, DynamicType.AssignableFrom(NewOptionalType(BoolType)))
+	assert.True(t, DynamicType.AssignableFrom(NewOutputType(BoolType)))
+	assert.True(t, DynamicType.AssignableFrom(NewPromiseType(BoolType)))
+	assert.True(t, DynamicType.AssignableFrom(NewMapType(BoolType)))
+	assert.True(t, DynamicType.AssignableFrom(NewListType(BoolType)))
+	assert.True(t, DynamicType.AssignableFrom(NewUnionType(BoolType, IntType)))
+	assert.True(t, DynamicType.AssignableFrom(NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	})))
+
+	// Test that DynamicType is assignable to certain types and not assignable to others.
+	assert.True(t, NewOptionalType(DynamicType).AssignableFrom(DynamicType))
+	assert.True(t, NewOutputType(DynamicType).AssignableFrom(DynamicType))
+	assert.True(t, NewPromiseType(DynamicType).AssignableFrom(DynamicType))
+	assert.True(t, NewUnionType(BoolType, DynamicType).AssignableFrom(DynamicType))
+
+	assert.False(t, BoolType.AssignableFrom(DynamicType))
+	assert.False(t, IntType.AssignableFrom(DynamicType))
+	assert.False(t, NumberType.AssignableFrom(DynamicType))
+	assert.False(t, StringType.AssignableFrom(DynamicType))
+
+	assert.False(t, NewOptionalType(BoolType).AssignableFrom(DynamicType))
+	assert.False(t, NewOutputType(BoolType).AssignableFrom(DynamicType))
+	assert.False(t, NewPromiseType(BoolType).AssignableFrom(DynamicType))
+	assert.False(t, NewMapType(BoolType).AssignableFrom(DynamicType))
+	assert.False(t, NewListType(BoolType).AssignableFrom(DynamicType))
+	assert.False(t, NewUnionType(BoolType, IntType).AssignableFrom(DynamicType))
+	assert.False(t, NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	}).AssignableFrom(DynamicType))
+
+	// Test that DynamicType is convertible from any type.
+	assert.True(t, DynamicType.ConversionFrom(BoolType).Exists())
+	assert.True(t, DynamicType.ConversionFrom(IntType).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NumberType).Exists())
+	assert.True(t, DynamicType.ConversionFrom(StringType).Exists())
+
+	assert.True(t, DynamicType.ConversionFrom(NewOptionalType(BoolType)).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NewOutputType(BoolType)).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NewPromiseType(BoolType)).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NewMapType(BoolType)).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NewListType(BoolType)).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NewUnionType(BoolType, IntType)).Exists())
+	assert.True(t, DynamicType.ConversionFrom(NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	})).Exists())
+
+	// Test that DynamicType is convertible to any type.
+	assert.True(t, BoolType.ConversionFrom(DynamicType).Exists())
+	assert.True(t, IntType.ConversionFrom(DynamicType).Exists())
+	assert.True(t, NumberType.ConversionFrom(DynamicType).Exists())
+	assert.True(t, StringType.ConversionFrom(DynamicType).Exists())
+
+	assert.True(t, NewOptionalType(BoolType).ConversionFrom(DynamicType).Exists())
+	assert.True(t, NewOutputType(BoolType).ConversionFrom(DynamicType).Exists())
+	assert.True(t, NewPromiseType(BoolType).ConversionFrom(DynamicType).Exists())
+	assert.True(t, NewMapType(BoolType).ConversionFrom(DynamicType).Exists())
+	assert.True(t, NewListType(BoolType).ConversionFrom(DynamicType).Exists())
+	assert.True(t, NewUnionType(BoolType, IntType).ConversionFrom(DynamicType).Exists())
+	assert.True(t, NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	}).ConversionFrom(DynamicType).Exists())
+
+	// Test that traversals on DynamicType always succeed.
+	testTraverse(t, DynamicType, hcl.TraverseAttr{Name: "foo"}, DynamicType, false)
+	testTraverse(t, DynamicType, hcl.TraverseIndex{Key: cty.StringVal("foo")}, DynamicType, false)
+	testTraverse(t, DynamicType, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, DynamicType, false)
+	testTraverse(t, DynamicType, hcl.TraverseIndex{Key: encapsulateType(DynamicType)}, DynamicType, false)
+}
+
+func TestIDType(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, IDType.AssignableFrom(StringType))
+	assert.False(t, StringType.AssignableFrom(IDType))
+
+	assert.Equal(t, SafeConversion, IDType.ConversionFrom(StringType))
+	assert.Equal(t, SafeConversion, StringType.ConversionFrom(IDType))
+
+	assert.Equal(t, SafeConversion, IDType.ConversionFrom(BoolType))
+	assert.Equal(t, SafeConversion, IDType.ConversionFrom(IntType))
+	assert.Equal(t, SafeConversion, IDType.ConversionFrom(NumberType))
+
+	assert.Equal(t, UnsafeConversion, BoolType.ConversionFrom(IDType))
+	assert.Equal(t, UnsafeConversion, IntType.ConversionFrom(IDType))
+	assert.Equal(t, UnsafeConversion, NumberType.ConversionFrom(IDType))
+
+	safeType, unsafeType := UnifyTypes(IDType, StringType)
+	assert.True(t, safeType.Equals(StringType))
+	assert.True(t, unsafeType.Equals(StringType))
+}
+
+func TestOptionalType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewOptionalType(DynamicType)
+
+	// Test that creating an optional type with the same element type does not create a new type.
+	typ2 := NewOptionalType(DynamicType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that creating an optional type with an element type that is also optional does not create a new type.
+	typ2 = NewOptionalType(typ)
+	assert.Equal(t, typ, typ2)
+
+	// Test that an optional type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that an optional type is assignable from none.
+	assert.True(t, typ.AssignableFrom(NoneType))
+
+	// Test that an optional type is assignable from its element type.
+	assert.True(t, NewOptionalType(StringType).AssignableFrom(StringType))
+
+	// Test that an optional(T) is assignable from an U, where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(BoolType))
+
+	// Test that an optional(T) is assignable from an optional(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewOptionalType(BoolType)))
+
+	// Test that traversing an optional(T) returns an optional(U), where U is the result of the inner traversal.
+	typ = NewOptionalType(NewMapType(StringType))
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, NewOptionalType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, NewOptionalType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, NewOptionalType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, NewOptionalType(StringType), false)
+}
+
+func TestOutputType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewOutputType(DynamicType)
+
+	// Test that creating an output type with the same element type does not create a new type.
+	typ2 := NewOutputType(typ.ElementType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that creating an output type with an element type that is also an output does not create a new type.
+	typ2 = NewOutputType(typ)
+	assert.Equal(t, typ, typ2)
+
+	// Test that an output type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that an output type is assignable from its element type.
+	assert.True(t, NewOutputType(StringType).AssignableFrom(StringType))
+
+	// Test that output(T) is assignable from U, where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(BoolType))
+
+	// Test that output(T) is assignable from output(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewOutputType(BoolType)))
+
+	// Test that output(T) is assignable from promise(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewPromiseType(BoolType)))
+
+	// Test that output(T) is _not_ assignable from U, where U is not assignable to T.
+	assert.False(t, NewOutputType(BoolType).AssignableFrom(IntType))
+
+	// Test that output(T) is _not_ assignable from output(U), where U is not assignable to T.
+	assert.False(t, NewOutputType(BoolType).AssignableFrom(NewOutputType(IntType)))
+	assert.False(t, NewOutputType(NumberType).AssignableFrom(NewOutputType(StringType)))
+
+	// Test that output(T) is _not_ assignable from promise(U), where U is not assignable to T.
+	assert.False(t, NewOutputType(BoolType).AssignableFrom(NewPromiseType(IntType)))
+	assert.False(t, NewOutputType(NumberType).AssignableFrom(NewPromiseType(StringType)))
+
+	// But output(T) is still convertible from output(U)/promise(U) if U is convertible to T.
+	assert.Equal(t, UnsafeConversion, NewOutputType(NumberType).ConversionFrom(NewOutputType(StringType)))
+	assert.Equal(t, UnsafeConversion, NewOutputType(NumberType).ConversionFrom(NewPromiseType(StringType)))
+
+	// Test that traversing an output(T) returns an output(U), where U is the result of the inner traversal.
+	typ = NewOutputType(NewMapType(StringType))
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, NewOutputType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, NewOutputType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, NewOutputType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, NewOutputType(StringType), false)
+
+	// Test that ResolveOutputs correctly handles nested outputs.
+	assert.Equal(t, NewOptionalType(BoolType), ResolveOutputs(NewOptionalType(NewOutputType(BoolType))))
+	assert.Equal(t, BoolType, ResolveOutputs(NewOutputType(BoolType)))
+	assert.Equal(t, BoolType, ResolveOutputs(NewPromiseType(BoolType)))
+	assert.Equal(t, NewMapType(BoolType), ResolveOutputs(NewMapType(NewOutputType(BoolType))))
+	assert.Equal(t, NewListType(BoolType), ResolveOutputs(NewListType(NewOutputType(BoolType))))
+	assert.Equal(t, NewUnionType(BoolType, IntType), ResolveOutputs(NewUnionType(NewOutputType(BoolType),
+		NewOutputType(IntType))))
+	assert.Equal(t, NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	}), ResolveOutputs(NewObjectType(map[string]Type{
+		"bool": NewOutputType(BoolType),
+		"int":  NewOutputType(IntType),
+	})))
+
+	// Test that NewOutputType correctly handles nested outputs.
+	assert.Equal(t, NewOutputType(NewOptionalType(BoolType)), NewOutputType(NewOptionalType(NewOutputType(BoolType))))
+	assert.Equal(t, NewOutputType(BoolType), NewOutputType(NewOutputType(BoolType)))
+	assert.Equal(t, NewOutputType(BoolType), NewOutputType(NewPromiseType(BoolType)))
+	assert.Equal(t, NewOutputType(NewMapType(BoolType)), NewOutputType(NewMapType(NewOutputType(BoolType))))
+	assert.Equal(t, NewOutputType(NewListType(BoolType)), NewOutputType(NewListType(NewOutputType(BoolType))))
+	assert.Equal(t, NewOutputType(NewUnionType(BoolType, IntType)),
+		NewOutputType(NewUnionType(NewOutputType(BoolType), NewOutputType(IntType))))
+	assert.Equal(t, NewOutputType(NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	})), NewOutputType(NewObjectType(map[string]Type{
+		"bool": NewOutputType(BoolType),
+		"int":  NewOutputType(IntType),
+	})))
+}
+
+func TestPromiseType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewPromiseType(DynamicType)
+
+	// Test that creating an promise type with the same element type does not create a new type.
+	typ2 := NewPromiseType(typ.ElementType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that creating an promise type with an element type that is also a promise does not create a new type.
+	typ2 = NewPromiseType(typ)
+	assert.Equal(t, typ, typ2)
+
+	// Test that a promise type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that a promise type is assignable from its element type.
+	assert.True(t, NewPromiseType(StringType).AssignableFrom(StringType))
+
+	// Test that promise(T) is assignable from U, where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(BoolType))
+
+	// Test that promise(T) is assignable from promise(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewPromiseType(BoolType)))
+
+	// Test that promise(T) is _not_ assignable from U, where U is not assignable to T.
+	assert.False(t, NewPromiseType(BoolType).AssignableFrom(IntType))
+
+	// Test that promise(T) is _not_ assignable from promise(U), where U is not assignable to T.
+	assert.False(t, NewPromiseType(BoolType).AssignableFrom(NewPromiseType(IntType)))
+
+	// Test that traversing an promise(T) returns an promise(U), where U is the result of the inner traversal.
+	typ = NewPromiseType(NewMapType(StringType))
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, NewPromiseType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, NewPromiseType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, NewPromiseType(StringType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, NewPromiseType(StringType), false)
+
+	// Test that ResolvePromises correctly handles nested promises.
+	assert.Equal(t, NewOptionalType(BoolType), ResolvePromises(NewOptionalType(NewPromiseType(BoolType))))
+	assert.Equal(t, BoolType, ResolvePromises(NewPromiseType(BoolType)))
+	assert.Equal(t, BoolType, ResolvePromises(NewPromiseType(BoolType)))
+	assert.Equal(t, NewMapType(BoolType), ResolvePromises(NewMapType(NewPromiseType(BoolType))))
+	assert.Equal(t, NewListType(BoolType), ResolvePromises(NewListType(NewPromiseType(BoolType))))
+	assert.Equal(t, NewUnionType(BoolType, IntType),
+		ResolvePromises(NewUnionType(NewPromiseType(BoolType), NewPromiseType(IntType))))
+	assert.Equal(t, NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	}), ResolvePromises(NewObjectType(map[string]Type{
+		"bool": NewPromiseType(BoolType),
+		"int":  NewPromiseType(IntType),
+	})))
+
+	// Test that NewPromiseType correctly handles nested promises.
+	assert.Equal(t, NewPromiseType(NewOptionalType(BoolType)), NewPromiseType(NewOptionalType(NewPromiseType(BoolType))))
+	assert.Equal(t, NewPromiseType(BoolType), NewPromiseType(NewPromiseType(BoolType)))
+	assert.Equal(t, NewPromiseType(BoolType), NewPromiseType(NewPromiseType(BoolType)))
+	assert.Equal(t, NewPromiseType(NewMapType(BoolType)), NewPromiseType(NewMapType(NewPromiseType(BoolType))))
+	assert.Equal(t, NewPromiseType(NewListType(BoolType)), NewPromiseType(NewListType(NewPromiseType(BoolType))))
+	assert.Equal(t, NewPromiseType(NewUnionType(BoolType, IntType)),
+		NewPromiseType(NewUnionType(NewPromiseType(BoolType), NewPromiseType(IntType))))
+	assert.Equal(t, NewPromiseType(NewObjectType(map[string]Type{
+		"bool": BoolType,
+		"int":  IntType,
+	})), NewPromiseType(NewObjectType(map[string]Type{
+		"bool": NewPromiseType(BoolType),
+		"int":  NewPromiseType(IntType),
+	})))
+}
+
+func TestMapType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewMapType(DynamicType)
+
+	// Test that creating an map type with the same element type does not create a new type.
+	typ2 := NewMapType(typ.ElementType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that a map type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that map(T) is _not_ assignable from U, where U is not map(T).
+	assert.False(t, typ.AssignableFrom(BoolType))
+
+	// Test that map(T) is assignable from map(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewMapType(BoolType)))
+
+	// Test that map(T) is convertible from object(K_0=U_0, .., K_N=U_N) where unify(U_0, ..., U_N) is assignable to T.
+	assert.True(t, typ.ConversionFrom(NewObjectType(map[string]Type{
+		"foo": IntType,
+		"bar": NumberType,
+		"baz": StringType,
+	})).Exists())
+
+	// Test that map(T) is _not_ assignable from map(U), where U is not assignable to T.
+	assert.False(t, NewMapType(BoolType).AssignableFrom(NewMapType(IntType)))
+
+	// Test that traversing a map(T) with a type that is convertible to string returns T.
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, typ.ElementType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, typ.ElementType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, typ.ElementType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, typ.ElementType, false)
+
+	// Test that traversing a map(T) with a type that is not convertible to string returns DynamicType and an error.
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.ListVal([]cty.Value{cty.NumberIntVal(0)})}, typ.ElementType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(typ)}, typ.ElementType, true)
+}
+
+func TestListType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewListType(DynamicType)
+
+	// Test that creating an list type with the same element type does not create a new type.
+	typ2 := NewListType(typ.ElementType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that an list type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that list(T) is _not_ assignable from U, where U is not list(T).
+	assert.False(t, typ.AssignableFrom(BoolType))
+
+	// Test that list(T) is assignable from list(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewListType(BoolType)))
+
+	// Test that list(T) is _not_ assignable from list(U), where U is not assignable to T.
+	assert.False(t, NewListType(BoolType).AssignableFrom(NewListType(IntType)))
+
+	// Test that traversing a list(T) with a type that is convertible to number returns T.
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "0"}, typ.ElementType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("0")}, typ.ElementType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, typ.ElementType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, typ.ElementType, false)
+
+	// Test that traversing a list(T) with a type that is not convertible to number returns DynamicType and an error.
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.ListVal([]cty.Value{cty.NumberIntVal(0)})}, typ.ElementType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(typ)}, typ.ElementType, true)
+}
+
+func TestSetType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewSetType(DynamicType)
+
+	// Test that creating an set type with the same element type does not create a new type.
+	typ2 := NewSetType(typ.ElementType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that an set type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that set(T) is _not_ assignable from U, where U is not set(T).
+	assert.False(t, typ.AssignableFrom(BoolType))
+
+	// Test that set(T) is assignable from set(U), where U is assignable to T.
+	assert.True(t, typ.AssignableFrom(NewSetType(BoolType)))
+
+	// Test that set(T) is _not_ assignable from set(U), where U is not assignable to T.
+	assert.False(t, NewSetType(BoolType).AssignableFrom(NewSetType(IntType)))
+
+	// Test that traversing a set(T) fails.
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "0"}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("0")}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, DynamicType, true)
+}
+
+func TestUnionType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewUnionType(BoolType, IntType, NumberType, StringType).(*UnionType)
+
+	// Test that creating a union with the same element types does not create a new type.
+	typ2 := NewUnionType(BoolType, IntType, NumberType, StringType).(*UnionType)
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that creating a union with duplicated element types unifies all of the duplicated types.
+	assert.Equal(t, BoolType, NewUnionType(BoolType, BoolType))
+	assert.Equal(t, typ, NewUnionType(BoolType, IntType, IntType, NumberType, StringType))
+
+	// Test that a union type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that a union type is assignable from each of its element types.
+	for _, et := range typ.ElementTypes {
+		assert.True(t, typ.AssignableFrom(et))
+	}
+
+	// Test that union(T_0, ..., T_N) is assignable from union(U_0, ..., U_M) if union(T_0, ..., T_N) is assignable
+	// from all of U_0 through U_M.
+	assert.True(t, NewUnionType(NoneType, StringType).ConversionFrom(typ).Exists())
+
+	// Test that union(T_0, ..., T_N) is _not_ assignable from union(U_0, ..., U_M) if union(T_0, ..., T_N) is not
+	// assignable from any of U_0 through U_M.
+	assert.False(t, typ.AssignableFrom(NewUnionType(BoolType, NewOptionalType(NumberType))))
+
+	// Test that traversing a union type fails if the element type cannot be traversed.
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(typ)}, DynamicType, true)
+
+	// Test that traversing a union type succeeds if some element type can be traversed.
+	typ = NewUnionType(typ, NewObjectType(map[string]Type{"foo": StringType}), NewListType(StringType)).(*UnionType)
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, StringType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, StringType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, StringType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(StringType)}, StringType, false)
+
+	// Test that traversing a union type produces a union if more than one element can be traversed.
+	typ = NewUnionType(NewMapType(IntType), NewObjectType(map[string]Type{"foo": StringType})).(*UnionType)
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, NewUnionType(StringType, IntType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, NewUnionType(StringType, IntType), false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, IntType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(IntType)}, NewUnionType(StringType, IntType), false)
+}
+
+func TestObjectType(t *testing.T) {
+	t.Parallel()
+
+	typ := NewObjectType(map[string]Type{
+		"foo": BoolType,
+		"bar": IntType,
+		"baz": NumberType,
+		"qux": NewOptionalType(BoolType),
+	})
+
+	// Test that creating a union with the same element types does not create a new type.
+	typ2 := NewObjectType(map[string]Type{
+		"foo": BoolType,
+		"bar": IntType,
+		"baz": NumberType,
+		"qux": NewOptionalType(BoolType),
+	})
+	assert.EqualValues(t, typ, typ2)
+
+	// Test that an object type is assignable to and from itself.
+	assert.True(t, typ.AssignableFrom(typ))
+
+	// Test that object(K_0=T_0, ..., K_N=T_N) is assignable from object(K_0=U_0, ..., K_N=U_N) if for each key K_i
+	// T_i is assignable from U_i.
+	assert.True(t, typ.ConversionFrom(NewObjectType(map[string]Type{
+		"foo": BoolType,
+		"bar": IntType,
+		"baz": IntType,
+		"qux": BoolType,
+	})).Exists())
+	// Test that object(K_0=T_0, ..., K_N=T_N) is assignable from object(K_0=U_0, ..., K_M=U_M) if M < N and for each
+	// key K_i where 0 <= i <= M, T_i is assignable from U_i and for each K_j where M < j <= N, T_j is optional.
+	assert.True(t, typ.ConversionFrom(NewObjectType(map[string]Type{
+		"foo": BoolType,
+		"bar": IntType,
+		"baz": NumberType,
+	})).Exists())
+
+	// Test that object(K_0=T_0, ..., K_N=T_N) is _unsafely_ convertible from object(L_0=U_0, ..., L_M=U_M) if there exists
+	// some key K_i a matching key K_i exists and T_i is unsafely convertible from U_i.
+	assert.Equal(t, UnsafeConversion, typ.ConversionFrom(NewObjectType(map[string]Type{
+		"foo": BoolType,
+		"bar": IntType,
+		"baz": NumberType,
+		"qux": StringType,
+	})))
+	assert.Equal(t, UnsafeConversion, typ.ConversionFrom(NewObjectType(map[string]Type{
+		"foo": BoolType,
+		"bar": IntType,
+		"baz": StringType,
+	})))
+
+	// Test that traversing an object type with a property name K_i returns T_i.
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "foo"}, BoolType, false)
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "bar"}, IntType, false)
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "baz"}, NumberType, false)
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "qux"}, NewOptionalType(BoolType), false)
+	// test case-insensitive attribute
+	testTraverse(t, typ, hcl.TraverseAttr{Name: "Qux"}, NewOptionalType(BoolType), true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("foo")}, BoolType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("bar")}, IntType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("baz")}, NumberType, false)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.StringVal("qux")}, NewOptionalType(BoolType), false)
+
+	// Test that traversing an object type with a dynamic value produces the union of the object's property types..
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(StringType)}, NewUnionType(BoolType, IntType,
+		NumberType, NewOptionalType(BoolType)), false)
+
+	// Test that traversing an object type with any other type fails.
+	testTraverse(t, typ, hcl.TraverseIndex{Key: cty.NumberIntVal(0)}, DynamicType, true)
+	testTraverse(t, typ, hcl.TraverseIndex{Key: encapsulateType(typ)}, DynamicType, true)
+}
+
+func TestInputType(t *testing.T) {
+	t.Parallel()
+
+	// Test that InputType(DynamicType) just returns DynamicType.
+	assert.Equal(t, DynamicType, InputType(DynamicType))
+
+	// Test that InputType(T) correctly recurses through constructed types. The result of InputType(T) should be
+	// union(innerInputType(T), output(innerInputType(T))), where innerInputType(T) recurses thorough constructed
+	// types.
+
+	assert.Equal(t, NewUnionType(BoolType, NewOutputType(BoolType)), InputType(BoolType))
+
+	assert.Equal(t, NewUnionType(
+		NewOptionalType(NewUnionType(BoolType, NewOutputType(BoolType))),
+		NewOutputType(NewOptionalType(BoolType))), InputType(NewOptionalType(BoolType)))
+
+	assert.Equal(t, NewUnionType(
+		NewPromiseType(NewUnionType(BoolType, NewOutputType(BoolType))),
+		NewOutputType(BoolType)), InputType(NewPromiseType(BoolType)))
+
+	assert.Equal(t, NewUnionType(
+		NewMapType(NewUnionType(BoolType, NewOutputType(BoolType))),
+		NewOutputType(NewMapType(BoolType))), InputType(NewMapType(BoolType)))
+
+	assert.Equal(t, NewUnionType(
+		NewListType(NewUnionType(BoolType, NewOutputType(BoolType))),
+		NewOutputType(NewListType(BoolType))), InputType(NewListType(BoolType)))
+
+	assert.Equal(t, NewUnionType(
+		NewTupleType(NewUnionType(BoolType, NewOutputType(BoolType)), NewUnionType(IntType, NewOutputType(IntType))),
+		NewOutputType(NewTupleType(BoolType, IntType))), InputType(NewTupleType(BoolType, IntType)))
+
+	assert.Equal(t, NewUnionType(
+		NewUnionType(BoolType, IntType, NewOutputType(BoolType), NewOutputType(IntType)),
+		NewOutputType(NewUnionType(BoolType, IntType))),
+		InputType(NewUnionType(BoolType, IntType)))
+
+	assert.Equal(t, NewUnionType(
+		NewObjectType(map[string]Type{"foo": NewUnionType(BoolType, NewOutputType(BoolType))}),
+		NewOutputType(NewObjectType(map[string]Type{"foo": BoolType}))),
+		InputType(NewObjectType(map[string]Type{"foo": BoolType})))
+
+	assert.True(t, InputType(BoolType).ConversionFrom(BoolType).Exists())
+	assert.True(t, InputType(NumberType).ConversionFrom(NumberType).Exists())
+}
+
+func assertUnified(t *testing.T, expectedSafe, expectedUnsafe Type, types ...Type) {
+	actualSafe, actualUnsafe := UnifyTypes(types...)
+	assert.True(t, expectedSafe.Equals(actualSafe))
+	assert.True(t, expectedUnsafe.Equals(actualUnsafe))
+
+	// Reverse the types and ensure we get the same results.
+	for i, j := 0, len(types)-1; i < j; i, j = i+1, j-1 {
+		types[i], types[j] = types[j], types[i]
+	}
+	actualSafe2, actualUnsafe2 := UnifyTypes(types...)
+	assert.True(t, actualSafe.Equals(actualSafe2))
+	assert.True(t, actualUnsafe.Equals(actualUnsafe2))
+}
+
+func TestUnifyType(t *testing.T) {
+	t.Parallel()
+
+	// Number, int, and bool unify with string by preferring string.
+	assertUnified(t, StringType, StringType, NumberType, StringType)
+	assertUnified(t, StringType, StringType, IntType, StringType)
+	assertUnified(t, StringType, StringType, BoolType, StringType)
+
+	// Number and int unify by preferring number.
+	assertUnified(t, NumberType, NumberType, IntType, NumberType)
+
+	// Number or int and bool unify by preferring number or int.
+	assertUnified(t, NewUnionType(NumberType, BoolType), NumberType, BoolType, NumberType)
+	assertUnified(t, NewUnionType(IntType, BoolType), IntType, BoolType, IntType)
+
+	// Two collection types of the same kind unify according to the unification of their element types.
+	assertUnified(t, NewMapType(StringType), NewMapType(StringType), NewMapType(BoolType), NewMapType(StringType))
+	assertUnified(t, NewListType(StringType), NewListType(StringType), NewListType(BoolType), NewListType(StringType))
+	assertUnified(t, NewSetType(StringType), NewSetType(StringType), NewSetType(BoolType), NewSetType(StringType))
+
+	// List and set types unify by preferring the list type.
+	assertUnified(t, NewListType(StringType), NewListType(StringType), NewListType(StringType), NewSetType(BoolType))
+	assertUnified(t, NewListType(StringType), NewListType(StringType), NewListType(BoolType), NewSetType(StringType))
+
+	assert.True(t, StringType.ConversionFrom(NewOptionalType(NewUnionType(NewMapType(StringType), BoolType))).Exists())
+
+	// Map and object types unify by preferring the map type.
+	m0, m1 := NewObjectType(map[string]Type{"foo": StringType}), NewObjectType(map[string]Type{"foo": BoolType})
+	assertUnified(t, NewMapType(StringType), NewMapType(StringType), m0, NewMapType(BoolType))
+	assertUnified(t, NewMapType(StringType), NewMapType(StringType), m1, NewMapType(StringType))
+
+	// List or set and tuple types unify by preferring the list or set type.
+	t0, t1 := NewTupleType(NumberType, BoolType), NewTupleType(StringType, NumberType)
+	assertUnified(t, NewListType(StringType), NewListType(StringType), t0, NewListType(StringType))
+	assertUnified(t, NewListType(StringType), NewListType(StringType), t1, NewListType(BoolType))
+	assertUnified(t, NewUnionType(t0, NewSetType(StringType)), NewSetType(StringType), t0, NewSetType(StringType))
+	assertUnified(t, NewUnionType(t1, NewSetType(BoolType)), NewSetType(StringType), t1, NewSetType(BoolType))
+
+	// The dynamic type unifies with any other type by selecting the other type.
+	assertUnified(t, NewUnionType(BoolType, DynamicType), BoolType, BoolType, DynamicType)
+
+	// Object types unify by constructing a new object type whose attributes are the unification of the two input types.
+	m2 := NewObjectType(map[string]Type{"bar": StringType})
+	m3 := NewObjectType(map[string]Type{"foo": NewOptionalType(StringType), "bar": NewOptionalType(StringType)})
+	m4 := NewObjectType(map[string]Type{"foo": NewMapType(StringType), "bar": NewListType(StringType)})
+	m5 := NewObjectType(map[string]Type{
+		"foo": NewOptionalType(NewUnionType(NewMapType(StringType), StringType, NoneType)),
+		"bar": NewOptionalType(NewUnionType(NewListType(StringType), StringType, NoneType)),
+	})
+	assertUnified(t, m0, m0, m0, m1)
+	assertUnified(t, m3, m3, m0, m2)
+	assertUnified(t, m5, m5, m4, m2, m0, m1)
+	assertUnified(t, m5, m5, m4, m0, m2, m1)
+
+	// A constant converts from nothing but itself, so distinct constants unify to their union.
+	cf, ct := NewConstType(BoolType, cty.False), NewConstType(BoolType, cty.True)
+	assert.Equal(t, NoConversion, cf.ConversionFrom(ct))
+	assert.Equal(t, UnsafeConversion, cf.ConversionFrom(BoolType))
+	// The same constant converts as its type does: a schema constant has an input-wrapped type.
+	inputCf := NewConstType(NewUnionType(BoolType, NewOutputType(BoolType)), cty.False)
+	assert.Equal(t, SafeConversion, inputCf.ConversionFrom(cf))
+	assert.Equal(t, NoConversion, inputCf.ConversionFrom(ct))
+	// A union, output, or optional destination sees the constant rather than its base type.
+	assert.Equal(t, SafeConversion, NewOptionalType(cf).ConversionFrom(cf))
+	assert.Equal(t, NoConversion, NewOptionalType(cf).ConversionFrom(ct))
+	assert.Equal(t, SafeConversion, InputType(NewOptionalType(cf)).ConversionFrom(cf))
+	assert.Equal(t, NoConversion, InputType(NewOptionalType(cf)).ConversionFrom(ct))
+	// A union of constants is assignable to the type of their values.
+	ca, cb := NewConstType(StringType, cty.StringVal("a")), NewConstType(StringType, cty.StringVal("b"))
+	assert.True(t, StringType.AssignableFrom(NewUnionType(ca, cb)))
+	assert.True(t, InputType(StringType).AssignableFrom(NewUnionType(ca, cb)))
+	assert.False(t, StringType.AssignableFrom(NewUnionType(ca, cf)))
+	// The null literal is a constant of the none type and converts to any optional type.
+	null := NewConstType(NoneType, cty.NullVal(cty.DynamicPseudoType))
+	assert.Equal(t, SafeConversion, NoneType.ConversionFrom(null))
+	assert.Equal(t, SafeConversion, InputType(NewOptionalType(StringType)).ConversionFrom(null))
+	// An enum accepts a member constant safely, no other constant, and its base type unsafely.
+	c1, c2, c3 := NewConstType(IntType, cty.NumberIntVal(1)), NewConstType(IntType, cty.NumberIntVal(2)),
+		NewConstType(IntType, cty.NumberIntVal(3))
+	enum := NewEnumType("test:index:Level", IntType, []cty.Value{cty.NumberIntVal(1), cty.NumberIntVal(2)})
+	assert.Equal(t, SafeConversion, enum.ConversionFrom(c1))
+	assert.Equal(t, NoConversion, enum.ConversionFrom(c3))
+	assert.Equal(t, UnsafeConversion, enum.ConversionFrom(IntType))
+	assert.Equal(t, SafeConversion, InputType(NewOptionalType(enum)).ConversionFrom(c2))
+	assert.Equal(t, NoConversion, InputType(NewOptionalType(enum)).ConversionFrom(c3))
+	assertUnified(t, NewUnionType(cf, ct), NewUnionType(cf, ct), cf, ct)
+	assertUnified(t, NewTupleType(NewUnionType(cf, ct)), NewTupleType(NewUnionType(cf, ct)),
+		NewTupleType(cf), NewTupleType(ct))
+
+	// A conversion check and a unification of the same types do not share a cached result, in either order.
+	a, b := NewTupleType(cf), NewTupleType(ct)
+	assertUnified(t, NewTupleType(NewUnionType(cf, ct)), NewTupleType(NewUnionType(cf, ct)), a, b)
+	assert.Equal(t, NoConversion, a.ConversionFrom(b))
+	a, b = NewTupleType(cf), NewTupleType(ct)
+	assert.Equal(t, NoConversion, a.ConversionFrom(b))
+	assertUnified(t, NewTupleType(NewUnionType(cf, ct)), NewTupleType(NewUnionType(cf, ct)), a, b)
+
+	// Nested tuples of constants with different lengths unify element by element.
+	t6 := NewTupleType(NewTupleType(cf, cf, cf))
+	t7 := NewTupleType(NewTupleType(ct), NewTupleType(cf))
+	t8 := NewTupleType(
+		NewTupleType(NewUnionType(cf, ct), NewOptionalType(cf), NewOptionalType(cf)),
+		NewOptionalType(NewTupleType(cf)),
+	)
+	assertUnified(t, t8, t8, t6, t7)
+
+	// Tuple types unify by constructing a new tuple type whose element types are the unification of the corresponding
+	// element types.
+	t2 := NewTupleType(StringType, NumberType)
+	t3 := NewTupleType(StringType, IntType)
+	t4 := NewTupleType(NumberType, BoolType, StringType)
+	t5 := NewTupleType(NumberType, BoolType, NewOptionalType(StringType))
+	assertUnified(t, NewUnionType(t0, t1), t2, t0, t1)
+	assertUnified(t, t2, t2, t3, t1)
+	assertUnified(t, t5, t5, t4, t0)
+
+	//
+	//	assertUnified(t, NewUnionType(BoolType, IntType), IntType, BoolType, IntType)
+	//	assertUnified(t, NewOptionalType(NumberType), NewOptionalType(NumberType), IntType, NewOptionalType(NumberType))
+	//	assertUnified(t, NewOptionalType(BoolType), NewOptionalType(BoolType), BoolType, NewOptionalType(BoolType))
+	//	assertUnified(t, NewOutputType(BoolType), NewOutputType(BoolType), BoolType, NewOutputType(BoolType))
+	//	assertUnified(t, NewPromiseType(BoolType), NewPromiseType(BoolType), BoolType, NewPromiseType(BoolType))
+	//	assertUnified(t, AnyType, AnyType, BoolType, IntType, AnyType)
+	//
+	//	assertUnified(t, BoolType, BoolType, DynamicType, BoolType)
+
+	//	t0 := Type(NewObjectType(map[string]Type{"foo": IntType}))
+	//	t1 := Type(NewObjectType(map[string]Type{"foo": IntType, "bar": NewOptionalType(NumberType)}))
+	//
+	//	assert.Equal(t, NewMapType(AnyType), unifyTypes(NewMapType(AnyType), t0))
+	//	assert.Equal(t, t1, unifyTypes(t0, t1))
+	//	assert.Equal(t, t1, unifyTypes(t1, t0))
+	//
+	//	t0 = NewOutputType(NumberType)
+	//	t1 = NewOutputType(NewUnionType(NumberType, IntType))
+	//	assert.Equal(t, t0, unifyTypes(t0, t1))
+	//	assert.Equal(t, t0, unifyTypes(t1, t0))
+}
+
+func TestRecursiveObjectType(t *testing.T) {
+	t.Parallel()
+
+	makeType := func(prop string) Type {
+		props := map[string]Type{
+			prop: NewOutputType(IntType),
+		}
+		objType := NewObjectType(props)
+		props["sibling"] = objType
+		listType := NewListType(objType)
+		linkedListType := NewOptionalType(listType)
+		props["next"] = linkedListType
+		return linkedListType
+	}
+
+	linkedListType := makeType("data")
+	linkedListTypeEqual := makeType("data")
+	linkedListTypeNonEqual := makeType("data1")
+
+	// Equals
+	assert.True(t, linkedListType.Equals(linkedListTypeEqual))
+	assert.False(t, linkedListType.Equals(linkedListTypeNonEqual))
+
+	// String conversion
+	assert.Equal(t, "union(none, list(object({data = output(int), next = union(none, list(...)), sibling = ...})))",
+		linkedListType.String())
+
+	// Convert from another type
+	assert.Equal(t, UnsafeConversion, linkedListType.ConversionFrom(linkedListTypeNonEqual))
+
+	// Contains eventuals
+	hasOutputs, hasPromises := ContainsEventuals(linkedListType)
+	assert.True(t, hasOutputs)
+	assert.False(t, hasPromises)
+
+	// Resolving eventuals
+	resolvedLinkedListType := ResolveOutputs(linkedListType)
+	data := resolvedLinkedListType.(*UnionType).ElementTypes[1].(*ListType).ElementType.(*ObjectType).Properties["data"]
+	assert.True(t, data.Equals(IntType))
+	hasOutputs, _ = ContainsEventuals(resolvedLinkedListType)
+	assert.False(t, hasOutputs)
+
+	// InputType conversion
+	inputLinkedListType := InputType(resolvedLinkedListType)
+	hasOutputs, _ = ContainsEventuals(inputLinkedListType)
+	assert.True(t, hasOutputs)
+}
+
+// TestRecursiveObjectTypeConvertsFromFiniteSource verifies that a finite source
+// value can be converted to a self-referential ObjectType.
+func TestRecursiveObjectTypeConvertsFromFiniteSource(t *testing.T) {
+	t.Parallel()
+
+	// Build a self-referential object type: Obj { a: Optional<Obj> }.
+	props := map[string]Type{}
+	recursive := NewObjectType(props)
+	props["a"] = NewOptionalType(recursive)
+
+	// Optional `a` means the property may be absent, so an empty source satisfies.
+	t.Run("empty source converts safely", func(t *testing.T) {
+		t.Parallel()
+		empty := NewObjectType(map[string]Type{})
+		assert.Equal(t, SafeConversion, recursive.ConversionFrom(empty))
+	})
+
+	t.Run("none source converts safely", func(t *testing.T) {
+		t.Parallel()
+		// Source: { a: <recursive itself absent> } — the recursive property is Optional.
+		src := NewObjectType(map[string]Type{"a": NoneType})
+		assert.Equal(t, SafeConversion, recursive.ConversionFrom(src))
+	})
+
+	t.Run("source mirroring schema converges", func(t *testing.T) {
+		t.Parallel()
+		// Source: { a: { a: {} } } has finite depth and matches the recursive shape.
+		outer := NewObjectType(map[string]Type{
+			"a": NewObjectType(map[string]Type{
+				"a": NewObjectType(map[string]Type{}),
+			}),
+		})
+		assert.Equal(t, SafeConversion, recursive.ConversionFrom(outer))
+	})
+
+	t.Run("source with incompatible property still rejected", func(t *testing.T) {
+		t.Parallel()
+		// Coinductive cycle handling shouldn't make conversions universally permissive:
+		// a source whose recursive property has a primitive type that can't satisfy the
+		// recursive target should still fail to convert.
+		src := NewObjectType(map[string]Type{"a": StringType})
+		assert.Equal(t, NoConversion, recursive.ConversionFrom(src))
+	})
+
+	t.Run("source with deeply incompatible nested property still rejected", func(t *testing.T) {
+		t.Parallel()
+		// Source: { a: { a: "string" } }. The OUTER "a" matches the recursive shape
+		// (it's an object), but the INNER nested "a" is a string and can never satisfy
+		// Optional<recursive>. The conversion check must descend into the source rather
+		// than short-circuit on the destination cycle.
+		src := NewObjectType(map[string]Type{
+			"a": NewObjectType(map[string]Type{
+				"a": StringType,
+			}),
+		})
+		assert.Equal(t, NoConversion, recursive.ConversionFrom(src))
+	})
+}
+
+// TestRecursiveObjectTypeViaInputUnion mirrors the InputShape/PlainShape
+// pattern produced by codegen/pcl.schemaTypeToType: the schema property is
+// reachable as `Optional<Union<recursiveInputObj | Output<recursivePlainObj>>>`,
+// and the value is an empty object that should satisfy `recursiveInputObj`.
+// Before the cycle-handling fix, the conversion bailed out with NoConversion.
+func TestRecursiveObjectTypeViaInputUnion(t *testing.T) {
+	t.Parallel()
+
+	inputProps := map[string]Type{}
+	inputObj := NewObjectType(inputProps)
+	inputProps["a"] = NewOptionalType(inputObj)
+
+	plainProps := map[string]Type{}
+	plainObj := NewObjectType(plainProps)
+	plainProps["a"] = NewOptionalType(plainObj)
+
+	schemaTyp := NewOptionalType(NewUnionType(inputObj, NewOutputType(plainObj)))
+
+	// Value type: { a: {} } - finite, satisfies inputObj.
+	value := NewObjectType(map[string]Type{
+		"a": NewObjectType(map[string]Type{}),
+	})
+
+	assert.Equal(t, SafeConversion, schemaTyp.ConversionFrom(value))
+}
+
+// Tests that object type annotations can be added and queried correctly.
+func TestObjectTypeAnnotations(t *testing.T) {
+	t.Parallel()
+
+	// Tests that an annotation of a non-interface type (here, *x) can be added and queried correctly, whether added using
+	// NewObjectType, Annotate or append.
+	t.Run("new/x-x", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{}, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*x](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type *x")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("append/x-x", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*x](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type *x")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("annotate/x-x", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*x](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type *x")
+		require.Same(t, expected, actual)
+	})
+
+	// Tests that when multiple annotations of a non-interface type (here, *x) are added, the first is returned by a
+	// query, whether they are added by NewObjectType, Annotate or append.
+	t.Run("new/x-x-x", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{}, expected, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*x](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find the first annotation of type *x")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("append/x-x-x", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, expected, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*x](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find the first annotation of type *x")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("annotate/x-x-x", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(expected, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*x](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find the first annotation of type *x")
+		require.Same(t, expected, actual)
+	})
+
+	// Tests that when an annotation is queried by non-interface type and there is no match, that no annotations are
+	// returned, whether they were added by NewObjectType, Annotate or append.
+	t.Run("new/x-y", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		o := NewObjectType(map[string]Type{}, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*y](o)
+
+		// Assert.
+		require.False(t, ok, "did not expect to find an annotation of type *y")
+		require.Nil(t, actual)
+	})
+
+	t.Run("append/x-y", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*y](o)
+
+		// Assert.
+		require.False(t, ok, "did not expect to find an annotation of type *y")
+		require.Nil(t, actual)
+	})
+
+	t.Run("annotate/x-y", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(&x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[*y](o)
+
+		// Assert.
+		require.False(t, ok, "did not expect to find an annotation of type *y")
+		require.Nil(t, actual)
+	})
+
+	// Tests that when an annotation is queried by interface type (here i, with an implementation of *x), the correct
+	// annotation is returned, whether it was added by NewObjectType, Annotate or append.
+	t.Run("new/x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{}, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("append/x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("annotate/x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	// Tests that when an annotation is queried by interface type (here i) and there are no matching implementations, no
+	// annotation is returned, whether they were added by NewObjectType, Annotate or append.
+	t.Run("new/z-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		o := NewObjectType(map[string]Type{}, &z{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.False(t, ok, "did not expect to find an annotation of type i")
+		require.Nil(t, actual)
+	})
+
+	t.Run("append/z-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, &z{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.False(t, ok, "did not expect to find an annotation of type i")
+		require.Nil(t, actual)
+	})
+
+	t.Run("annotate/z-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(&z{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.False(t, ok, "did not expect to find an annotation of type i")
+		require.Nil(t, actual)
+	})
+
+	// Tests that when multiple (identically typed) implementations of an interface type (here i) are added, the first is
+	// returned by a query for that interface type, whether they were added by NewObjectType, Annotate or append.
+	t.Run("new/x-x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{}, expected, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find the first annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("append/x-x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, expected, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find the first annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("annotate/x-x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(expected, &x{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find the first annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	// Tests that when multiple (differently typed) implementations of an interface type (here i) are added, the first is
+	// returned by a query for that interface type, whether they were added by NewObjectType, Annotate or append.
+	t.Run("new/x-y-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{}, expected, &y{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("append/x-y-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, expected, &y{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("annotate/x-y-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(expected, &y{})
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	// Tests that interface type queries return the first implementing annotation, even if there are annotations of
+	// non-implementing types present. Tests this whether the annotations were added by NewObjectType, Annotate or append.
+	t.Run("new/z-x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{}, &z{}, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("append/z-x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotations = append(o.Annotations, &z{}, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+
+	t.Run("annotate/z-x-i", func(t *testing.T) {
+		t.Parallel()
+
+		// Arrange.
+		expected := &x{}
+
+		o := NewObjectType(map[string]Type{})
+		o.Annotate(&z{}, expected)
+
+		// Act.
+		actual, ok := GetObjectTypeAnnotation[i](o)
+
+		// Assert.
+		require.True(t, ok, "expected to find an annotation of type i (*x)")
+		require.Same(t, expected, actual)
+	})
+}
+
+type i interface {
+	f() string
+}
+
+type x struct{}
+
+func (*x) f() string {
+	return "x"
+}
+
+var _ i = (*x)(nil)
+
+type y struct{}
+
+func (*y) f() string {
+	return "y"
+}
+
+var _ i = (*y)(nil)
+
+type z struct{}
+
+// TestUnifyRecursiveObjectTypes verifies that two recursive object types of different shapes unify to one
+// recursive object type instead of recursing without end.
+func TestUnifyRecursiveObjectTypes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("list", func(t *testing.T) {
+		t.Parallel()
+
+		aProps := map[string]Type{}
+		a := NewObjectType(aProps)
+		aProps["self"] = NewListType(a)
+		bProps := map[string]Type{"b": IntType}
+		b := NewObjectType(bProps)
+		bProps["self"] = NewListType(b)
+
+		expectedProps := map[string]Type{"b": NewOptionalType(IntType)}
+		expected := NewObjectType(expectedProps)
+		expectedProps["self"] = NewListType(expected)
+
+		assertUnified(t, expected, expected, a, b)
+	})
+
+	t.Run("optional", func(t *testing.T) {
+		t.Parallel()
+
+		aProps := map[string]Type{}
+		a := NewObjectType(aProps)
+		aProps["self"] = NewOptionalType(a)
+		bProps := map[string]Type{"b": IntType}
+		b := NewObjectType(bProps)
+		bProps["self"] = NewOptionalType(b)
+
+		expected := NewObjectType(map[string]Type{
+			"b":    NewOptionalType(IntType),
+			"self": NewUnionType(NoneType, a, b),
+		})
+
+		assertUnified(t, expected, expected, a, b)
+	})
+}
+
+// TestUnifyMapWithObject verifies that a map unifies with an object by folding the object's property types into
+// the map's element type in an order that does not depend on the property names.
+func TestUnifyMapWithObject(t *testing.T) {
+	t.Parallel()
+
+	m := NewMapType(NewUnionType(BoolType, IntType, NoneType))
+	properties := map[string]Type{
+		"a": BoolType,
+		"b": NumberType,
+		"c": NewConstType(StringType, cty.StringVal("y")),
+	}
+	reordered := map[string]Type{
+		"a": properties["c"],
+		"b": properties["a"],
+		"c": properties["b"],
+	}
+	expectedUnsafe := NewMapType(NewUnionType(NumberType, NoneType, NewConstType(StringType, cty.StringVal("y"))))
+
+	for _, obj := range []Type{NewObjectType(properties), NewObjectType(reordered)} {
+		assertUnified(t, NewUnionType(m, obj), expectedUnsafe, m, obj)
+	}
+}
+
+// TestTupleConversionFromShorterTuple verifies that a tuple converts from a shorter tuple only when the elements
+// that the source lacks are optional.
+func TestTupleConversionFromShorterTuple(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, SafeConversion,
+		NewTupleType(IntType, NewOptionalType(BoolType)).ConversionFrom(NewTupleType(IntType)))
+	assert.Equal(t, NoConversion, NewTupleType(IntType, BoolType).ConversionFrom(NewTupleType(IntType)))
+	assert.Equal(t, NoConversion, NewTupleType(IntType).ConversionFrom(NewTupleType(IntType, BoolType)))
+}
+
+// A recursive type, such as a WAF statement that nests statements, must not send assignability into an
+// infinite descent. A cycle is assumed assignable only for the exact `(dest, src)` pair that is mid-flight, so a
+// mismatch at any finite leaf is still found.
+func TestAssignableFromRecursiveType(t *testing.T) {
+	t.Parallel()
+
+	// statement = { statements: list(statement) }
+	statement := NewObjectType(map[string]Type{})
+	statement.Properties["statements"] = NewListType(statement)
+
+	// named = { statements: list(named), name: string }
+	named := NewObjectType(map[string]Type{"name": StringType})
+	named.Properties["statements"] = NewListType(named)
+
+	// node = { next: optional(node) }
+	node := NewObjectType(map[string]Type{})
+	node.Properties["next"] = NewOptionalType(node)
+
+	// tree = { children: map(tree) }
+	tree := NewObjectType(map[string]Type{})
+	tree.Properties["children"] = NewMapType(tree)
+
+	// even = { odd: odd }, odd = { even: optional(even) }
+	even, odd := NewObjectType(map[string]Type{}), NewObjectType(map[string]Type{})
+	even.Properties["odd"] = odd
+	odd.Properties["even"] = NewOptionalType(even)
+
+	// outerNamed = { statements: list(statement), name: string }: named at the top level only.
+	outerNamed := NewObjectType(map[string]Type{"name": StringType, "statements": NewListType(statement)})
+
+	cases := []struct {
+		name      string
+		dest, src Type
+		want      bool
+	}{
+		{"input from self", InputType(statement), statement, true},
+		{"output from self", NewOutputType(statement), statement, true},
+		{"promise from self", NewPromiseType(statement), statement, true},
+		{"list of input from list of self", NewListType(InputType(statement)), NewListType(statement), true},
+		{"optional self reference", InputType(node), node, true},
+		{"map self reference", InputType(tree), tree, true},
+		{"mutual recursion", InputType(even), even, true},
+		{"wider recursive source", statement, named, true},
+		{"narrower recursive source", named, statement, false},
+		{"finite source mismatch at a leaf", statement, NewObjectType(map[string]Type{
+			"statements": NewListType(NewObjectType(map[string]Type{"statements": NewListType(StringType)})),
+		}), false},
+		{"re-entry with a different source", named, outerNamed, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, c.want, c.dest.AssignableFrom(c.src))
+		})
+	}
+}
+
+// A constant keeps its identity under assignability: a union that lists the constant accepts it, and a type that
+// accepts the constant's value type accepts the constant.
+func TestAssignableFromConst(t *testing.T) {
+	t.Parallel()
+
+	a := NewConstType(StringType, cty.StringVal("a"))
+	b := NewConstType(StringType, cty.StringVal("b"))
+	c := NewConstType(StringType, cty.StringVal("c"))
+	aOrB := NewUnionType(a, b)
+
+	assert.True(t, aOrB.AssignableFrom(NewConstType(StringType, cty.StringVal("a"))))
+	assert.False(t, aOrB.AssignableFrom(c))
+	assert.False(t, aOrB.AssignableFrom(StringType))
+	assert.True(t, NewOutputType(StringType).AssignableFrom(a))
+	assert.True(t, NewListType(StringType).AssignableFrom(NewTupleType(a, b)))
+}
+
+// Two recursive objects are equal when every finite leaf matches. A cycle counts as equal only for the exact pair of
+// objects that is mid-flight, so an object that re-enters the cycle against a different other is still compared.
+func TestObjectTypeEqualsRecursive(t *testing.T) {
+	t.Parallel()
+
+	// statement = { statements: list(statement) }, twice, as two distinct values.
+	newStatement := func() *ObjectType {
+		statement := NewObjectType(map[string]Type{})
+		statement.Properties["statements"] = NewListType(statement)
+		return statement
+	}
+	statement, sameShape := newStatement(), newStatement()
+
+	// named = { statements: list(named), name: string }
+	named := NewObjectType(map[string]Type{"name": StringType})
+	named.Properties["statements"] = NewListType(named)
+
+	// outerNamed = { statements: list(statement), name: string }: named at the top level only.
+	outerNamed := NewObjectType(map[string]Type{"name": StringType, "statements": NewListType(statement)})
+
+	// twoDeep = { statements: list({ statements: list(string) }) }: finite, and differs from statement at depth two.
+	twoDeep := NewObjectType(map[string]Type{
+		"statements": NewListType(NewObjectType(map[string]Type{"statements": NewListType(StringType)})),
+	})
+
+	cases := []struct {
+		name string
+		a, b Type
+		want bool
+	}{
+		{"same shape", statement, sameShape, true},
+		{"differs in a leaf", statement, twoDeep, false},
+		{"differs under a cycle", named, outerNamed, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, c.want, c.a.Equals(c.b))
+			assert.Equal(t, c.want, c.b.Equals(c.a))
+		})
+	}
+}

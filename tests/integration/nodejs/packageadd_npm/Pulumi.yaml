@@ -1,0 +1,5 @@
+name: packageadd_npm
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm

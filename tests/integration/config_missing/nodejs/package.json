@@ -1,0 +1,11 @@
+{
+    "name": "config_missing_js",
+    "version": "0.0.9",
+    "license": "Apache-2.0",
+    "peerDependencies": {
+        "@pulumi/pulumi": "latest"
+    },
+    "dependencies": {
+        "@types/node": "8.10.66"
+    }
+}

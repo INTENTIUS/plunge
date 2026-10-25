@@ -1,0 +1,249 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package deploy
+
+import (
+	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+)
+
+// ContinueResourceDiffEvent is a step that asks the engine to continue provisioning a resource after completing its
+// diff, it is always created from a base RegisterResourceEvent.
+type ContinueResourceDiffEvent interface {
+	// The base event that triggered this continue event.
+	Event() RegisterResourceEvent
+	// Any error that occurred calling provider.Diff.
+	Error() error
+	// The diff result from the provider.Diff call.
+	Diff() plugin.DiffResult
+
+	// The URN of the resource being continued.
+	URN() resource.URN
+	// The old state of the resource being continued.
+	Old() *pkgresource.State
+	// The new state of the resource being continued.
+	New() *pkgresource.State
+	// The provider that should be used to continue the resource.
+	Provider() plugin.Provider
+	// The autonaming options that should be used to continue the resource.
+	Autonaming() *plugin.AutonamingOptions
+	// The random seed that should be used to continue the resource.
+	RandomSeed() []byte
+}
+
+type continueDiffResourceEvent struct {
+	evt            RegisterResourceEvent
+	err            error
+	diff           plugin.DiffResult
+	triggerReplace bool
+	urn            resource.URN
+	old            *pkgresource.State
+	new            *pkgresource.State
+	provider       plugin.Provider
+	autonaming     *plugin.AutonamingOptions
+	randomSeed     []byte
+}
+
+var _ ContinueResourceDiffEvent = (*continueDiffResourceEvent)(nil)
+
+func (g *continueDiffResourceEvent) event() {}
+
+func (g *continueDiffResourceEvent) Event() RegisterResourceEvent {
+	return g.evt
+}
+
+func (g *continueDiffResourceEvent) URN() resource.URN {
+	return g.urn
+}
+
+func (g *continueDiffResourceEvent) Error() error {
+	return g.err
+}
+
+func (g *continueDiffResourceEvent) Diff() plugin.DiffResult {
+	return g.diff
+}
+
+func (g *continueDiffResourceEvent) ReplacementTrigger() bool {
+	return g.triggerReplace
+}
+
+func (g *continueDiffResourceEvent) Old() *pkgresource.State {
+	return g.old
+}
+
+func (g *continueDiffResourceEvent) New() *pkgresource.State {
+	return g.new
+}
+
+func (g *continueDiffResourceEvent) Provider() plugin.Provider {
+	return g.provider
+}
+
+func (g *continueDiffResourceEvent) Autonaming() *plugin.AutonamingOptions {
+	return g.autonaming
+}
+
+func (g *continueDiffResourceEvent) RandomSeed() []byte {
+	return g.randomSeed
+}
+
+// ContinueResourceRefreshEvent is a step that asks the engine to continue provisioning a resource after a
+// refresh, it is always created from a base RegisterResourceEvent.
+type ContinueResourceRefreshEvent interface {
+	RegisterResourceEvent
+
+	URN() resource.URN
+	Old() *pkgresource.State
+	New() *pkgresource.State
+	Invalid() bool
+	Error() error
+}
+
+type continueResourceRefreshEvent struct {
+	RegisterResourceEvent
+	urn     resource.URN       // the URN of the resource being processed.
+	old     *pkgresource.State // the old state of the resource being processed.
+	new     *pkgresource.State // the new state of the resource being processed.
+	invalid bool               // whether the resource is invalid.
+	err     error              // any error that occurred during refresh
+}
+
+var _ ContinueResourceRefreshEvent = (*continueResourceRefreshEvent)(nil)
+
+func (g *continueResourceRefreshEvent) event() {}
+
+func (g *continueResourceRefreshEvent) URN() resource.URN {
+	return g.urn
+}
+
+func (g *continueResourceRefreshEvent) Old() *pkgresource.State {
+	return g.old
+}
+
+func (g *continueResourceRefreshEvent) New() *pkgresource.State {
+	return g.new
+}
+
+func (g *continueResourceRefreshEvent) Invalid() bool {
+	return g.invalid
+}
+
+func (g *continueResourceRefreshEvent) Error() error {
+	return g.err
+}
+
+// ContinueResourceImportEvent is a step that asks the engine to continue provisioning a resource after an import, it is
+// always created from a base RegisterResourceEvent.
+type ContinueResourceImportEvent interface {
+	RegisterResourceEvent
+
+	Error() error
+	URN() resource.URN
+	New() *pkgresource.State
+	Old() *pkgresource.State
+	Provider() plugin.Provider
+	Invalid() bool
+	Recreating() bool
+	RandomSeed() []byte
+	IsImported() bool
+}
+
+type continueResourceImportEvent struct {
+	RegisterResourceEvent
+	err        error
+	urn        resource.URN // the URN of the resource being processed.
+	old        *pkgresource.State
+	new        *pkgresource.State
+	provider   plugin.Provider
+	invalid    bool
+	recreating bool
+	randomSeed []byte
+	// whether the resource is actually imported, or if we're just continuing the step generation for a
+	// normal resource.
+	isImported bool
+}
+
+var _ ContinueResourceImportEvent = (*continueResourceImportEvent)(nil)
+
+func (g *continueResourceImportEvent) event() {}
+
+func (g *continueResourceImportEvent) Error() error {
+	return g.err
+}
+
+func (g *continueResourceImportEvent) URN() resource.URN {
+	return g.urn
+}
+
+func (g *continueResourceImportEvent) Old() *pkgresource.State {
+	return g.old
+}
+
+func (g *continueResourceImportEvent) New() *pkgresource.State {
+	return g.new
+}
+
+func (g *continueResourceImportEvent) Provider() plugin.Provider {
+	return g.provider
+}
+
+func (g *continueResourceImportEvent) Invalid() bool {
+	return g.invalid
+}
+
+func (g *continueResourceImportEvent) Recreating() bool {
+	return g.recreating
+}
+
+func (g *continueResourceImportEvent) RandomSeed() []byte {
+	return g.randomSeed
+}
+
+func (g *continueResourceImportEvent) IsImported() bool {
+	return g.isImported
+}
+
+// ContinueExtensionEvent asks the engine to continue handling a resource registration after its
+// extension parameterization has completed.
+type ContinueExtensionEvent interface {
+	RegisterResourceEvent
+
+	URN() resource.URN
+	Invalid() bool
+	Error() error
+}
+
+type continueExtensionEvent struct {
+	RegisterResourceEvent
+	urn     resource.URN // the URN of the resource that is part of an extension parameterization.
+	invalid bool         // whether the resource is invalid.
+	err     error        // any error that occurred during extension
+}
+
+var _ ContinueExtensionEvent = (*continueExtensionEvent)(nil)
+
+func (g *continueExtensionEvent) URN() resource.URN {
+	return g.urn
+}
+
+func (g *continueExtensionEvent) Invalid() bool {
+	return g.invalid
+}
+
+func (g *continueExtensionEvent) Error() error {
+	return g.err
+}

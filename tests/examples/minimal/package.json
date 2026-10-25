@@ -1,0 +1,15 @@
+{
+    "name": "minimal",
+    "main": "bin/index.js",
+    "typings": "bin/index.d.ts",
+    "scripts": {
+        "build": "tsc"
+    },
+    "devDependencies": {
+        "typescript": "3.9.10",
+        "@types/node": "11.15.54"
+    },
+    "peerDependencies": {
+        "@pulumi/pulumi": "latest"
+    }
+}

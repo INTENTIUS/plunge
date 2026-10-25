@@ -1,0 +1,6 @@
+name: transforms_simple
+description: A program with transforms
+runtime:
+  name: python
+  options:
+    toolchain: uv

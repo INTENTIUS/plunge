@@ -1,0 +1,159 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package packagecmd
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/blang/semver"
+	"github.com/spf13/cobra"
+
+	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
+	cmdCmd "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/cmd"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/constrictor"
+	cmdDiag "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/diag"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/packages"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/packageworkspace"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/convert"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/schema"
+	pkghost "github.com/pulumi/pulumi/pkg/v3/host"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/agentdetect"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+func newGenSdkCommand() *cobra.Command {
+	var overlays string
+	var language string
+	var out string
+	var version string
+	var local bool
+	var parameterArgs []string
+	var asExtension bool
+	var serverURL string
+	cmd := &cobra.Command{
+		Use:   "gen-sdk",
+		Short: "Generate SDK(s) from a package or schema",
+		Long: `Generate SDK(s) from a package or schema.
+
+<schema_source> can be a package name or the path to a plugin binary or folder.
+If a folder either the plugin binary must match the folder name (e.g. 'aws' and 'pulumi-resource-aws')` +
+			` or it must have a PulumiPlugin.yaml file specifying the runtime to use.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			source := args[0]
+			agent := agentdetect.Detect(os.Getenv)
+
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			sink := cmdutil.Diag()
+			registry := cmdCmd.NewDefaultRegistry(
+				cmd.Context(), cmdBackend.DefaultLoginManager, pkgWorkspace.Instance, nil, sink, env.Global())
+			pluginHost, err := pkghost.New(context.WithoutCancel(cmd.Context()), sink, sink, nil,
+				pkgWorkspace.EnsureLanguageInstalled, schema.NewLoaderServerFromContext, convert.NewMapperServerFromContext,
+				packageworkspace.NewResolverServer(registry))
+			if err != nil {
+				return err
+			}
+			// host is owned here, closed after the context
+			defer contract.IgnoreClose(pluginHost)
+			pctx, err := plugin.NewContext(cmd.Context(), sink, sink, pluginHost, nil, wd, nil, false,
+				nil)
+			if err != nil {
+				return err
+			}
+			defer contract.IgnoreClose(pctx)
+
+			parameters := &plugin.ParameterizeArgs{Args: parameterArgs}
+			spec, _, err := packages.SchemaFromSchemaSource(pkgWorkspace.Instance, pctx, source, parameters,
+				registry, env.Global(), 0 /* unbounded concurrency */, asExtension, serverURL)
+			if err != nil {
+				return err
+			}
+			pkg, err := packages.BindSpec(*spec, schema.NewPluginLoader(pctx))
+			if err != nil {
+				return err
+			}
+
+			if version != "" {
+				pkgVersion, err := semver.Parse(version)
+				if err != nil {
+					return fmt.Errorf("invalid version %q: %w", version, err)
+				}
+				if pkg.Version != nil {
+					sink.Infof(diag.Message("", "overriding package version %s with %s"), pkg.Version, pkgVersion)
+				}
+				pkg.Version = &pkgVersion
+			}
+			language = cmdCmd.NormalizeRuntimeName(language)
+
+			if language == "all" {
+				for _, lang := range []string{"dotnet", "go", "java", "nodejs", "python"} {
+					diags, err := packages.GenSDK(cmd.Context(), registry, lang, out, pkg, overlays, local)
+					cmdDiag.PrintDiagnostics(pctx.Diag, diags)
+					if err != nil {
+						return err
+					}
+				}
+				fmt.Fprintf(cmd.ErrOrStderr(), "SDKs have been written to %s\n", out)
+				printRegistryDocsHint(cmd.ErrOrStderr(), agent, cmd.Context(), registry, pkg)
+				return nil
+			}
+			diags, err := packages.GenSDK(cmd.Context(), registry, language, out, pkg, overlays, local)
+			cmdDiag.PrintDiagnostics(pctx.Diag, diags)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.ErrOrStderr(), "SDK has been written to %s\n", filepath.Join(out, language))
+			printRegistryDocsHint(cmd.ErrOrStderr(), agent, cmd.Context(), registry, pkg)
+			return nil
+		},
+	}
+
+	constrictor.AttachArguments(cmd, &constrictor.Arguments{
+		Arguments: []constrictor.Argument{
+			{Name: "schema-source"},
+			{Name: "provider-parameter"},
+		},
+		Required: 1,
+		Variadic: true,
+	})
+
+	// It's worth mentioning the `--`, as it means that Cobra will stop parsing flags.
+	// In other words, a provider parameter can be `--foo` as long as it's after `--`.
+	cmd.Use = "gen-sdk <schema-source> [flags] [--] [provider-parameter]..."
+
+	cmd.Flags().StringVarP(&language, "language", "", "all",
+		"The SDK language to generate: [nodejs|python|go|dotnet|java|all]")
+	cmd.Flags().StringVarP(&out, "out", "o", "./sdk",
+		"The directory to write the SDK to")
+	cmd.Flags().StringVar(&overlays, "overlays", "", "A folder of extra overlay files to copy to the generated SDK")
+	cmd.Flags().StringVar(&version, "version", "", "The provider plugin version to generate the SDK for")
+	cmd.Flags().BoolVar(&local, "local", false, "Generate an SDK appropriate for local usage")
+	cmd.Flags().StringVar(&serverURL, "server", "",
+		"A URL to download the plugin from. When set, the provider argument is used as the plugin name "+
+			"directly and no package resolution is performed.")
+	packages.AddExtensionFlag(cmd, &parameterArgs, &asExtension)
+	contract.AssertNoErrorf(cmd.Flags().MarkHidden("overlays"), `Could not mark "overlay" as hidden`)
+	return cmd
+}

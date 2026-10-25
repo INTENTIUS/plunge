@@ -1,0 +1,10 @@
+name: test-provider-url-python
+runtime:
+  name: python
+  options:
+    toolchain: uv
+description: A minimal Python Pulumi program
+plugins:
+  providers:
+    - name: testprovider
+      path: ../../../testprovider

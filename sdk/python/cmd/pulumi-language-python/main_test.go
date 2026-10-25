@@ -1,0 +1,544 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"sync"
+	"testing"
+
+	pulumirpc "github.com/pulumi/pulumi/sdk/v3/proto/go"
+	"github.com/pulumi/pulumi/sdk/v3/python/toolchain"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestParseOptions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("defaults", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{}, false)
+		require.NoError(t, err)
+		assert.Equal(t, "root", opts.Root)
+		assert.Equal(t, "programDir", opts.ProgramDir)
+		assert.Equal(t, toolchain.Auto, opts.Toolchain)
+		assert.Equal(t, toolchain.TypeCheckerNone, opts.Typechecker)
+		assert.Equal(t, "", opts.Virtualenv)
+	})
+
+	t.Run("virtualenv", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{
+			"virtualenv":  "myvenv",
+			"toolchain":   "uv",
+			"typechecker": "mypy",
+		}, false)
+		require.NoError(t, err)
+		assert.Equal(t, "myvenv", opts.Virtualenv)
+		assert.Equal(t, toolchain.Uv, opts.Toolchain)
+		assert.Equal(t, toolchain.TypeCheckerMypy, opts.Typechecker)
+	})
+
+	t.Run("toolchain unknown", func(t *testing.T) {
+		t.Parallel()
+		_, err := parseOptions("root", "programDir", map[string]any{"toolchain": "npm"}, false)
+		require.ErrorContains(t, err, "unsupported toolchain option: npm")
+	})
+
+	t.Run("plugin auto toolchain defaults virtualenv to `venv`", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{}, true)
+		require.NoError(t, err)
+		assert.Equal(t, "venv", opts.Virtualenv)
+		assert.Equal(t, toolchain.Auto, opts.Toolchain)
+	})
+
+	t.Run("plugin pip toolchain defaults virtualenv to `venv`", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{"toolchain": "pip"}, true)
+		require.NoError(t, err)
+		assert.Equal(t, "venv", opts.Virtualenv)
+	})
+
+	t.Run("plugin explicit virtualenv is not overridden", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{"virtualenv": "myvenv"}, true)
+		require.NoError(t, err)
+		assert.Equal(t, "myvenv", opts.Virtualenv)
+	})
+
+	t.Run("plugin poetry toolchain does not default virtualenv", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{"toolchain": "poetry"}, true)
+		require.NoError(t, err)
+		assert.Equal(t, "", opts.Virtualenv)
+	})
+
+	t.Run("plugin uv toolchain does not default virtualenv", func(t *testing.T) {
+		t.Parallel()
+		opts, err := parseOptions("root", "programDir", map[string]any{"toolchain": "uv"}, true)
+		require.NoError(t, err)
+		assert.Equal(t, "", opts.Virtualenv)
+	})
+}
+
+func TestRemoveReleaseCandidateSuffix(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, "3.13.0", removeReleaseCandidateSuffix("3.13.0rc0"))
+	require.Equal(t, "3.13.0", removeReleaseCandidateSuffix("3.13.0rc1"))
+	require.Equal(t, "3.13.0", removeReleaseCandidateSuffix("3.13.0rc345"))
+	require.Equal(t, "3.13.0-banana", removeReleaseCandidateSuffix("3.13.0-banana"))
+}
+
+func TestDeterminePluginVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input    string
+		expected string
+		err      string
+	}{
+		{
+			input:    "0.1",
+			expected: "0.1.0",
+		},
+		{
+			input:    "1.0",
+			expected: "1.0.0",
+		},
+		{
+			input:    "1.0.0",
+			expected: "1.0.0",
+		},
+		{
+			input: "",
+			err:   "cannot parse empty string",
+		},
+		{
+			input:    "4.3.2.1",
+			expected: "4.3.2.1",
+		},
+		{
+			input: " 1 . 2 . 3 ",
+			err:   `' 1 . 2 . 3 ' still unparsed`,
+		},
+		{
+			input:    "2.1a123456789",
+			expected: "2.1.0-alpha.123456789",
+		},
+		{
+			input:    "2.14.0a1605583329",
+			expected: "2.14.0-alpha.1605583329",
+		},
+		{
+			input:    "1.2.3b123456",
+			expected: "1.2.3-beta.123456",
+		},
+		{
+			input:    "3.2.1rc654321",
+			expected: "3.2.1-rc.654321",
+		},
+		{
+			input: "1.2.3dev7890",
+			err:   "'dev7890' still unparsed",
+		},
+		{
+			input:    "1.2.3.dev456",
+			expected: "1.2.3+dev456",
+		},
+		{
+			input: "1.",
+			err:   "'.' still unparsed",
+		},
+		{
+			input:    "3.2.post32",
+			expected: "3.2.0+post32",
+		},
+		{
+			input:    "0.3.0b8",
+			expected: "0.3.0-beta.8",
+		},
+		{
+			input: "10!3.2.1",
+			err:   "epochs are not supported",
+		},
+		{
+			input:    "3.2.post1.dev0",
+			expected: "3.2.0+post1dev0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := determinePluginVersion(tt.input)
+			if tt.err != "" {
+				assert.EqualError(t, err, tt.err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func getOptions(t *testing.T, name, cwd string) toolchain.PythonOptions {
+	t.Helper()
+	switch name {
+	case "pip":
+		return toolchain.PythonOptions{
+			Toolchain:  toolchain.Pip,
+			Virtualenv: ".venv",
+			Root:       cwd,
+			ProgramDir: cwd,
+		}
+	case "poetry":
+		return toolchain.PythonOptions{
+			Toolchain:  toolchain.Poetry,
+			Root:       cwd,
+			ProgramDir: cwd,
+		}
+	case "uv":
+		return toolchain.PythonOptions{
+			Toolchain:  toolchain.Uv,
+			Root:       cwd,
+			ProgramDir: cwd,
+		}
+	}
+	t.Fatalf("unknown toolchain: %s", name)
+	return toolchain.PythonOptions{}
+}
+
+// addPackage installs a package using the specified toolchain.
+func addPackage(t *testing.T, opts toolchain.PythonOptions, name string) {
+	t.Helper()
+
+	// If name is a local source directory, copy it into a per-call tempdir. Otherwise concurrent
+	// installs from the same source race on <source>/build/ — legacy setuptools (no pyproject.toml)
+	// writes its build artifacts in place, which manifests as e.g.
+	// "Directory not empty: 'build/bdist.linux-x86_64/wheel'" under pip and as a wheel missing data
+	// files (e.g. pulumi-plugin.json) under poetry/uv.
+	if info, err := os.Stat(name); err == nil && info.IsDir() {
+		dest := filepath.Join(t.TempDir(), filepath.Base(name))
+		require.NoError(t, os.CopyFS(dest, os.DirFS(name)))
+		name = dest
+	}
+
+	switch opts.Toolchain {
+	case toolchain.Pip, toolchain.Auto:
+		tc, err := toolchain.ResolveToolchain(opts)
+		require.NoError(t, err)
+		cmd, err := tc.ModuleCommand(t.Context(), "pip", "install", name)
+		require.NoError(t, err)
+		cmd.Dir = opts.Root
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	case toolchain.Poetry:
+		cmd := exec.Command("poetry", "add", name)
+		cmd.Dir = opts.Root
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	case toolchain.Uv:
+		cmd := exec.Command("uv", "add", name)
+		cmd.Dir = opts.Root
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	default:
+		require.Fail(t, "unknown toolchain %v", opts.Toolchain)
+	}
+}
+
+// createVenv creates a virtual environment in the given directory with the toolchain and installs requirements.
+func createVenv(t *testing.T, cwd, toolchainName string, opts toolchain.PythonOptions, requirements ...string) {
+	t.Helper()
+	//nolint:lll
+	poetryToml := `[virtualenvs]
+# Create the venv inside the project directory so it gets cleaned up when we remove the temp directory used for the tests.
+in-project = true
+`
+
+	switch toolchainName {
+	case "poetry":
+		// Create poetry config file that ensures venvs are created in the local folder
+		err := os.WriteFile(filepath.Join(cwd, "poetry.toml"), []byte(poetryToml), 0o600)
+		require.NoError(t, err)
+		err = os.WriteFile(filepath.Join(cwd, "pyproject.toml"), []byte(`[tool.poetry]
+name = "test"
+version = "0.1.0"
+description = ""
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+`), 0o600)
+		require.NoError(t, err)
+		// Create the venv
+		cmd := exec.Command("poetry", "install")
+		cmd.Dir = cwd
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	case "uv":
+		cmd := exec.Command("uv", "init")
+		cmd.Dir = cwd
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+		cmd = exec.Command("uv", "sync")
+		cmd.Dir = cwd
+		out, err = cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	case "pip":
+		cmd := exec.Command("python3", "-m", "venv", ".venv")
+		cmd.Dir = cwd
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+
+	for _, req := range requirements {
+		addPackage(t, opts, req)
+	}
+}
+
+var buildPulumiWheel = sync.OnceValues(func() (string, error) {
+	coreSDK, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		return "", err
+	}
+	dest, err := os.MkdirTemp("", "pulumi-core-sdk-")
+	if err != nil {
+		return "", err
+	}
+	cmd := exec.Command("uv", "build", coreSDK, "--wheel", "-o", dest)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("uv build %s: %w\n%s", coreSDK, err, out)
+	}
+	wheels, err := filepath.Glob(filepath.Join(dest, "*.whl"))
+	if err != nil {
+		return "", err
+	}
+	if len(wheels) != 1 {
+		return "", fmt.Errorf("expected exactly one wheel in %s, found %v", dest, wheels)
+	}
+	return wheels[0], nil
+})
+
+func pulumiWheel(t *testing.T) string {
+	t.Helper()
+	wheel, err := buildPulumiWheel()
+	require.NoError(t, err)
+	return wheel
+}
+
+func TestListPulumiPackageInfos(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping package-manager integration test in short mode")
+	}
+
+	t.Parallel()
+
+	for _, toolchainName := range []string{"pip", "poetry", "uv"} {
+		t.Run(toolchainName+"/empty", func(t *testing.T) {
+			t.Parallel()
+			cwd := t.TempDir()
+			opts := getOptions(t, toolchainName, cwd)
+			createVenv(t, cwd, toolchainName, opts)
+			tc, err := toolchain.ResolveToolchain(opts)
+			require.NoError(t, err)
+
+			infos, err := listPulumiPackageInfos(t.Context(), tc)
+
+			require.NoError(t, err)
+			require.Empty(t, infos)
+		})
+
+		t.Run(toolchainName+"/non-empty", func(t *testing.T) {
+			t.Parallel()
+			cwd := t.TempDir()
+			opts := getOptions(t, toolchainName, cwd)
+
+			createVenv(t, cwd, toolchainName, opts, pulumiWheel(t), "pulumi-random", "pip-install-test")
+			tc, err := toolchain.ResolveToolchain(opts)
+			require.NoError(t, err)
+
+			infos, err := listPulumiPackageInfos(t.Context(), tc)
+
+			require.NoError(t, err)
+			require.Len(t, infos, 1)
+			require.Equal(t, "pulumi-random", infos[0].DependencyInfo.Name)
+		})
+
+		t.Run(toolchainName+"/pulumiplugin", func(t *testing.T) {
+			t.Parallel()
+
+			cwd := t.TempDir()
+			opts := getOptions(t, toolchainName, cwd)
+			createVenv(t, cwd, toolchainName, opts, "pip-install-test==0.5")
+			tc, err := toolchain.ResolveToolchain(opts)
+			require.NoError(t, err)
+			// Find sitePackages folder in Python that contains pip_install_test subfolder.
+			var sitePackages string
+			cmd, err := tc.Command(t.Context(), "-c",
+				"import site; import json; print(json.dumps(site.getsitepackages()))")
+			require.NoError(t, err)
+			possibleSitePackages, err := cmd.Output()
+			require.NoError(t, err)
+			var possibleSitePackagePaths []string
+			err = json.Unmarshal(possibleSitePackages, &possibleSitePackagePaths)
+			require.NoError(t, err)
+			for _, dir := range possibleSitePackagePaths {
+				_, err := os.Stat(filepath.Join(dir, "pip_install_test"))
+				if os.IsNotExist(err) {
+					continue
+				}
+				require.NoError(t, err)
+				sitePackages = dir
+			}
+			if sitePackages == "" {
+				t.Error("None of Python site.getsitepackages() folders contain a pip_install_test subfolder")
+				t.FailNow()
+			}
+			path := filepath.Join(sitePackages, "pip_install_test", "pulumi-plugin.json")
+			bytes := []byte(`{ "name": "thing1", "version": "thing2", "server": "thing3", "resource": true }` + "\n")
+			err = os.WriteFile(path, bytes, 0o600)
+			require.NoError(t, err)
+			t.Logf("Wrote pulumi-plugin.json file: %s", path)
+
+			infos, err := listPulumiPackageInfos(t.Context(), tc)
+
+			require.NoError(t, err)
+			require.Len(t, infos, 1)
+			pipInstallTest := infos[0]
+			assert.Equal(t, "pip-install-test", pipInstallTest.DependencyInfo.Name)
+
+			plugin, err := packageDependencyFromPluginJSON(pipInstallTest.DependencyInfo, pipInstallTest.PluginJSON)
+			require.NoError(t, err)
+			require.NotNil(t, plugin)
+			assert.Equal(t, "thing1", plugin.Name)
+			assert.Equal(t, "vthing2", plugin.Version)
+			assert.Equal(t, "thing3", plugin.Server)
+			assert.Equal(t, "resource", plugin.Kind)
+		})
+
+		t.Run(toolchainName+"/pulumiplugin-resource-false", func(t *testing.T) {
+			t.Parallel()
+
+			cwd := t.TempDir()
+			opts := getOptions(t, toolchainName, cwd)
+			createVenv(t, cwd, toolchainName, opts, pulumiWheel(t))
+
+			// Install a local pulumi SDK that has a pulumi-plugin.json file with `{ "resource": false }`.
+			fooSdkDir, err := filepath.Abs(filepath.Join("testdata", "sdks", "foo-1.0.0"))
+			require.NoError(t, err)
+			addPackage(t, opts, fooSdkDir)
+
+			tc, err := toolchain.ResolveToolchain(opts)
+			require.NoError(t, err)
+
+			// The package should be considered a Pulumi package since its name is prefixed with "pulumi_".
+			infos, err := listPulumiPackageInfos(t.Context(), tc)
+			require.NoError(t, err)
+			require.Len(t, infos, 1)
+			assert.Equal(t, "pulumi-foo", infos[0].DependencyInfo.Name)
+
+			// There should be no associated plugin since its `resource` field is set to `false`.
+			plugin, err := packageDependencyFromPluginJSON(infos[0].DependencyInfo, infos[0].PluginJSON)
+			require.NoError(t, err)
+			assert.Nil(t, plugin)
+		})
+
+		t.Run(toolchainName+"/no-pulumiplugin.json-file", func(t *testing.T) {
+			t.Parallel()
+
+			cwd := t.TempDir()
+			opts := getOptions(t, toolchainName, cwd)
+			createVenv(t, cwd, toolchainName, opts, pulumiWheel(t))
+
+			// Install a local old provider SDK that does not have a pulumi-plugin.json file.
+			oldSdkDir, err := filepath.Abs(filepath.Join("testdata", "sdks", "old-1.0.0"))
+			require.NoError(t, err)
+			addPackage(t, opts, oldSdkDir)
+
+			tc, err := toolchain.ResolveToolchain(opts)
+			require.NoError(t, err)
+
+			// The package should be considered a Pulumi package since its name is prefixed with "pulumi_".
+			infos, err := listPulumiPackageInfos(t.Context(), tc)
+			require.NoError(t, err)
+			require.Len(t, infos, 1)
+			assert.Equal(t, "pulumi-old", infos[0].DependencyInfo.Name)
+		})
+
+		t.Run(toolchainName+"/pulumi-policy", func(t *testing.T) {
+			t.Parallel()
+
+			cwd := t.TempDir()
+			opts := getOptions(t, toolchainName, cwd)
+			createVenv(t, cwd, toolchainName, opts, pulumiWheel(t), "pulumi-policy")
+
+			tc, err := toolchain.ResolveToolchain(opts)
+			require.NoError(t, err)
+
+			// The package should not be considered a Pulumi package since it is hardcoded not to be,
+			// since it does not have an associated plugin.
+			infos, err := listPulumiPackageInfos(t.Context(), tc)
+			require.NoError(t, err)
+			assert.Empty(t, infos)
+		})
+	}
+}
+
+func TestRuntimeOptionsPromptsToolchainChoices(t *testing.T) {
+	toolchainChoices := func(t *testing.T) []string {
+		host := &pythonLanguageHost{}
+		resp, err := host.RuntimeOptionsPrompts(t.Context(), &pulumirpc.RuntimeOptionsRequest{
+			Info: &pulumirpc.ProgramInfo{},
+		})
+		require.NoError(t, err)
+		require.Len(t, resp.Prompts, 1)
+		require.Equal(t, "toolchain", resp.Prompts[0].Key)
+		require.Equal(t, "pip", resp.Prompts[0].Default.StringValue)
+		names := make([]string, 0, len(resp.Prompts[0].Choices))
+		for _, choice := range resp.Prompts[0].Choices {
+			names = append(names, choice.DisplayName)
+		}
+		return names
+	}
+
+	t.Run("only pip when no other toolchain is found", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		require.Equal(t, []string{"pip"}, toolchainChoices(t))
+	})
+
+	t.Run("all toolchains when another one is found", func(t *testing.T) {
+		dir := t.TempDir()
+		name := "uv"
+		if runtime.GOOS == "windows" {
+			name = "uv.exe"
+		}
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte{}, 0o755)) //nolint:gosec
+		t.Setenv("PATH", dir)
+		require.Equal(t, []string{"pip", "uv", "poetry [not found]"}, toolchainChoices(t))
+	})
+}

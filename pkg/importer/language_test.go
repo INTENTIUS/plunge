@@ -1,0 +1,534 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package importer
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"maps"
+	"strings"
+	"testing"
+
+	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/stretchr/testify/require"
+
+	"github.com/pulumi/pulumi/pkg/v3/codegen/nodejs"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/pcl"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/schema"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/testing/utils"
+	"github.com/pulumi/pulumi/pkg/v3/resource/stack"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/slice"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGenerateLanguageDefinition(t *testing.T) {
+	t.Parallel()
+	loader := schema.NewPluginLoader(utils.NewContext(testdataPath))
+
+	cases, err := readTestCases("testdata/cases.json")
+	require.NoError(t, err)
+
+	for _, s := range cases.Resources {
+		t.Run(string(s.URN), func(t *testing.T) {
+			t.Parallel()
+			state, err := stack.DeserializeResource(s, config.NopDecrypter)
+			require.NoError(t, err)
+
+			snapshot := []*pkgresource.State{
+				{
+					ID:     "123",
+					Custom: true,
+					Type:   "pulumi:providers:importer",
+					URN:    "urn:pulumi:stack::project::pulumi:providers:importer::default_123",
+				},
+				{
+					ID:     "123",
+					Custom: true,
+					Type:   "pulumi:providers:random",
+					URN:    "urn:pulumi:stack::project::pulumi:providers:random::default_123",
+				},
+				{
+					ID:     "id",
+					Custom: true,
+					Type:   "pulumi:providers:pkg",
+					URN:    "urn:pulumi:stack::project::pulumi:providers:pkg::provider",
+				},
+			}
+
+			var actualState *pkgresource.State
+			err = GenerateLanguageDefinitions(io.Discard, loader, func(_ io.Writer, p *pcl.Program) error {
+				require.Len(t, p.Nodes, 1)
+
+				res, isResource := p.Nodes[0].(*pcl.Resource)
+				if !assert.True(t, isResource) {
+					t.Fatal()
+				}
+
+				actualState = renderResource(t, res)
+				return nil
+			}, []*pkgresource.State{state}, snapshot, maps.Clone(names))
+			require.NoError(t, err)
+
+			assert.Equal(t, state.Type, actualState.Type)
+			assert.Equal(t, state.URN, actualState.URN)
+			assert.Equal(t, state.Parent, actualState.Parent)
+			if !strings.Contains(state.Provider, "::default_") {
+				assert.Equal(t, state.Provider, actualState.Provider)
+			}
+			assert.Equal(t, state.Protect, actualState.Protect)
+			if !assert.True(t, actualState.Inputs.DeepEquals(state.Inputs)) {
+				actual, _, err := stack.SerializeResource(t.Context(), actualState, config.NopEncrypter, false)
+				contract.IgnoreError(err)
+
+				sb, err := json.MarshalIndent(s, "", "    ")
+				contract.IgnoreError(err)
+
+				ab, err := json.MarshalIndent(actual, "", "    ")
+				contract.IgnoreError(err)
+
+				t.Logf("%v\n\n%v\n", string(sb), string(ab))
+			}
+		})
+	}
+}
+
+func TestGenerateLanguageDefinitionsReferencesOtherResources(t *testing.T) {
+	t.Parallel()
+	loader := schema.NewPluginLoader(utils.NewContext(testdataPath))
+
+	var generatedProgram strings.Builder
+	generator := func(_ io.Writer, p *pcl.Program) error {
+		for _, content := range p.Source() {
+			generatedProgram.WriteString(content)
+		}
+		return nil
+	}
+
+	snapshot := []*pkgresource.State{
+		{
+			ID:     "123",
+			Custom: true,
+			Type:   "pulumi:providers:importer",
+			URN:    "urn:pulumi:stack::project::pulumi:providers:importer::default_123",
+		},
+	}
+
+	resources := []apitype.ResourceV3{
+		{
+			URN:      "urn:pulumi:stack::project::importer:s3/bucket:Bucket::myBucket",
+			ID:       "bucket-1",
+			Custom:   true,
+			Type:     "importer:s3/bucket:Bucket",
+			Inputs:   map[string]any{},
+			Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+		},
+		{
+			URN:    "urn:pulumi:stack::project::importer:s3/bucketObject:BucketObject::obj",
+			ID:     "bucket-object-1",
+			Custom: true,
+			Type:   "importer:s3/bucketObject:BucketObject",
+			Inputs: map[string]any{
+				"bucket": "bucket-1",
+			},
+			Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+		},
+	}
+
+	states := slice.Prealloc[*pkgresource.State](len(resources))
+	for _, r := range resources {
+		state, err := stack.DeserializeResource(r, config.NopDecrypter)
+		require.NoError(t, err)
+		states = append(states, state)
+	}
+
+	var names NameTable
+	err := GenerateLanguageDefinitions(io.Discard, loader, generator, states, snapshot, names)
+	require.NoError(t, err)
+	// notice here the generated program doesn't have any references because
+	// we retried the codegen without guessing the dependencies between the resources.
+	expectedCode := `package importer {
+    baseProviderName = "importer"
+
+}
+
+resource myBucket "importer:s3/bucket:Bucket" {
+
+}
+
+resource obj "importer:s3/bucketObject:BucketObject" {
+    bucket = myBucket.id
+
+}
+`
+	assert.Equal(t, expectedCode, generatedProgram.String())
+}
+
+func TestGenerateLanguageDefinitionsReferencesOtherResourcesByName(t *testing.T) {
+	t.Parallel()
+
+	testAttribute := func(t *testing.T, names NameTable, expectedCode string) {
+		t.Helper()
+		loader := schema.NewPluginLoader(utils.NewContext(testdataPath))
+
+		var generatedProgram strings.Builder
+		generator := func(_ io.Writer, p *pcl.Program) error {
+			for _, content := range p.Source() {
+				generatedProgram.WriteString(content)
+			}
+			return nil
+		}
+
+		snapshot := []*pkgresource.State{
+			{
+				ID:     "123",
+				Custom: true,
+				Type:   "pulumi:providers:importer",
+				URN:    "urn:pulumi:stack::project::pulumi:providers:importer::default_123",
+			},
+		}
+
+		resources := []apitype.ResourceV3{
+			{
+				URN:      "urn:pulumi:stack::project::importer:s3/bucket:Bucket::my.Bucket.com",
+				ID:       "bucket-1",
+				Custom:   true,
+				Type:     "importer:s3/bucket:Bucket",
+				Inputs:   map[string]any{},
+				Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+			},
+			{
+				URN:    "urn:pulumi:stack::project::importer:s3/bucketObject:BucketObject::obj",
+				ID:     "bucket-object-1",
+				Custom: true,
+				Type:   "importer:s3/bucketObject:BucketObject",
+				Inputs: map[string]any{
+					"bucket": "bucket-1",
+				},
+				Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+			},
+		}
+
+		states := slice.Prealloc[*pkgresource.State](len(resources))
+		for _, r := range resources {
+			state, err := stack.DeserializeResource(r, config.NopDecrypter)
+			require.NoError(t, err)
+			states = append(states, state)
+		}
+
+		err := GenerateLanguageDefinitions(io.Discard, loader, generator, states, snapshot, names)
+		require.NoError(t, err)
+		assert.Equal(t, expectedCode, generatedProgram.String())
+	}
+
+	// Regression test for https://github.com/pulumi/pulumi/issues/22058, check that given names are used in
+	// attribute lookups.
+	t.Run("GivenName", func(t *testing.T) {
+		t.Parallel()
+		names := NameTable{
+			"urn:pulumi:stack::project::importer:s3/bucket:Bucket::my.Bucket.com": "myBucket",
+		}
+		expectedCode := `package importer {
+    baseProviderName = "importer"
+
+}
+
+resource myBucket "importer:s3/bucket:Bucket" {
+    __logicalName = "my.Bucket.com"
+
+}
+
+resource obj "importer:s3/bucketObject:BucketObject" {
+    bucket = myBucket.id
+
+}
+`
+		testAttribute(t, names, expectedCode)
+	})
+
+	// Regression test for https://github.com/pulumi/pulumi/issues/22058, check that sanitized names are used in
+	// attribute lookups.
+	t.Run("SanitizedName", func(t *testing.T) {
+		t.Parallel()
+		var names NameTable
+		expectedCode := `package importer {
+    baseProviderName = "importer"
+
+}
+
+resource my_Bucket_com "importer:s3/bucket:Bucket" {
+    __logicalName = "my.Bucket.com"
+
+}
+
+resource obj "importer:s3/bucketObject:BucketObject" {
+    bucket = my_Bucket_com.id
+
+}
+`
+		testAttribute(t, names, expectedCode)
+	})
+}
+
+func TestGenerateLanguageDefinitionsRetriesCodegenWhenEncounteringCircularReferences(t *testing.T) {
+	t.Parallel()
+	loader := schema.NewPluginLoader(utils.NewContext(testdataPath))
+
+	var generatedProgram strings.Builder
+	generator := func(_ io.Writer, p *pcl.Program) error {
+		for _, content := range p.Source() {
+			generatedProgram.WriteString(content)
+		}
+		return nil
+	}
+
+	snapshot := []*pkgresource.State{
+		{
+			ID:     "123",
+			Custom: true,
+			Type:   "pulumi:providers:importer",
+			URN:    "urn:pulumi:stack::project::pulumi:providers:importer::default_123",
+		},
+	}
+
+	// Create a circular reference between two resources.
+	// In this case, generating the PCL would fail with a circular reference error but we retry the codegen
+	// without guessing the dependencies between the resources.
+	resources := []apitype.ResourceV3{
+		{
+			URN:    "urn:pulumi:stack::project::importer:s3/bucketObject:BucketObject::first",
+			ID:     "bucket-object-1",
+			Custom: true,
+			Type:   "importer:s3/bucketObject:BucketObject",
+			Inputs: map[string]any{
+				"bucket": "bucket-object-2",
+			},
+			Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+		},
+		{
+			URN:    "urn:pulumi:stack::project::importer:s3/bucketObject:BucketObject::second",
+			ID:     "bucket-object-2",
+			Custom: true,
+			Type:   "importer:s3/bucketObject:BucketObject",
+			Inputs: map[string]any{
+				"bucket": "bucket-object-1",
+			},
+			Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+		},
+	}
+
+	states := slice.Prealloc[*pkgresource.State](len(resources))
+	for _, r := range resources {
+		state, err := stack.DeserializeResource(r, config.NopDecrypter)
+		require.NoError(t, err)
+		states = append(states, state)
+	}
+
+	var names NameTable
+	err := GenerateLanguageDefinitions(io.Discard, loader, generator, states, snapshot, names)
+	require.NoError(t, err)
+	// notice here the generated program doesn't have any references because
+	// we retried the codegen without guessing the dependencies between the resources.
+	expectedCode := `package importer {
+    baseProviderName = "importer"
+
+}
+
+resource first "importer:s3/bucketObject:BucketObject" {
+    bucket = "bucket-object-2"
+
+}
+
+resource second "importer:s3/bucketObject:BucketObject" {
+    bucket = "bucket-object-1"
+
+}
+`
+	assert.Equal(t, expectedCode, generatedProgram.String())
+}
+
+func TestGenerateLanguageDefinitionsAllowsGeneratingParentVariables(t *testing.T) {
+	t.Parallel()
+
+	loader := schema.NewPluginLoader(utils.NewContext(testdataPath))
+
+	var generatedProgram strings.Builder
+	generator := func(_ io.Writer, p *pcl.Program) error {
+		for _, content := range p.Source() {
+			generatedProgram.WriteString(content)
+		}
+		return nil
+	}
+
+	componentURN := resource.NewURN("dev", "project", "", "example:index:MyComponent", "example")
+	childURN := resource.NewURN(
+		"dev",
+		"project",
+		"example:index:MyComponent",
+		"random:index/randomPet:RandomPet",
+		"randomPet")
+
+	nameTable := NameTable{
+		componentURN: "parentComponent",
+	}
+
+	snapshot := []*pkgresource.State{
+		{
+			ID:     "123",
+			Custom: true,
+			Type:   "pulumi:providers:random",
+			URN:    "urn:pulumi:stack::project::pulumi:providers:random::default_123",
+		},
+	}
+
+	resources := []apitype.ResourceV3{
+		{
+			URN:      childURN,
+			Custom:   true,
+			Type:     "random:index/randomPet:RandomPet",
+			Parent:   componentURN,
+			Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+		},
+	}
+
+	states := slice.Prealloc[*pkgresource.State](len(resources))
+	for _, r := range resources {
+		state, err := stack.DeserializeResource(r, config.NopDecrypter)
+		require.NoError(t, err)
+		states = append(states, state)
+	}
+
+	err := GenerateLanguageDefinitions(io.Discard, loader, generator, states, snapshot, nameTable)
+	require.NoError(t, err)
+	expectedCode := `package random {
+    baseProviderName = "random"
+
+}
+
+resource randomPet "random:index/randomPet:RandomPet" {
+options {
+parent = parentComponent
+
+}
+
+}
+`
+	assert.Equal(t, expectedCode, generatedProgram.String())
+}
+
+func TestGenerateLanguageDefinitionsGeneratesLocalComponents(t *testing.T) {
+	t.Parallel()
+
+	loader := schema.NewPluginLoader(utils.NewContext(testdataPath))
+
+	var generatedProgram strings.Builder
+	var generatedTypeScript string
+	generator := func(_ io.Writer, p *pcl.Program) error {
+		for _, content := range p.Source() {
+			generatedProgram.WriteString(content)
+		}
+		files, _, err := nodejs.GenerateProgram(p)
+		require.NoError(t, err)
+		generatedTypeScript = string(files["index.ts"])
+		return nil
+	}
+
+	componentURN := resource.NewURN("dev", "project", "", "company:product:CRClass", "example")
+	childURN := resource.NewURN(
+		"dev",
+		"project",
+		"company:product:CRClass",
+		"random:index/randomPet:RandomPet",
+		"randomPet")
+
+	nameTable := NameTable{
+		componentURN: "parentComponent",
+	}
+
+	snapshot := []*pkgresource.State{
+		{
+			ID:     "123",
+			Custom: true,
+			Type:   "pulumi:providers:random",
+			URN:    "urn:pulumi:stack::project::pulumi:providers:random::default_123",
+		},
+	}
+
+	resources := []apitype.ResourceV3{
+		{
+			URN:     componentURN,
+			Type:    "company:product:CRClass",
+			Protect: true,
+		},
+		{
+			URN:      childURN,
+			Custom:   true,
+			Type:     "random:index/randomPet:RandomPet",
+			Parent:   componentURN,
+			Provider: fmt.Sprintf("%s::%s", snapshot[0].URN, snapshot[0].ID),
+		},
+	}
+
+	states := slice.Prealloc[*pkgresource.State](len(resources))
+	for _, r := range resources {
+		state, err := stack.DeserializeResource(r, config.NopDecrypter)
+		require.NoError(t, err)
+		states = append(states, state)
+	}
+
+	err := GenerateLanguageDefinitions(io.Discard, loader, generator, states, snapshot, nameTable)
+	require.NoError(t, err)
+	expectedCode := `component parentComponent {
+    __logicalName = "example"
+    token = "company:product:CRClass"
+options {
+protect =true
+
+}
+
+}
+
+package random {
+    baseProviderName = "random"
+
+}
+
+resource randomPet "random:index/randomPet:RandomPet" {
+options {
+parent = parentComponent
+
+}
+
+}
+`
+	assert.Equal(t, expectedCode, generatedProgram.String())
+
+	expectedTypeScript := `import * as pulumi from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
+
+const parentComponent = new pulumi.ComponentResource("company:product:CRClass", "example", {}, {
+    protect: true,
+});
+const randomPet = new random.RandomPet("randomPet", {}, {
+    parent: parentComponent,
+});
+`
+	assert.Equal(t, expectedTypeScript, generatedTypeScript)
+}

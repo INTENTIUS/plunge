@@ -1,0 +1,452 @@
+# Copyright 2016, Pulumi Corporation.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Mocks for testing.
+"""
+
+import functools
+import logging
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, NamedTuple, Optional
+
+from google.protobuf import empty_pb2
+
+from ..runtime.proto import (
+    engine_pb2,
+    provider_pb2,
+    resource_pb2,
+)
+from ..runtime.stack import Stack, run_pulumi_func
+from ._callbacks import _CallbackServicer
+from . import rpc, rpc_manager
+from .settings import (
+    Settings,
+    configure,
+    get_project,
+    get_root_resource,
+    get_stack,
+    SETTINGS,
+)
+from .sync_await import _ensure_event_loop, _sync_await
+
+if TYPE_CHECKING:
+    from ..invoke import InvokeTransform
+    from ..resource import ResourceTransform
+
+
+def test(fn):
+    """
+    Decorates a test function to make sure that a returned Future
+    or Output is awaited as part of the test.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        from .. import Output
+
+        SETTINGS.rpc_manager.clear()
+        SETTINGS.outputs.clear()
+
+        _sync_await(
+            run_pulumi_func(
+                lambda: _sync_await(Output.from_input(fn(*args, **kwargs)).future())
+            )
+        )
+
+    return wrapper
+
+
+class MockResourceArgs:
+    """
+    MockResourceArgs is used to construct a newResource Mock
+    """
+
+    typ: str
+    name: str
+    inputs: dict
+    provider: Optional[str] = None
+    resource_id: Optional[str] = None
+    custom: Optional[bool] = None
+    transforms: "list[ResourceTransform]"
+
+    def __init__(
+        self,
+        typ: str,
+        name: str,
+        inputs: dict,
+        provider: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        custom: Optional[bool] = None,
+        transforms: Optional["list[ResourceTransform]"] = None,
+    ) -> None:
+        """
+        :param str typ: The token that indicates which resource type is being constructed. This token is of the form "package:module:type".
+        :param str name: The logical name of the resource instance.
+        :param dict inputs: The inputs for the resource.
+        :param str provider: The identifier of the provider instance being used to manage this resource.
+        :param str resource_id: The physical identifier of an existing resource to read or import.
+        :param bool custom: Specifies whether or not the resource is Custom (i.e. managed by a resource provider).
+        :param list transforms: The transforms declared in the resource's options. The mock monitor does not run them.
+        """
+        self.typ = typ
+        self.name = name
+        self.inputs = inputs
+        self.provider = provider
+        self.resource_id = resource_id
+        self.custom = custom
+        self.transforms = transforms or []
+
+
+class MockCallArgs:
+    """
+    MockCallArgs is used to construct a call Mock
+    """
+
+    token: str
+    args: dict
+    provider: str
+
+    def __init__(self, token: str, args: dict, provider: str) -> None:
+        """
+        :param str token: The token that indicates which function is being called. This token is of the form "package:module:function".
+        :param dict args: The arguments provided to the function call.
+        :param str provider: The identifier of the provider instance being used to make the call
+        """
+        self.token = token
+        self.args = args
+        self.provider = provider
+
+
+class Mocks(ABC):
+    """
+    Mocks is an abstract class that allows subclasses to replace operations normally implemented by the Pulumi engine with
+    their own implementations. This can be used during testing to ensure that calls to provider functions and resource constructors
+    return predictable values.
+    """
+
+    @abstractmethod
+    def call(self, args: MockCallArgs) -> tuple[dict, Optional[list[tuple[str, str]]]]:
+        """
+        call mocks provider-implemented function calls (e.g. aws.get_availability_zones).
+
+        :param MockCallArgs args.
+        """
+        return {}, None
+
+    @abstractmethod
+    def new_resource(self, args: MockResourceArgs) -> tuple[Optional[str], dict]:
+        """
+        new_resource mocks resource construction calls. This function should return the physical identifier and the output properties
+        for the resource being constructed.
+
+        :param MockResourceArgs args.
+        """
+        return "", {}
+
+    def register_transform(self, transform: "ResourceTransform") -> None:
+        """
+        register_transform is called when a stack transform is registered. The mock monitor
+        does not run transforms; implementations that want to exercise them can record the
+        transform here and call it from `new_resource`.
+
+        :param ResourceTransform transform.
+        """
+
+    def register_invoke_transform(self, transform: "InvokeTransform") -> None:
+        """
+        register_invoke_transform is called when a stack invoke transform is registered. The
+        mock monitor does not run transforms; implementations that want to exercise them can
+        record the transform here and call it from `call`.
+
+        :param InvokeTransform transform.
+        """
+
+
+def _resolve_callbacks(callbacks) -> list:
+    by_token = {}
+    for servicer in _CallbackServicer._servicers:
+        for fn, token in servicer._transforms.items():
+            by_token[token] = fn
+    return [
+        by_token[callback.token] for callback in callbacks if callback.token in by_token
+    ]
+
+
+class MockMonitor:
+    class ResourceRegistration(NamedTuple):
+        """
+        ResourceRegistration contains the URN, ID, and state of a registered resource.
+        """
+
+        urn: str
+        id: str
+        state: dict
+
+    mocks: Mocks
+    resources: dict[str, ResourceRegistration]
+
+    _stack_transforms: "list[ResourceTransform]"
+    _stack_invoke_transforms: "list[InvokeTransform]"
+
+    def __init__(self, mocks: Mocks):
+        self.mocks = mocks
+        self.resources = {}
+        self._stack_transforms = []
+        self._stack_invoke_transforms = []
+
+    def make_urn(self, parent: str, type_: str, name: str) -> str:
+        if parent != "":
+            qualifiedType = parent.split("::")[2]
+            parentType = qualifiedType.split("$").pop()
+            type_ = parentType + "$" + type_
+
+        return "urn:pulumi:" + "::".join([get_stack(), get_project(), type_, name])
+
+    def get_registered_resources(self) -> dict[str, ResourceRegistration]:
+        """
+        get_registered_resources returns a copy of the resources dictionary that can be used for test assertions.
+        """
+
+        return dict(self.resources)
+
+    def get_registered_transforms(self) -> "list[ResourceTransform]":
+        """
+        get_registered_transforms returns the resource transforms registered with this monitor.
+        The mock monitor does not run them; tests that want to exercise them can call them
+        from their `Mocks.new_resource` implementation.
+        """
+        return list(self._stack_transforms)
+
+    def get_registered_invoke_transforms(self) -> "list[InvokeTransform]":
+        """
+        get_registered_invoke_transforms returns the invoke transforms registered with this
+        monitor. The mock monitor does not run them; tests that want to exercise them can
+        call them from their `Mocks.call` implementation.
+        """
+        return list(self._stack_invoke_transforms)
+
+    def Invoke(self, request):
+        # Ensure we have an event loop on this thread because it's needed when deserializing resource references.
+        _ensure_event_loop()
+
+        args = rpc.deserialize_properties(request.args)
+
+        if request.tok == "pulumi:pulumi:getResource":
+            registered_resource = self.resources.get(args["urn"])
+            if registered_resource is None:
+                raise Exception(f"unknown resource {args['urn']}")
+            ret_proto = _sync_await(
+                rpc.serialize_properties(registered_resource._asdict(), {})
+            )
+            fields = {"failures": None, "return": ret_proto}
+            return resource_pb2.ResourceInvokeResponse(**fields)
+
+        call_args = MockCallArgs(
+            token=request.tok, args=args, provider=request.provider
+        )
+        tup = self.mocks.call(call_args)
+        if isinstance(tup, dict):
+            (ret, failures) = (tup, None)
+        else:
+            (ret, failures) = (
+                tup[0],
+                [
+                    provider_pb2.CheckFailure(property=failure[0], reason=failure[1])
+                    for failure in tup[1]
+                ],
+            )
+
+        ret_proto = _sync_await(rpc.serialize_properties(ret, {}))
+
+        fields = {"failures": failures, "return": ret_proto}
+        return resource_pb2.ResourceInvokeResponse(**fields)
+
+    def ReadResource(self, request):
+        # Ensure we have an event loop on this thread because it's needed when deserializing resource references.
+        _ensure_event_loop()
+
+        state = rpc.deserialize_properties(request.properties)
+
+        resource_args = MockResourceArgs(
+            typ=request.type,
+            name=request.name,
+            inputs=state,
+            provider=request.provider,
+            resource_id=request.id,
+        )
+        id_, state = self.mocks.new_resource(resource_args)
+
+        props_proto = _sync_await(rpc.serialize_properties(state, {}))
+
+        urn = self.make_urn(request.parent, request.type, request.name)
+
+        self.resources[urn] = MockMonitor.ResourceRegistration(urn, id_, state)
+
+        return resource_pb2.ReadResourceResponse(urn=urn, properties=props_proto)
+
+    def ExistsResource(self, request):
+        prefix = "urn:pulumi:" + "::".join([get_stack(), get_project()]) + "::"
+        exists = any(
+            r.id == request.id
+            and r.urn[len(prefix) :].split("::")[0].split("$")[-1] == request.type
+            for r in self.resources.values()
+        )
+        return resource_pb2.ExistsResourceResponse(exists=exists)
+
+    def RegisterResource(self, request):
+        urn = self.make_urn(request.parent, request.type, request.name)
+
+        if request.type == "pulumi:pulumi:Stack":
+            return resource_pb2.RegisterResourceResponse(urn=urn)
+
+        # Ensure we have an event loop on this thread because it's needed when deserializing resource references.
+        _ensure_event_loop()
+
+        inputs = rpc.deserialize_properties(request.object)
+
+        resource_args = MockResourceArgs(
+            typ=request.type,
+            name=request.name,
+            inputs=inputs,
+            provider=request.provider,
+            resource_id=request.importId,
+            custom=request.custom or False,
+            transforms=_resolve_callbacks(request.transforms),
+        )
+        id_, state = self.mocks.new_resource(resource_args)
+
+        obj_proto = _sync_await(rpc.serialize_properties(state, {}))
+
+        self.resources[urn] = MockMonitor.ResourceRegistration(urn, id_, state)
+
+        return resource_pb2.RegisterResourceResponse(urn=urn, id=id_, object=obj_proto)
+
+    def RegisterResourceOutputs(self, request):
+        return empty_pb2.Empty()
+
+    def RegisterStackTransform(self, request):
+        for transform in _resolve_callbacks([request]):
+            self._stack_transforms.append(transform)
+            self.mocks.register_transform(transform)
+        return empty_pb2.Empty()
+
+    def RegisterStackInvokeTransform(self, request):
+        for transform in _resolve_callbacks([request]):
+            self._stack_invoke_transforms.append(transform)
+            self.mocks.register_invoke_transform(transform)
+        return empty_pb2.Empty()
+
+    def RegisterResourceHook(self, request):
+        return empty_pb2.Empty()
+
+    def RegisterErrorHook(self, request):
+        return empty_pb2.Empty()
+
+    def SupportsFeature(self, request):
+        # Support for "outputValues" is deliberately disabled for the mock monitor so
+        # instances of `Output` don't show up in `MockResourceArgs` inputs.
+        has_support = request.id != "outputValues"
+        return type("SupportsFeatureResponse", (object,), {"hasSupport": has_support})
+
+    def GetDeploymentInfo(self, request):
+        # Support for "outputValues" is deliberately disabled for the mock monitor so
+        # instances of `Output` don't show up in `MockResourceArgs` inputs.
+        # INVOKE_DEPENDS_ON is left out because the mock monitor implements no invoke
+        # dependency gate; leaving it out keeps the client-side one.
+        return resource_pb2.DeploymentInfo(
+            supportedFeatures=[
+                resource_pb2.RESOURCE_MONITOR_FEATURE_SECRETS,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_RESOURCE_REFERENCES,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_ALIAS_SPECS,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_REPLACEMENT_TRIGGER,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_DELETED_WITH,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_REPLACE_WITH,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_TRANSFORMS,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_INVOKE_TRANSFORMS,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_PARAMETERIZATION,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_RESOURCE_HOOKS,
+                resource_pb2.RESOURCE_MONITOR_FEATURE_ERROR_HOOKS,
+            ]
+        )
+
+    def RegisterPackage(self, request):
+        # Mocks don't _really_ support packages, so we just return a fake package ref.
+        return resource_pb2.RegisterPackageResponse(ref="mock-uuid")
+
+    def SignalAndWaitForShutdown(self, request):
+        return empty_pb2.Empty()
+
+
+class MockEngine:
+    logger: logging.Logger
+
+    def __init__(self, logger: Optional[logging.Logger]):
+        self.logger = logger if logger is not None else logging.getLogger()
+
+    def Log(self, request):
+        if request.severity == engine_pb2.DEBUG:
+            self.logger.debug(request.message)
+        elif request.severity == engine_pb2.INFO:
+            self.logger.info(request.message)
+        elif request.severity == engine_pb2.WARNING:
+            self.logger.warning(request.message)
+        elif request.severity == engine_pb2.ERROR:
+            self.logger.error(request.message)
+
+
+# We use this MockSettings class in the case where test setup needs to stub in settings objects
+# Because ContextVars are context-sensitive, asyncio threads lose track of external settings meddling
+class MockSettings(Settings):
+    def __init__(self, *_, **kwargs):
+        self.rpc_manager = rpc_manager.RPCManager()
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def __repr__(self):
+        return f"<class MockSettings[engine={self.engine.__repr__()} monitor={self.monitor.__repr__()} project={self.project.__repr__()} stack={self.stack.__repr__()}>"
+
+
+def set_mocks(
+    mocks: Mocks,
+    project: Optional[str] = None,
+    stack: Optional[str] = None,
+    preview: Optional[bool] = None,
+    logger: Optional[logging.Logger] = None,
+    monitor: Optional[MockMonitor] = None,
+    organization: Optional[str] = None,
+):
+    """
+    set_mocks configures the Pulumi runtime to use the given mocks for testing.
+    """
+    monitor = MockMonitor(mocks) if monitor is None else monitor
+    monitor_features = set(
+        monitor.GetDeploymentInfo(empty_pb2.Empty()).supportedFeatures
+    )
+    settings = MockSettings(
+        monitor=monitor,
+        monitor_features=monitor_features,
+        engine=MockEngine(logger),
+        project=project if project is not None else "project",
+        stack=stack if stack is not None else "stack",
+        dry_run=preview,
+        organization=organization,
+        callbacks=None,
+    )
+    configure(settings)
+
+    # Ensure a new root stack resource has been initialized.
+    if get_root_resource() is None:
+        root_stack = Stack()
+        root_stack._finish()

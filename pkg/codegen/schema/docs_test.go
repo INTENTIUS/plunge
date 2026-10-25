@@ -1,0 +1,457 @@
+// Copyright 2020, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schema
+
+import (
+	"encoding/json"
+	"io/fs"
+	"net/url"
+	"path"
+	"path/filepath"
+	"testing"
+
+	"github.com/pgavlin/goldmark/ast"
+	"github.com/pgavlin/goldmark/testutil"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/testing/utils"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/slice"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// Note to future engineers: keep each file tested as a single test, do not use `t.Run` in the inner
+// loops.
+//
+// Time to complete on these tests increases from ~2s to 30s or more and the number of lines logged
+// to stdout from 46 lines to over 1,000,000 lines of output. This corresponds to the roughly 1
+// million doc items tested across each file.
+//
+// Aside from just being verbose, the voluminous output makes `gotestsum` analysis less useful and
+// prevents use of the `ci-matrix` tool.
+
+var testdataPath = filepath.Join("..", "testing", "test", "testdata")
+
+var nodeAssertions = testutil.DefaultNodeAssertions().Union(testutil.NodeAssertions{
+	KindShortcode: func(t *testing.T, sourceExpected, sourceActual []byte, expected, actual ast.Node) bool {
+		shortcodeExpected, shortcodeActual := expected.(*Shortcode), actual.(*Shortcode)
+		return testutil.AssertEqualBytes(t, shortcodeExpected.Name, shortcodeActual.Name)
+	},
+	KindRef: func(t *testing.T, sourceExpected, sourceActual []byte, expected, actual ast.Node) bool {
+		refExpected, refActual := expected.(*Ref), actual.(*Ref)
+		return assert.Equal(t, refExpected.Destination, refActual.Destination)
+	},
+})
+
+type doc struct {
+	entity  string
+	content string
+}
+
+func getDocsForProperty(parent string, p *Property) []doc {
+	entity := path.Join(parent, p.Name)
+	return []doc{
+		{entity: entity + "/description", content: p.Comment},
+		{entity: entity + "/deprecationMessage", content: p.DeprecationMessage},
+	}
+}
+
+func getDocsForObjectType(path string, t *ObjectType) []doc {
+	if t == nil {
+		return nil
+	}
+
+	docs := []doc{{entity: path + "/description", content: t.Comment}}
+	for _, p := range t.Properties {
+		docs = append(docs, getDocsForProperty(path+"/properties", p)...)
+	}
+	return docs
+}
+
+func getDocsForFunction(f *Function) []doc {
+	entity := "#/functions/" + url.PathEscape(f.Token)
+	docs := []doc{
+		{entity: entity + "/description", content: f.Comment},
+		{entity: entity + "/deprecationMessage", content: f.DeprecationMessage},
+	}
+	docs = append(docs, getDocsForObjectType(entity+"/inputs/properties", f.Inputs)...)
+
+	if f.ReturnType != nil {
+		if objectType, ok := f.ReturnType.(*ObjectType); ok && objectType != nil {
+			docs = append(docs, getDocsForObjectType(entity+"/outputs/properties", objectType)...)
+		}
+	}
+
+	return docs
+}
+
+func getDocsForResource(r *Resource, isProvider bool) []doc {
+	var entity string
+	if isProvider {
+		entity = "#/provider"
+	} else {
+		entity = "#/resources/" + url.PathEscape(r.Token)
+	}
+
+	docs := slice.Prealloc[doc](2 + len(r.InputProperties) + len(r.Properties))
+	docs = append(docs,
+		doc{entity: entity + "/description", content: r.Comment},
+		doc{entity: entity + "/deprecationMessage", content: r.DeprecationMessage},
+	)
+	for _, p := range r.InputProperties {
+		docs = append(docs, getDocsForProperty(entity+"/inputProperties", p)...)
+	}
+	for _, p := range r.Properties {
+		docs = append(docs, getDocsForProperty(entity+"/properties", p)...)
+	}
+	docs = append(docs, getDocsForObjectType(entity+"/stateInputs", r.StateInputs)...)
+	return docs
+}
+
+func getDocsForPackage(pkg *Package) []doc {
+	var allDocs []doc
+	for _, p := range pkg.Config {
+		allDocs = append(allDocs, getDocsForProperty("#/config/variables", p)...)
+	}
+	for _, f := range pkg.Functions {
+		allDocs = append(allDocs, getDocsForFunction(f)...)
+	}
+	allDocs = append(allDocs, getDocsForResource(pkg.Provider, true)...)
+	for _, r := range pkg.Resources {
+		allDocs = append(allDocs, getDocsForResource(r, false)...)
+	}
+	for _, t := range pkg.Types {
+		if obj, ok := t.(*ObjectType); ok {
+			allDocs = append(allDocs, getDocsForObjectType("#/types", obj)...)
+		}
+	}
+	return allDocs
+}
+
+func TestParseAndRenderDocs(t *testing.T) {
+	t.Parallel()
+
+	schemaFS := utils.SchemaFS()
+	files, err := fs.ReadDir(schemaFS, ".")
+	if err != nil {
+		t.Fatalf("could not read test data: %v", err)
+	}
+
+	loader := NewPluginLoader(utils.NewContext(testdataPath))
+
+	for _, f := range files {
+		if filepath.Ext(f.Name()) != ".json" {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			contents, err := fs.ReadFile(schemaFS, f.Name())
+			if err != nil {
+				t.Fatalf("could not read %v: %v", f.Name(), err)
+			}
+
+			var spec PackageSpec
+			if err = json.Unmarshal(contents, &spec); err != nil {
+				t.Fatalf("could not unmarshal package spec: %v", err)
+			}
+			pkg, diags, err := BindSpec(spec, loader, ValidationOptions{
+				AllowDanglingReferences: true,
+			})
+			if err != nil {
+				t.Fatalf("could not bind package: %v", err)
+			}
+			if diags.HasErrors() {
+				t.Fatalf("could not bind package: %v", diags)
+			}
+
+			for _, doc := range getDocsForPackage(pkg) {
+				original := []byte(doc.content)
+				expected := ParseDocs(original)
+				rendered := []byte(RenderDocsToString(original, expected))
+				actual := ParseDocs(rendered)
+				if !testutil.AssertSameStructure(t, original, rendered, expected, actual, nodeAssertions) {
+					t.Logf("original: %v", doc.content)
+					t.Logf("rendered: %v", string(rendered))
+				}
+			}
+		})
+	}
+}
+
+func TestRefParser(t *testing.T) {
+	t.Parallel()
+
+	// collectRefs walks a parsed doc AST and returns all Ref nodes found.
+	collectRefs := func(node ast.Node) []*Ref {
+		var refs []*Ref
+		err := ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if entering {
+				if ref, ok := n.(*Ref); ok {
+					refs = append(refs, ref)
+				}
+			}
+			return ast.WalkContinue, nil
+		})
+		contract.AssertNoErrorf(err, "collectRefs walk should not error")
+		return refs
+	}
+
+	t.Run("ValidRefWithSpace", func(t *testing.T) {
+		t.Parallel()
+		doc := ParseDocs([]byte("{{% ref #/resources/aws:s3:bucket %}}"))
+		refs := collectRefs(doc)
+		require.Len(t, refs, 1)
+		if len(refs) == 1 {
+			assert.Equal(t, "#/resources/aws:s3:bucket", refs[0].Destination)
+		}
+	})
+
+	t.Run("ValidRefWithExtraWhitespace", func(t *testing.T) {
+		t.Parallel()
+		doc := ParseDocs([]byte("{{% ref   #/resources/aws:s3:bucket   %}}"))
+		refs := collectRefs(doc)
+		require.Len(t, refs, 1)
+		if len(refs) == 1 {
+			assert.Equal(t, "#/resources/aws:s3:bucket", refs[0].Destination)
+		}
+	})
+
+	t.Run("InvalidRefNoSpaceBeforeDestination", func(t *testing.T) {
+		t.Parallel()
+		doc := ParseDocs([]byte("{{% ref#/resources/aws:s3:bucket %}}"))
+		refs := collectRefs(doc)
+		assert.Empty(t, refs)
+	})
+
+	t.Run("InvalidRefWithSuffixedName", func(t *testing.T) {
+		t.Parallel()
+		doc := ParseDocs([]byte("{{% refXxx %}}"))
+		refs := collectRefs(doc)
+		assert.Empty(t, refs)
+	})
+
+	t.Run("InvalidRefEmptyDestination", func(t *testing.T) {
+		t.Parallel()
+		doc := ParseDocs([]byte("{{% ref %}}"))
+		refs := collectRefs(doc)
+		assert.Empty(t, refs)
+	})
+}
+
+func TestParseDocRef(t *testing.T) {
+	t.Parallel()
+
+	t.Run("InvalidUnknownTopLevelType", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/unknown/aws:s3:bucket"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidTopLevelOnly", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidMissingToken", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("ResourceRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindResource, Token: "aws:s3:bucket"}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("ResourceRefWithSlashInToken", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3%2Fbucket:Bucket"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindResource, Token: "aws:s3/bucket:Bucket"}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("FunctionRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/functions/aws:ec2:getInstance"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindFunction, Token: "aws:ec2:getInstance"}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("TypeRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/types/aws:s3:BucketPolicy"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindType, Token: "aws:s3:BucketPolicy"}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidUnknownPropertyKind", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket/unknown/acl"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidPropertiesOnly", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket/properties"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidMissingPropertyName", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket/properties/"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("ResourcePropertyRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket/properties/acl"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindResourceProperty, Token: "aws:s3:bucket", Property: "acl"}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("ResourceInputPropertyRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket/inputProperties/acl"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindResourceInputProperty, Token: "aws:s3:bucket", Property: "acl"}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("FunctionInputPropertyRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/functions/aws:ec2:getInstance/inputs/properties/instanceId"
+		expected := internalDocRef{
+			Ref: ref, Kind: DocRefKindFunctionInputProperty, Token: "aws:ec2:getInstance", Property: "instanceId",
+		}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("FunctionOutputPropertyRef", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/functions/aws:ec2:getInstance/outputs/properties/publicIp"
+		expected := internalDocRef{
+			Ref: ref, Kind: DocRefKindFunctionOutputProperty, Token: "aws:ec2:getInstance", Property: "publicIp",
+		}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidMissingHashPrefix", func(t *testing.T) {
+		t.Parallel()
+		ref := "/resources/aws:s3:bucket"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+
+	t.Run("InvalidSubProperty", func(t *testing.T) {
+		t.Parallel()
+		ref := "#/resources/aws:s3:bucket/properties/acl/invalid"
+		expected := internalDocRef{Ref: ref, Kind: DocRefKindUnknown}
+		assert.Equal(t, expected, parseDocRef(ref))
+	})
+}
+
+func TestPartialPackageInterpretPulumiRefs(t *testing.T) {
+	t.Parallel()
+
+	spec := PartialPackageSpec{
+		PackageInfoSpec: PackageInfoSpec{Name: "test", Version: "1.0.0"},
+		Resources: map[string]json.RawMessage{
+			"test:index:Thing": json.RawMessage(`{"properties": {"name": {"type": "string"}}}`),
+		},
+	}
+	description := "See {{% ref #/resources/test:index:Thing/properties/name %}}."
+	resolver := func(ref DocRef) (string, bool) { return "resolved " + ref.Property, true }
+	expected := "See resolved name."
+
+	interpret := map[string]func(t *testing.T) (string, error){
+		"before Definition": func(t *testing.T) (string, error) {
+			pkg, err := ImportPartialSpec(spec, nil, NewNullLoader())
+			require.NoError(t, err)
+			return pkg.InterpretPulumiRefs(description, resolver)
+		},
+		"after Definition": func(t *testing.T) (string, error) {
+			pkg, err := ImportPartialSpec(spec, nil, NewNullLoader())
+			require.NoError(t, err)
+			_, err = pkg.Definition()
+			require.NoError(t, err)
+			return pkg.InterpretPulumiRefs(description, resolver)
+		},
+		"on Definition": func(t *testing.T) (string, error) {
+			pkg, err := ImportPartialSpec(spec, nil, NewNullLoader())
+			require.NoError(t, err)
+			def, err := pkg.Definition()
+			require.NoError(t, err)
+			return def.InterpretPulumiRefs(description, resolver)
+		},
+		"on Snapshot": func(t *testing.T) (string, error) {
+			pkg, err := ImportPartialSpec(spec, nil, NewNullLoader())
+			require.NoError(t, err)
+			snapshot, err := pkg.Snapshot()
+			require.NoError(t, err)
+			return snapshot.InterpretPulumiRefs(description, resolver)
+		},
+	}
+
+	for name, run := range interpret {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			actual, err := run(t)
+			require.NoError(t, err)
+			assert.Equal(t, expected, actual)
+		})
+	}
+
+	t.Run("resolver reads the package", func(t *testing.T) {
+		t.Parallel()
+
+		pkg, err := ImportPartialSpec(spec, nil, NewNullLoader())
+		require.NoError(t, err)
+		readingResolver := func(ref DocRef) (string, bool) {
+			_, ok, err := pkg.Resources().Get("test:index:Thing")
+			require.NoError(t, err)
+			require.True(t, ok)
+			return resolver(ref)
+		}
+
+		actual, err := pkg.InterpretPulumiRefs(description, readingResolver)
+		require.NoError(t, err)
+		assert.Equal(t, expected, actual)
+
+		_, err = pkg.Definition()
+		require.NoError(t, err)
+		actual, err = pkg.InterpretPulumiRefs(description, readingResolver)
+		require.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("missing target", func(t *testing.T) {
+		t.Parallel()
+
+		pkg, err := ImportPartialSpec(spec, nil, NewNullLoader())
+		require.NoError(t, err)
+		_, err = pkg.InterpretPulumiRefs("See {{% ref #/resources/test:index:Missing %}}.", resolver)
+		assert.ErrorContains(t, err, "reference to resource '/resources/test:index:Missing' not found")
+	})
+}

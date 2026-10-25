@@ -1,0 +1,1134 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package templates
+
+import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"errors"
+	"io"
+	"iter"
+	"os"
+	"path/filepath"
+	"strconv"
+	"testing"
+
+	"github.com/blang/semver"
+	"github.com/pulumi/pulumi/pkg/v3/backend"
+	"github.com/pulumi/pulumi/pkg/v3/backend/backenderr"
+	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
+	"github.com/pulumi/pulumi/pkg/v3/registry"
+	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const expectedRegistryFormatError = "Expected: registry://templates/source/publisher/name[@version], " +
+	"source/publisher/name[@version], publisher/name[@version], or name[@version]"
+
+func mockLoginManager(b backend.Backend) cmdBackend.LoginManager {
+	return &cmdBackend.MockLoginManager{
+		CurrentF: func(ctx context.Context, ws pkgWorkspace.Context, sink diag.Sink,
+			url string, project *workspace.Project, setCurrent bool,
+		) (backend.Backend, error) {
+			return b, nil
+		},
+		LoginF: func(ctx context.Context, ws pkgWorkspace.Context, sink diag.Sink,
+			url string, project *workspace.Project, setCurrent bool, insecure bool, color colors.Colorization,
+			_ ...cmdBackend.LoginOption,
+		) (backend.Backend, error) {
+			return b, nil
+		},
+	}
+}
+
+func TestFilterOnName(t *testing.T) {
+	t.Parallel()
+
+	template1 := &apitype.PulumiTemplateRemote{
+		ProjectTemplate: apitype.ProjectTemplate{},
+		Name:            "name1",
+		SourceName:      "source1",
+		TemplateURL:     "example.com/source1/name1",
+	}
+
+	testFilterOnName := func(t *testing.T, lm cmdBackend.LoginManager, disableRegistryResolve bool) {
+		mapStore := env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": strconv.FormatBool(disableRegistryResolve),
+		}
+		ctx := testContext(t)
+
+		source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "name1",
+			ScopeAll, TemplateKindPulumiProject,
+			templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+			env.NewEnv(mapStore),
+		)
+
+		template, err := source.Templates()
+		require.NoError(t, err)
+		require.Len(t, template, 1)
+		if disableRegistryResolve {
+			assert.Equal(t, "name1", template[0].Name())
+		} else {
+			assert.Equal(t, "name1", template[0].Name())
+			assert.Equal(t, "name1 [publisher1]", template[0].DisplayName())
+		}
+		assert.Equal(t, "", template[0].Description())
+		assert.Nil(t, template[0].Error())
+	}
+
+	t.Run("org-backed-templates - disable registry resolve = true", func(t *testing.T) {
+		t.Parallel()
+
+		mockBackend := &backend.MockBackend{
+			SupportsTemplatesF: func() bool { return true },
+			CurrentUserF: func() (string, []string, *workspace.TokenInformation, error) {
+				return "doe", []string{"org1"}, &workspace.TokenInformation{}, nil
+			},
+			ListTemplatesF: func(_ context.Context, orgName string) (apitype.ListOrgTemplatesResponse, error) {
+				assert.Equal(t, "org1", orgName)
+
+				return apitype.ListOrgTemplatesResponse{
+					Templates: map[string][]*apitype.PulumiTemplateRemote{
+						"source1": {template1},
+						"source2": {
+							{
+								ProjectTemplate: apitype.ProjectTemplate{},
+								Name:            "name2",
+								SourceName:      "source2",
+								TemplateURL:     "example.com/source2/name1",
+							},
+						},
+					},
+					OrgHasTemplates: true,
+				}, nil
+			},
+		}
+
+		testFilterOnName(t, mockLoginManager(mockBackend), true)
+	})
+
+	t.Run("org-backed-templates - disable registry resolve = false", func(t *testing.T) {
+		t.Parallel()
+
+		listTemplates := func(
+			ctx context.Context, opts registry.ListTemplatesOptions,
+		) iter.Seq2[apitype.ListTemplatesResponse, error] {
+			assert.Equal(t, registry.ListTemplatesOptions{}, opts)
+			return singlePage(apitype.TemplateMetadata{
+				Name:      "name1",
+				Publisher: "publisher1",
+				Source:    "source1",
+			}, apitype.TemplateMetadata{
+				Name:      "name2",
+				Publisher: "publisher2",
+				Source:    "source2",
+			})
+		}
+		mockBackend := &backend.MockBackend{
+			GetReadOnlyCloudRegistryF: func() registry.Registry {
+				return &backend.MockCloudRegistry{
+					Mock: registry.Mock{
+						ListTemplatesF: listTemplates,
+					},
+				}
+			},
+		}
+
+		testFilterOnName(t, mockLoginManager(mockBackend), false)
+	})
+}
+
+func TestMultipleTemplateSources_OrgTemplates(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	template1 := &apitype.PulumiTemplateRemote{
+		ProjectTemplate: apitype.ProjectTemplate{},
+		Name:            "name1",
+		SourceName:      "source1",
+		TemplateURL:     "example.com/source1/name1",
+	}
+
+	template2 := &apitype.PulumiTemplateRemote{
+		ProjectTemplate: apitype.ProjectTemplate{},
+		Name:            "name2",
+		SourceName:      "source2",
+		TemplateURL:     "example.com/source2/name1",
+	}
+
+	mockBackend := &backend.MockBackend{
+		SupportsTemplatesF: func() bool { return true },
+		CurrentUserF: func() (string, []string, *workspace.TokenInformation, error) {
+			return "doe", []string{"org1"}, &workspace.TokenInformation{}, nil
+		},
+		ListTemplatesF: func(_ context.Context, orgName string) (apitype.ListOrgTemplatesResponse, error) {
+			assert.Equal(t, "org1", orgName)
+
+			return apitype.ListOrgTemplatesResponse{
+				Templates: map[string][]*apitype.PulumiTemplateRemote{
+					"source1": {template1},
+					"source2": {template2},
+				},
+				OrgHasTemplates: true,
+			}, nil
+		},
+	}
+
+	lm := mockLoginManager(mockBackend)
+
+	repoTemplateDir := t.TempDir()
+	subdir := filepath.Join(repoTemplateDir, "sub")
+	require.NoError(t, os.Mkdir(subdir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(subdir, "Pulumi.yaml"), []byte(`name: template3
+runtime: dotnet
+description: An ASP.NET application running a simple container in a EKS Cluster
+`), 0o600))
+	repoTemplates := templateRepository(TemplateRepository{
+		Root:         repoTemplateDir,
+		SubDirectory: subdir,
+	}, nil)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "",
+		ScopeAll, TemplateKindPulumiProject,
+		repoTemplates, env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "true",
+		}),
+	)
+
+	template, err := source.Templates()
+	require.NoError(t, err)
+	assert.ElementsMatch(t,
+		[]Template{
+			projectTemplate{t: ProjectTemplate{
+				Dir:                subdir,
+				Name:               "sub",
+				ProjectName:        "template3",
+				ProjectDescription: "An ASP.NET application running a simple container in a EKS Cluster",
+			}},
+			orgTemplate{t: template1, org: "org1", cleanup: &source.cleanup, backend: mockBackend},
+			orgTemplate{t: template2, org: "org1", cleanup: &source.cleanup, backend: mockBackend},
+		},
+		template)
+}
+
+func TestSurfaceListTemplateErrors_OrgTemplates(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	somethingWentWrong := errors.New("something went wrong")
+
+	mockBackend := &backend.MockBackend{
+		SupportsTemplatesF: func() bool { return true },
+		CurrentUserF: func() (string, []string, *workspace.TokenInformation, error) {
+			return "doe", []string{"org1"}, &workspace.TokenInformation{}, nil
+		},
+		ListTemplatesF: func(_ context.Context, orgName string) (apitype.ListOrgTemplatesResponse, error) {
+			assert.Equal(t, "org1", orgName)
+			return apitype.ListOrgTemplatesResponse{}, somethingWentWrong
+		},
+	}
+
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "name1",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{"PULUMI_DISABLE_REGISTRY_RESOLVE": "true"}),
+	)
+
+	_, err := source.Templates()
+	assert.ErrorIs(t, err, somethingWentWrong)
+}
+
+func TestSurfaceListTemplateErrors_RegistryTemplates(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	somethingWentWrong := errors.New("something went wrong")
+
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			ListTemplatesF: func(
+				ctx context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				return func(yield func(apitype.ListTemplatesResponse, error) bool) {
+					yield(apitype.ListTemplatesResponse{}, somethingWentWrong)
+				}
+			},
+		},
+	}
+
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "name1",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+			"PULUMI_EXPERIMENTAL":             "true",
+		}),
+	)
+
+	_, err := source.Templates()
+	assert.ErrorIs(t, err, somethingWentWrong)
+}
+
+func TestSurfaceOnEmptyError_OrgTemplates(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	mockBackend := &backend.MockBackend{
+		SupportsTemplatesF: func() bool { return true },
+		CurrentUserF: func() (string, []string, *workspace.TokenInformation, error) {
+			return "doe", []string{"org1"}, &workspace.TokenInformation{}, nil
+		},
+		ListTemplatesF: func(_ context.Context, orgName string) (apitype.ListOrgTemplatesResponse, error) {
+			assert.Equal(t, "org1", orgName)
+			return apitype.ListOrgTemplatesResponse{}, nil
+		},
+	}
+
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "name1",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "true",
+		}),
+	)
+
+	_, err := source.Templates()
+	var expected TemplateNotFoundError
+	assert.ErrorAsf(t, err, &expected, "what's in %#v", source.project.errsOnEmpty)
+}
+
+func TestSurfaceOnEmptyError_RegistryTemplates(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			ListTemplatesF: func(
+				_ context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				return singlePage()
+			},
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry {
+			return mockRegistry
+		},
+	}
+
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "name1",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+			"PULUMI_EXPERIMENTAL":             "true",
+		}),
+	)
+
+	_, err := source.Templates()
+	var expected TemplateNotFoundError
+	assert.ErrorAsf(t, err, &expected, "what's in %#v", source.project.errsOnEmpty)
+}
+
+func TestTemplateDownload_Org(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	template1 := &apitype.PulumiTemplateRemote{
+		ProjectTemplate: apitype.ProjectTemplate{},
+		Name:            "name1",
+		SourceName:      "source1",
+		TemplateURL:     "example.com/source1/name1",
+	}
+
+	pulumiYAML := `name: template1
+runtime: dotnet
+description: An ASP.NET application running a simple container in a EKS Cluster
+`
+	anotherFile := `This is another file`
+
+	mockBackend := &backend.MockBackend{
+		SupportsTemplatesF: func() bool { return true },
+		CurrentUserF: func() (string, []string, *workspace.TokenInformation, error) {
+			return "doe", []string{"org1"}, &workspace.TokenInformation{}, nil
+		},
+		ListTemplatesF: func(_ context.Context, orgName string) (apitype.ListOrgTemplatesResponse, error) {
+			assert.Equal(t, "org1", orgName)
+
+			return apitype.ListOrgTemplatesResponse{
+				Templates: map[string][]*apitype.PulumiTemplateRemote{
+					"source1": {template1},
+				},
+				OrgHasTemplates: true,
+			}, nil
+		},
+		DownloadTemplateF: func(_ context.Context, orgName, templateSource string) (backend.TarReaderCloser, error) {
+			assert.Equal(t, "org1", orgName)
+			assert.Equal(t, template1.TemplateURL, templateSource)
+
+			return backend.MockTarReader{
+				"Pulumi.yaml": backend.MockTarFile{Content: pulumiYAML},
+				"other.txt":   backend.MockTarFile{Content: anotherFile},
+			}, nil
+		},
+	}
+
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "name1",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "true",
+		}),
+	)
+
+	template, err := source.Templates()
+	require.NoError(t, err)
+	assert.Equal(t,
+		[]Template{orgTemplate{t: template1, org: "org1", cleanup: &source.cleanup, backend: mockBackend}},
+		template)
+	t.Cleanup(func() {
+		require.NoError(t, source.Close())
+	})
+
+	wTemplate, err := template[0].Download(ctx)
+	require.NoError(t, err)
+
+	{ // Pulumi.yaml
+		file, err := os.ReadFile(filepath.Join(wTemplate.Dir, "Pulumi.yaml"))
+		require.NoError(t, err)
+		assert.Equal(t, pulumiYAML, string(file))
+	}
+	{ // other.txt
+		file, err := os.ReadFile(filepath.Join(wTemplate.Dir, "other.txt"))
+		require.NoError(t, err)
+		assert.Equal(t, anotherFile, string(file))
+	}
+}
+
+// Test data for registry template tests
+var (
+	testPulumiYAML = `name: template1
+runtime: dotnet
+description: An ASP.NET application running a simple container in a EKS Cluster
+`
+	testAnotherFile = `This is another file`
+)
+
+// createTestTarData creates tar archive data with test files
+func createTestTarData(t *testing.T) []byte {
+	var buf bytes.Buffer
+	w := tar.NewWriter(&buf)
+
+	// Write Pulumi.yaml
+	require.NoError(t, w.WriteHeader(&tar.Header{
+		Name: "Pulumi.yaml",
+		Size: int64(len(testPulumiYAML)),
+		Mode: 0o600,
+	}))
+	_, err := w.Write([]byte(testPulumiYAML))
+	require.NoError(t, err)
+
+	// Write other.txt
+	require.NoError(t, w.WriteHeader(&tar.Header{
+		Name: "other.txt",
+		Size: int64(len(testAnotherFile)),
+		Mode: 0o600,
+	}))
+	_, err = w.Write([]byte(testAnotherFile))
+	require.NoError(t, err)
+
+	require.NoError(t, w.Close())
+	return buf.Bytes()
+}
+
+func createMockRegistrySource(
+	ctx context.Context,
+	t *testing.T,
+	downloadFunc func(context.Context, string) (io.ReadCloser, error),
+) *Source {
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			ListTemplatesF: func(
+				ctx context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				return singlePage(apitype.TemplateMetadata{
+					Name:        "name1",
+					DownloadURL: "example.com/download/name",
+				})
+			},
+			DownloadTemplateF: downloadFunc,
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+
+	return newImpl(ctx, &pkgWorkspace.MockContext{}, mockLoginManager(mockBackend), "name1",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+			"PULUMI_EXPERIMENTAL":             "true",
+		}))
+}
+
+// testTemplateDownload tests downloading and verifying template content
+func testTemplateDownload(ctx context.Context, t *testing.T, source *Source) {
+	templates, err := source.Templates()
+	require.NoError(t, err)
+	require.Len(t, templates, 1)
+	assert.Equal(t, "name1", templates[0].Name())
+	t.Cleanup(func() {
+		require.NoError(t, source.Close())
+	})
+
+	wTemplate, err := templates[0].Download(ctx)
+	require.NoError(t, err)
+
+	// Verify extracted files
+	{ // Pulumi.yaml
+		file, err := os.ReadFile(filepath.Join(wTemplate.Dir, "Pulumi.yaml"))
+		require.NoError(t, err)
+		assert.Equal(t, testPulumiYAML, string(file))
+	}
+	{ // other.txt
+		file, err := os.ReadFile(filepath.Join(wTemplate.Dir, "other.txt"))
+		require.NoError(t, err)
+		assert.Equal(t, testAnotherFile, string(file))
+	}
+}
+
+func TestTemplateDownload_Registry(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	source := createMockRegistrySource(ctx, t, func(ctx context.Context, downloadURL string) (io.ReadCloser, error) {
+		assert.Equal(t, "example.com/download/name", downloadURL)
+		tarData := createTestTarData(t)
+		return io.NopCloser(bytes.NewReader(tarData)), nil
+	})
+
+	testTemplateDownload(ctx, t, source)
+}
+
+func TestTemplateDownload_Registry_Gzipped(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	source := createMockRegistrySource(ctx, t, func(ctx context.Context, downloadURL string) (io.ReadCloser, error) {
+		assert.Equal(t, "example.com/download/name", downloadURL)
+
+		// Create tar data and gzip it
+		tarData := createTestTarData(t)
+		var gzipBuf bytes.Buffer
+		gw := gzip.NewWriter(&gzipBuf)
+		_, err := gw.Write(tarData)
+		require.NoError(t, err)
+		require.NoError(t, gw.Close())
+
+		return io.NopCloser(&gzipBuf), nil
+	})
+
+	testTemplateDownload(ctx, t, source)
+}
+
+func TestVCSBasedTemplateNames(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			ListTemplatesF: func(
+				ctx context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				byBacking := map[apitype.TemplateBacking][]apitype.TemplateMetadata{
+					apitype.TemplateBackingRegistry: {{
+						Name:      "just/has/slashes",
+						Source:    "private",
+						Publisher: "pulumi-org",
+					}},
+					apitype.TemplateBackingVcs: {{
+						Name:      "gh-org/repo/name",
+						Source:    "github",
+						Publisher: "pulumi-org",
+						RepoSlug:  new("gh-org/repo"),
+					}, {
+						Name:      "gl-org/repo/name",
+						Source:    "gitlab",
+						Publisher: "pulumi-org",
+						RepoSlug:  new("gl-org/repo"),
+					}},
+				}
+				require.Len(t, opts.Backing, 1)
+				return singlePage(byBacking[opts.Backing[0]]...)
+			},
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "", ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+			"PULUMI_EXPERIMENTAL":             "true",
+		}))
+
+	templates, err := source.Templates()
+	require.NoError(t, err)
+	require.Len(t, templates, 3)
+
+	assert.Equal(t, "just/has/slashes", templates[0].Name())
+	assert.Equal(t, "just/has/slashes [pulumi-org]", templates[0].DisplayName())
+	assert.Equal(t, "name", templates[1].Name())
+	assert.Equal(t, "name [gh-org/repo]", templates[1].DisplayName())
+	assert.Equal(t, "name", templates[2].Name())
+	assert.Equal(t, "name [gl-org/repo]", templates[2].DisplayName())
+}
+
+func mockRegistrySource(
+	t *testing.T,
+	list func(context.Context, registry.ListTemplatesOptions) iter.Seq2[apitype.ListTemplatesResponse, error],
+) *Source {
+	t.Helper()
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry {
+			return &backend.MockCloudRegistry{Mock: registry.Mock{ListTemplatesF: list}}
+		},
+	}
+	return newImpl(testContext(t), &pkgWorkspace.MockContext{}, mockLoginManager(mockBackend),
+		"", ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{"PULUMI_DISABLE_REGISTRY_RESOLVE": "false"}))
+}
+
+func TestVcsTemplateSourceOrgsAreReadOffTheListing(t *testing.T) {
+	t.Parallel()
+
+	// Both browse fetches see the same totals; observing them twice must not double-count.
+	source := mockRegistrySource(t, func(
+		ctx context.Context, opts registry.ListTemplatesOptions,
+	) iter.Seq2[apitype.ListTemplatesResponse, error] {
+		return func(yield func(apitype.ListTemplatesResponse, error) bool) {
+			yield(apitype.ListTemplatesResponse{
+				VcsTemplateSourceTotals: []apitype.OrgVcsTemplateSourceTotal{
+					{OrgLogin: "acme", Total: 2},
+					{OrgLogin: "globex", Total: 1},
+				},
+			}, nil)
+		}
+	})
+
+	assert.Equal(t, []string{"acme", "globex"}, source.VcsTemplateSourceOrgs(),
+		"an org with collections is named even though no fetch carries its templates")
+}
+
+func TestBothFetchesListingEverythingIsNotDuplicated(t *testing.T) {
+	t.Parallel()
+
+	source := mockRegistrySource(t, func(
+		ctx context.Context, opts registry.ListTemplatesOptions,
+	) iter.Seq2[apitype.ListTemplatesResponse, error] {
+		return singlePage(
+			apitype.TemplateMetadata{Name: "vpc", Source: "private", Publisher: "acme"},
+			apitype.TemplateMetadata{Name: "org/repo/eks", Source: "github", Publisher: "acme", RepoSlug: new("org/repo")},
+		)
+	})
+
+	templates, err := source.Templates()
+	require.NoError(t, err)
+	require.Len(t, templates, 2, "each template is listed once even when both fetches return it")
+	assert.Equal(t, "vpc", templates[0].Name())
+	assert.Equal(t, "eks", templates[1].Name())
+}
+
+func TestVCSBasedTemplateNameFilter(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			ListTemplatesF: func(
+				ctx context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				assert.Equal(t, registry.ListTemplatesOptions{}, opts)
+				return singlePage(apitype.TemplateMetadata{
+					Name:        "gh-org/repo/target",
+					Source:      "github",
+					Description: new("This is from GH"),
+					Publisher:   "pulumi-org",
+					RepoSlug:    new("gh-org/repo"),
+				}, apitype.TemplateMetadata{
+					Name:      "gl-org/repo/name",
+					Source:    "gitlab",
+					Publisher: "pulumi-org",
+					RepoSlug:  new("gl-org/repo"),
+				}, apitype.TemplateMetadata{
+					Name:        "target",
+					Source:      "private",
+					Description: new("This is from the registry"),
+					Publisher:   "pulumi-org",
+				})
+			},
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "target", ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+			"PULUMI_EXPERIMENTAL":             "true",
+		}))
+
+	templates, err := source.Templates()
+	require.NoError(t, err)
+	require.Len(t, templates, 2)
+
+	assert.Equal(t, "target", templates[0].Name())
+	assert.Equal(t, "target [gh-org/repo]", templates[0].DisplayName())
+	assert.Equal(t, "This is from GH", templates[0].Description())
+	assert.Equal(t, "target", templates[1].Name())
+	assert.Equal(t, "target [pulumi-org]", templates[1].DisplayName())
+	assert.Equal(t, "This is from the registry", templates[1].Description())
+}
+
+func templateRepository(repo TemplateRepository, err error) getProjectTemplateFunc {
+	return func(ctx context.Context, templateNamePathOrURL string, offline bool,
+		templateKind TemplateKind,
+	) (TemplateRepository, error) {
+		return repo, err
+	}
+}
+
+func testContext(t *testing.T) context.Context {
+	ctx := t.Context()
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+func singlePage(templates ...apitype.TemplateMetadata) iter.Seq2[apitype.ListTemplatesResponse, error] {
+	return func(yield func(apitype.ListTemplatesResponse, error) bool) {
+		yield(apitype.ListTemplatesResponse{Templates: templates}, nil)
+	}
+}
+
+func TestRegistryTemplateResolution(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			ListTemplatesF: func(
+				ctx context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				return singlePage(apitype.TemplateMetadata{
+					Name:        "csharp-documented",
+					Source:      "private",
+					Publisher:   "pulumi_local",
+					Description: new("A C# template"),
+				}, apitype.TemplateMetadata{
+					Name:      "csharp-documented",
+					Source:    "github",
+					Publisher: "different-org",
+				}, apitype.TemplateMetadata{
+					Name:        "gh-org/repo/target",
+					Source:      "github",
+					Publisher:   "pulumi-org",
+					RepoSlug:    new("gh-org/repo"),
+					Description: new("A template from VCS"),
+				}, apitype.TemplateMetadata{
+					Name:        "whatever-template",
+					Source:      "private",
+					Publisher:   "test-org",
+					Description: new("A template with special chars"),
+				})
+			},
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+	lm := mockLoginManager(mockBackend)
+
+	testCases := []struct {
+		name                string
+		templateURL         string
+		shouldMatch         bool
+		expectedName        string
+		expectedDisplayName string
+		description         string
+		expectSpecificError string
+	}{
+		{
+			name:                "registry URL full format",
+			templateURL:         "registry://templates/private/pulumi_local/csharp-documented",
+			shouldMatch:         true,
+			expectedName:        "csharp-documented",
+			expectedDisplayName: "csharp-documented [pulumi_local]",
+			description:         "A C# template",
+		},
+		{
+			name:                "registry URL with version",
+			templateURL:         "registry://templates/private/pulumi_local/csharp-documented@latest",
+			shouldMatch:         true,
+			expectedName:        "csharp-documented",
+			expectedDisplayName: "csharp-documented [pulumi_local]",
+			description:         "A C# template",
+		},
+		{
+			name:                "partial URL format",
+			templateURL:         "private/pulumi_local/csharp-documented",
+			shouldMatch:         true,
+			expectedName:        "csharp-documented",
+			expectedDisplayName: "csharp-documented [pulumi_local]",
+			description:         "A C# template",
+		},
+		{
+			name:                "partial URL with version",
+			templateURL:         "private/pulumi_local/csharp-documented@latest",
+			shouldMatch:         true,
+			expectedName:        "csharp-documented",
+			expectedDisplayName: "csharp-documented [pulumi_local]",
+			description:         "A C# template",
+		},
+		{
+			name:                "VCS template display name matching",
+			templateURL:         "target",
+			shouldMatch:         true,
+			expectedName:        "target",
+			expectedDisplayName: "target [gh-org/repo]",
+			description:         "A template from VCS",
+		},
+		{
+			name:                "wrong resource type does not match",
+			templateURL:         "registry://packages/private/pulumi_local/csharp-documented",
+			shouldMatch:         false,
+			expectSpecificError: "resource type 'packages' is not valid for templates",
+		},
+		{
+			name:                "parsing failure falls back to exact name match",
+			templateURL:         "whatever-template",
+			shouldMatch:         true,
+			expectedName:        "whatever-template",
+			expectedDisplayName: "whatever-template [test-org]",
+			description:         "A template with special chars",
+		},
+		{
+			name:        "nonexistent template returns not found",
+			templateURL: "nonexistent/template/name",
+			shouldMatch: false,
+		},
+		{
+			name:                "malformed URL with no match",
+			templateURL:         "registry://templates/a/b/c/d/e",
+			shouldMatch:         false,
+			expectSpecificError: expectedRegistryFormatError,
+		},
+		{
+			name:        "git repo URL should not trigger registry errors",
+			templateURL: "https://github.com/user/repo",
+			shouldMatch: false,
+		},
+		{
+			name:        "ssh git URL should not trigger registry errors",
+			templateURL: "git@github.com:user/repo.git",
+			shouldMatch: false,
+		},
+		{
+			name:        "git repo URL with path should not trigger registry errors",
+			templateURL: "https://github.com/user/repo/tree/main/templates/example",
+			shouldMatch: false,
+		},
+		{
+			name:                "wrong resource type - unknown resource type",
+			templateURL:         "registry://unknown/private/publisher/name",
+			shouldMatch:         false,
+			expectSpecificError: "resource type 'unknown' is not valid for templates",
+		},
+		{
+			name:                "malformed registry URL - missing parts",
+			templateURL:         "registry://templates/private",
+			shouldMatch:         false,
+			expectSpecificError: expectedRegistryFormatError,
+		},
+		{
+			name:        "malformed partial URL - too many parts",
+			templateURL: "a/b/c/d/e",
+			shouldMatch: false,
+			// This should fall back to name matching (structural error), not show specific error
+		},
+		{
+			name:                "malformed registry URL - empty version",
+			templateURL:         "registry://templates/private/publisher/name@",
+			shouldMatch:         false,
+			expectSpecificError: "missing version",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm,
+				tc.templateURL, ScopeAll, TemplateKindPulumiProject,
+				templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+				env.NewEnv(env.MapStore{
+					"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+					"PULUMI_EXPERIMENTAL":             "true",
+				}))
+
+			templates, err := source.Templates()
+			if tc.shouldMatch {
+				require.NoError(t, err)
+				require.Len(t, templates, 1)
+				assert.Equal(t, tc.expectedName, templates[0].Name())
+				assert.Equal(t, tc.expectedDisplayName, templates[0].DisplayName())
+				if tc.description != "" {
+					assert.Equal(t, tc.description, templates[0].Description())
+				}
+			} else {
+				require.Error(t, err)
+				if tc.expectSpecificError != "" {
+					assert.Contains(t, err.Error(), tc.expectSpecificError)
+				} else {
+					var templateNotFound TemplateNotFoundError
+					assert.ErrorAs(t, err, &templateNotFound)
+				}
+			}
+		})
+	}
+}
+
+func TestVersionedTemplateResolution(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	type getCall struct {
+		source, publisher, name, version string
+	}
+	var getTemplateCalls []getCall
+
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			GetTemplateF: func(
+				ctx context.Context, source, publisher, name string, version *semver.Version,
+			) (apitype.TemplateMetadata, error) {
+				v := ""
+				if version != nil {
+					v = version.String()
+				}
+				getTemplateCalls = append(getTemplateCalls, getCall{source, publisher, name, v})
+
+				if version != nil && version.String() == "1.0.0" {
+					return apitype.TemplateMetadata{
+						Name:        name,
+						Source:      source,
+						Publisher:   publisher,
+						Description: new("A versioned template"),
+					}, nil
+				}
+				return apitype.TemplateMetadata{}, backenderr.NotFoundError{}
+			},
+			ListTemplatesF: func(
+				ctx context.Context, opts registry.ListTemplatesOptions,
+			) iter.Seq2[apitype.ListTemplatesResponse, error] {
+				return singlePage(apitype.TemplateMetadata{
+					Name:        "my-template",
+					Source:      "private",
+					Publisher:   "my-org",
+					Description: new("Latest version"),
+				})
+			},
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+	lm := mockLoginManager(mockBackend)
+
+	testCases := []struct {
+		name                string
+		templateURL         string
+		shouldMatch         bool
+		expectedName        string
+		expectedDisplayName string
+		description         string
+		expectSpecificError string
+		expectedGetCalls    []getCall
+	}{
+		{
+			name:                "versioned template with full URL",
+			templateURL:         "private/my-org/my-template@1.0.0",
+			shouldMatch:         true,
+			expectedName:        "my-template",
+			expectedDisplayName: "my-template [my-org]",
+			description:         "A versioned template",
+			expectedGetCalls:    []getCall{{"private", "my-org", "my-template", "1.0.0"}},
+		},
+		{
+			name:                "versioned template with registry URL",
+			templateURL:         "registry://templates/private/my-org/my-template@1.0.0",
+			shouldMatch:         true,
+			expectedName:        "my-template",
+			expectedDisplayName: "my-template [my-org]",
+			description:         "A versioned template",
+			expectedGetCalls:    []getCall{{"private", "my-org", "my-template", "1.0.0"}},
+		},
+		{
+			name:                "versioned template not found",
+			templateURL:         "private/my-org/my-template@2.0.0",
+			shouldMatch:         false,
+			expectSpecificError: "version '2.0.0' not found",
+			expectedGetCalls:    []getCall{{"private", "my-org", "my-template", "2.0.0"}},
+		},
+		{
+			name:                "two-part with version uses private then version",
+			templateURL:         "my-org/my-template@1.0.0",
+			shouldMatch:         true,
+			expectedName:        "my-template",
+			expectedDisplayName: "my-template [my-org]",
+			description:         "A versioned template",
+			expectedGetCalls:    []getCall{{"private", "my-org", "my-template", "1.0.0"}},
+		},
+		{
+			name:                "partial URL with version discovers source from list",
+			templateURL:         "my-template@1.0.0",
+			shouldMatch:         true,
+			expectedName:        "my-template",
+			expectedDisplayName: "my-template [my-org]",
+			description:         "A versioned template",
+			expectedGetCalls:    []getCall{{"private", "my-org", "my-template", "1.0.0"}},
+		},
+		{
+			name:                "without version uses ListTemplates",
+			templateURL:         "private/my-org/my-template",
+			shouldMatch:         true,
+			expectedName:        "my-template",
+			expectedDisplayName: "my-template [my-org]",
+			description:         "Latest version",
+		},
+	}
+
+	//nolint:paralleltest // the subtests share getTemplateCalls
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			getTemplateCalls = nil
+
+			source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm,
+				tc.templateURL, ScopeAll, TemplateKindPulumiProject,
+				templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+				env.NewEnv(env.MapStore{
+					"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+					"PULUMI_EXPERIMENTAL":             "true",
+				}))
+
+			templates, err := source.Templates()
+
+			assert.Equal(t, tc.expectedGetCalls, getTemplateCalls,
+				"GetTemplate call sequence does not match")
+
+			if tc.shouldMatch {
+				require.NoError(t, err)
+				require.Len(t, templates, 1)
+				assert.Equal(t, tc.expectedName, templates[0].Name())
+				assert.Equal(t, tc.expectedDisplayName, templates[0].DisplayName())
+				if tc.description != "" {
+					assert.Equal(t, tc.description, templates[0].Description())
+				}
+			} else {
+				require.Error(t, err)
+				if tc.expectSpecificError != "" {
+					assert.Contains(t, err.Error(), tc.expectSpecificError)
+				}
+			}
+		})
+	}
+}
+
+func TestVCSBackedTemplateRejectsVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := testContext(t)
+
+	mockRegistry := &backend.MockCloudRegistry{
+		Mock: registry.Mock{
+			GetTemplateF: func(
+				ctx context.Context, source, publisher, name string, version *semver.Version,
+			) (apitype.TemplateMetadata, error) {
+				return apitype.TemplateMetadata{
+					Name:      "pulumi/templates/typescript",
+					Source:    "github",
+					Publisher: "pulumi",
+				}, nil
+			},
+		},
+	}
+	mockBackend := &backend.MockBackend{
+		GetReadOnlyCloudRegistryF: func() registry.Registry { return mockRegistry },
+	}
+	lm := mockLoginManager(mockBackend)
+
+	source := newImpl(ctx, &pkgWorkspace.MockContext{}, lm, "github/pulumi/pulumi%2Ftemplates%2Ftypescript@1.0.0",
+		ScopeAll, TemplateKindPulumiProject,
+		templateRepository(TemplateRepository{}, TemplateNotFoundError{}),
+		env.NewEnv(env.MapStore{
+			"PULUMI_DISABLE_REGISTRY_RESOLVE": "false",
+			"PULUMI_EXPERIMENTAL":             "true",
+		}))
+
+	_, err := source.Templates()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "VCS-backed")
+	assert.Contains(t, err.Error(), "does not support specific versions")
+}

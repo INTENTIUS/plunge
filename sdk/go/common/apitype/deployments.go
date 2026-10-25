@@ -1,0 +1,564 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package apitype
+
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"gopkg.in/yaml.v3"
+)
+
+// PulumiOperation describes what operation to perform on the
+// stack as defined in the Job spec.
+type PulumiOperation string
+
+// The possible operations we can deploy.
+const (
+	Update         PulumiOperation = "update"
+	Preview        PulumiOperation = "preview"
+	Destroy        PulumiOperation = "destroy"
+	Refresh        PulumiOperation = "refresh"
+	DetectDrift    PulumiOperation = "detect-drift"
+	RemediateDrift PulumiOperation = "remediate-drift"
+)
+
+func ParsePulumiOperation(o string) (PulumiOperation, error) {
+	switch o {
+	case "update":
+		return Update, nil
+	case "preview":
+		return Preview, nil
+	case "destroy":
+		return Destroy, nil
+	case "refresh":
+		return Refresh, nil
+	case "detect-drift":
+		return DetectDrift, nil
+	case "remediate-drift":
+		return RemediateDrift, nil
+	default:
+		return "", fmt.Errorf("invalid pulumi operation; %q", o)
+	}
+}
+
+// DeploymentDuration, wrapper over time.Duration to properly marshall
+// time durations according to pulumi cloud spec.
+type DeploymentDuration time.Duration
+
+func (v DeploymentDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Duration(v).String())
+}
+
+func (v *DeploymentDuration) UnmarshalJSON(bytes []byte) error {
+	var s string
+	if err := json.Unmarshal(bytes, &s); err != nil {
+		return err
+	}
+	if s != "" {
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return err
+		}
+		*v = DeploymentDuration(d)
+	}
+	return nil
+}
+
+func (v DeploymentDuration) MarshalYAML() (any, error) {
+	return time.Duration(v).String(), nil
+}
+
+func (v *DeploymentDuration) UnmarshalYAML(node *yaml.Node) error {
+	var s string
+	if err := node.Decode(&s); err != nil {
+		return err
+	}
+	if s != "" {
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return err
+		}
+		*v = DeploymentDuration(d)
+	}
+	return nil
+}
+
+// CreateDeploymentRequest defines the request payload that is expected when
+// creating a new deployment.
+type CreateDeploymentRequest struct {
+	// Op
+	Op PulumiOperation `json:"operation"`
+
+	// InheritSettings is a flag that indicates whether the deployment should inherit
+	// deployment settings from the stack.
+	InheritSettings bool `json:"inheritSettings"`
+
+	// Executor defines options that the executor is going to use to run the job.
+	Executor *ExecutorContext `json:"executorContext,omitempty"`
+
+	// Source defines how the source code to the Pulumi program will be gathered.
+	Source *SourceContext `json:"sourceContext,omitempty"`
+
+	// Operation defines the options that the executor will use to run the Pulumi commands.
+	Operation *OperationContext `json:"operationContext,omitempty"`
+
+	AgentPoolID *AgentPoolIDMarshaller `json:"agentPoolID,omitempty"`
+}
+
+type AgentPoolIDMarshaller string
+
+func (d *AgentPoolIDMarshaller) MarshalJSON() ([]byte, error) {
+	if *d != "" {
+		return json.Marshal(*d)
+	}
+	return json.Marshal(nil)
+}
+
+type GitHubAppIntegration struct {
+	// Whether the app is installed for this org.
+	Installed bool `json:"installed"`
+}
+
+type DeploymentSettings struct {
+	// Version is assigned by the service and is not accepted on write.
+	Version       int                       `json:"version,omitempty"`
+	Tag           string                    `json:"tag,omitempty" yaml:"tag,omitempty"`
+	Executor      *ExecutorContext          `json:"executorContext,omitempty" yaml:"executorContext,omitempty"`
+	SourceContext *SourceContext            `json:"sourceContext,omitempty" yaml:"sourceContext,omitempty"`
+	GitHub        *DeploymentSettingsGitHub `json:"gitHub,omitempty" yaml:"gitHub,omitempty"`
+	VCS           *DeploymentSettingsVCS    `json:"vcs,omitempty"`
+	Operation     *OperationContext         `json:"operationContext,omitempty" yaml:"operationContext,omitempty"`
+	// SettingsSource records what configured these settings. It is set by the service and is not
+	// accepted on write. It is not named Source because SourceContext already occupies that meaning
+	// on this type.
+	SettingsSource *DeploymentSettingsSource `json:"source,omitempty"`
+	AgentPoolID    *string                   `json:"agentPoolID,omitempty" yaml:"agentPoolID,omitempty"`
+	CacheOptions   *CacheOptions             `json:"cacheOptions,omitempty"`
+}
+
+// DeploymentSettingsSource identifies what configured a stack's deployment settings. The review
+// stack values mark settings the service generated from a template stack rather than settings a
+// user wrote, so an edit against them is not durable.
+type DeploymentSettingsSource string
+
+const (
+	DeploymentSettingsSourceConsole                DeploymentSettingsSource = "console"
+	DeploymentSettingsSourceAPI                    DeploymentSettingsSource = "api"
+	DeploymentSettingsSourceProvider               DeploymentSettingsSource = "provider"
+	DeploymentSettingsSourceGitHubReviewStack      DeploymentSettingsSource = "github-review-stack"
+	DeploymentSettingsSourceAzureDevOpsReviewStack DeploymentSettingsSource = "azure-devops-review-stack"
+	DeploymentSettingsSourceGitLabReviewStack      DeploymentSettingsSource = "gitlab-review-stack"
+	DeploymentSettingsSourceBitBucketReviewStack   DeploymentSettingsSource = "bitbucket-review-stack"
+	DeploymentSettingsSourceGitHubGitOps           DeploymentSettingsSource = "github-gitops"
+)
+
+// CacheOptions controls dependency caching between deployments.
+type CacheOptions struct {
+	Enable bool `json:"enable"`
+}
+
+// VCSProvider identifies which version control provider a DeploymentSettingsVCS describes.
+type VCSProvider string
+
+const (
+	VCSProviderGitHub      VCSProvider = "github"
+	VCSProviderGitLab      VCSProvider = "gitlab"
+	VCSProviderAzureDevOps VCSProvider = "azure_devops"
+	VCSProviderBitbucket   VCSProvider = "bitbucket"
+	VCSProviderCustom      VCSProvider = "custom"
+)
+
+// DeploymentSettingsVCS is the provider-agnostic replacement for DeploymentSettingsGitHub. The
+// service models it as a union discriminated on Provider, but every member shares the same body,
+// so one flat struct covers the wire format in both directions.
+type DeploymentSettingsVCS struct {
+	// Provider carries no omitempty: the service rejects a vcs object that does not name one.
+	Provider            VCSProvider `json:"provider"`
+	Repository          string      `json:"repository,omitempty"`
+	DeployCommits       bool        `json:"deployCommits,omitempty"`
+	DeployTags          bool        `json:"deployTags,omitempty"`
+	Paths               []string    `json:"paths,omitempty"`
+	TagFilters          []string    `json:"tagFilters,omitempty"`
+	InstallationID      string      `json:"installationId,omitempty"`
+	PullRequestTemplate bool        `json:"pullRequestTemplate,omitempty"`
+	PreviewPullRequests bool        `json:"previewPullRequests,omitempty"`
+	DeployPullRequest   *int64      `json:"deployPullRequest,omitempty"`
+	// ReviewStackLabels is honored only when Provider is VCSProviderGitHub. Other providers accept
+	// it and discard it without an error.
+	ReviewStackLabels []string `json:"reviewStackLabels,omitempty"`
+}
+
+type DeploymentSettingsGitHub struct {
+	Repository          string   `json:"repository,omitempty" yaml:"repository,omitempty"`
+	PullRequestTemplate bool     `json:"pullRequestTemplate,omitempty" yaml:"pullRequestTemplate,omitempty"`
+	DeployCommits       bool     `json:"deployCommits,omitempty" yaml:"deployCommits,omitempty"`
+	PreviewPullRequests bool     `json:"previewPullRequests,omitempty" yaml:"previewPullRequests,omitempty"`
+	DeployPullRequest   *int64   `json:"deployPullRequest,omitempty" yaml:"deployPullRequest,omitempty"`
+	Paths               []string `json:"paths,omitempty" yaml:"paths,omitempty"`
+	InstallationID      string   `json:"installationId,omitempty"`
+	ReviewStackLabels   []string `json:"reviewStackLabels,omitempty"`
+	DeployTags          bool     `json:"deployTags,omitempty"`
+	TagFilters          []string `json:"tagFilters,omitempty"`
+}
+
+type ExecutorContext struct {
+	// WorkingDirectory defines the path where the work should be done when executing.
+	WorkingDirectory string `json:"workingDirectory" yaml:"workingDirectory,omitempty"`
+
+	// Defines the image that the pulumi operations should run in.
+	ExecutorImage *DockerImage `json:"executorImage,omitempty" yaml:"executorImage,omitempty"`
+
+	// ExecutorRootPath overrides the default root path (`/`) used by the deployment executor. Useful when running
+	// with non-root users (e.g. set to `/tmp`).
+	ExecutorRootPath *string `json:"executorRootPath,omitempty" yaml:"executorRootPath,omitempty"`
+}
+
+// A DockerImage describes a Docker image reference + optional credentials for use with a job definition.
+type DockerImage struct {
+	Reference string `json:"reference" yaml:"reference"`
+	// IsDefault tells the workflow runner to use its own built-in image and ignore Reference. It is
+	// set by the service and is not accepted on write.
+	IsDefault   bool                    `json:"isDefault,omitempty"`
+	Credentials *DockerImageCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+}
+
+type dockerImageJSON struct {
+	Reference   string                  `json:"reference" yaml:"reference"`
+	IsDefault   bool                    `json:"isDefault,omitempty"`
+	Credentials *DockerImageCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+}
+
+func (d *DockerImage) MarshalJSON() ([]byte, error) {
+	if d.Credentials != nil || d.IsDefault {
+		return json.Marshal(dockerImageJSON{
+			Reference:   d.Reference,
+			IsDefault:   d.IsDefault,
+			Credentials: d.Credentials,
+		})
+	}
+	return json.Marshal(d.Reference)
+}
+
+func (d *DockerImage) UnmarshalJSON(bytes []byte) error {
+	var image dockerImageJSON
+	if err := json.Unmarshal(bytes, &image); err == nil {
+		d.Reference, d.IsDefault, d.Credentials = image.Reference, image.IsDefault, image.Credentials
+		return nil
+	}
+
+	var reference string
+	if err := json.Unmarshal(bytes, &reference); err != nil {
+		return err
+	}
+	d.Reference, d.IsDefault, d.Credentials = reference, false, nil
+	return nil
+}
+
+// DockerImageCredentials describes the credentials needed to access a Docker repository.
+type DockerImageCredentials struct {
+	Username string      `json:"username" yaml:"username"`
+	Password SecretValue `json:"password" yaml:"password"`
+}
+
+// SourceContext describes some source code, and how to obtain it. Only one of its fields may be
+// specified.
+type SourceContext struct {
+	Git      *SourceContextGit      `json:"git,omitempty" yaml:"git,omitempty"`
+	Hg       *SourceContextHg       `json:"hg,omitempty"`
+	Template *SourceContextTemplate `json:"template,omitempty"`
+}
+
+type SourceContextGit struct {
+	RepoURL string `json:"repoUrl" yaml:"repoUrl,omitempty"`
+
+	Branch string `json:"branch" yaml:"branch"`
+
+	// (optional) RepoDir is the directory to work from in the project's source repository
+	// where Pulumi.yaml is located. It is used in case Pulumi.yaml is not
+	// in the project source root.
+	RepoDir string `json:"repoDir,omitempty" yaml:"repoDir,omitempty"`
+
+	// (optional) Commit is the hash of the commit to deploy. If used, HEAD will be in detached mode. This
+	// is mutually exclusive with the Branch setting. Either value needs to be specified.
+	Commit string `json:"commit,omitempty" yaml:"commit,omitempty"`
+
+	// (optional) Tag is the git tag that triggered this deployment. It is set by the service when a
+	// deployment is queued by a tag push, and is mutually exclusive with Branch. When it is set,
+	// Commit is also set to the SHA the tag points at.
+	Tag string `json:"tag,omitempty"`
+
+	// (optional) GitAuth allows configuring git authentication options
+	// There are 3 different authentication options:
+	//   * SSH private key (and its optional password)
+	//   * Personal access token
+	//   * Basic auth username and password
+	// Only one authentication mode will be considered if more than one option is specified,
+	// with ssh private key/password preferred first, then personal access token, and finally
+	// basic auth credentials.
+	GitAuth *GitAuthConfig `json:"gitAuth,omitempty" yaml:"gitAuth,omitempty"`
+}
+
+// SourceContextHg describes a Mercurial source.
+type SourceContextHg struct {
+	RepoURL  string `json:"repoUrl,omitempty"`
+	Branch   string `json:"branch,omitempty"`
+	RepoDir  string `json:"repoDir,omitempty"`
+	Revision string `json:"revision,omitempty"`
+	// HgAuth reuses GitAuthConfig; the service models Mercurial credentials with the same shape.
+	HgAuth *GitAuthConfig `json:"hgAuth,omitempty"`
+}
+
+// SourceContextTemplate describes a source drawn from a template rather than from a repository
+// checkout.
+type SourceContextTemplate struct {
+	// SourceURL is either a registry reference of the form
+	// registry://templates/source/<publisher>/<name>[@<version>] or a plain VCS URL.
+	SourceURL string         `json:"sourceUrl,omitempty"`
+	GitAuth   *GitAuthConfig `json:"gitAuth,omitempty"`
+	// ProjectSourceURL is the template source configured on the stack's project. Deployments fall
+	// back to it when SourceURL is blank. It is read-only: it cannot be set through deployment
+	// settings requests.
+	ProjectSourceURL string `json:"projectSourceUrl,omitempty"`
+}
+
+// GitAuthConfig specifies git authentication configuration options.
+// There are 3 different authentication options:
+//   - Personal access token
+//   - SSH private key (and its optional password)
+//   - Basic auth username and password
+//
+// Only 1 authentication mode is valid.
+type GitAuthConfig struct {
+	PersonalAccessToken *SecretValue `json:"accessToken,omitempty" yaml:"accessToken,omitempty"`
+	SSHAuth             *SSHAuth     `json:"sshAuth,omitempty" yaml:"sshAuth,omitempty"`
+	BasicAuth           *BasicAuth   `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+}
+
+// SSHAuth configures ssh-based auth for git authentication.
+// SSHPrivateKey is required but password is optional.
+type SSHAuth struct {
+	SSHPrivateKey SecretValue  `json:"sshPrivateKey" yaml:"sshPrivateKey"`
+	Password      *SecretValue `json:"password,omitempty" yaml:"password,omitempty"`
+}
+
+// BasicAuth configures git authentication through basic auth:
+// i.e. username and password. Both UserName and Password are required.
+type BasicAuth struct {
+	UserName SecretValue `json:"userName" yaml:"userName"`
+	Password SecretValue `json:"password" yaml:"password"`
+}
+
+// OperationContext describes what to do.
+type OperationContext struct {
+	// OIDC contains the OIDC configuration for the operation.
+	OIDC *OperationContextOIDCConfiguration `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// PreRunCommands is an optional list of arbitrary commands to run before Pulumi
+	// is invoked.
+	// ref: https://github.com/pulumi/pulumi/issues/9397
+	PreRunCommands []string `json:"preRunCommands" yaml:"preRunCommands,omitempty"`
+
+	// Operation is what we plan on doing.
+	Operation PulumiOperation `json:"operation" yaml:"-"`
+
+	// EnvironmentVariables contains environment variables to be applied during the execution.
+	EnvironmentVariables map[string]SecretValue `json:"environmentVariables" yaml:"environmentVariables,omitempty"`
+
+	// Options is a bag of settings to specify or override default behavior
+	Options *OperationContextOptions `json:"options,omitempty" yaml:"options,omitempty"`
+
+	// Role is the deployment role the operation assumes.
+	Role *DeploymentRole `json:"role,omitempty"`
+}
+
+// DeploymentRole identifies a deployment role.
+type DeploymentRole struct {
+	ID                string  `json:"id"`
+	Name              string  `json:"name,omitempty"`
+	DefaultIdentifier *string `json:"defaultIdentifier,omitempty"`
+}
+
+type OperationContextOIDCConfiguration struct {
+	// AWS contains AWS-specific configuration.
+	AWS *OperationContextAWSOIDCConfiguration `json:"aws,omitempty" yaml:"aws,omitempty"`
+	// Azure contains Azure-specific configuration.
+	Azure *OperationContextAzureOIDCConfiguration `json:"azure,omitempty" yaml:"azure,omitempty"`
+	// GCP contains GCP-specific configuration.
+	GCP *OperationContextGCPOIDCConfiguration `json:"gcp,omitempty" yaml:"gcp,omitempty"`
+}
+
+type OperationContextAWSOIDCConfiguration struct {
+	// Duration is the duration of the assume-role session.
+	Duration DeploymentDuration `json:"duration,omitempty" yaml:"duration,omitempty"`
+	// PolicyARNs is an optional set of IAM policy ARNs that further restrict the assume-role session.
+	PolicyARNs []string `json:"policyArns,omitempty" yaml:"policyArns,omitempty"`
+	// The ARN of the role to assume using the OIDC token.
+	RoleARN string `json:"roleArn" yaml:"roleArn"`
+	// The name of the assume-role session.
+	SessionName string `json:"sessionName" yaml:"sessionName"`
+}
+
+type OperationContextAzureOIDCConfiguration struct {
+	// ClientID is the client ID of the federated workload identity.
+	ClientID string `json:"clientId,omitempty" yaml:"clientId,omitempty"`
+	// TenantID is the tenant ID of the federated workload identity.
+	TenantID string `json:"tenantId,omitempty" yaml:"tenantId,omitempty"`
+	// SubscriptionID is the subscription ID of the federated workload identity.
+	SubscriptionID string `json:"subscriptionId,omitempty" yaml:"subscriptionId,omitempty"`
+}
+
+type OperationContextGCPOIDCConfiguration struct {
+	// ProjectID is the numerical ID of the GCP project.
+	ProjectID string `json:"projectId" yaml:"projectId"`
+	// Region is the region of the GCP project.
+	Region string `json:"region,omitempty" yaml:"region,omitempty"`
+	// WorkloadPoolID is the ID of the workload pool to use.
+	WorkloadPoolID string `json:"workloadPoolId" yaml:"workloadPoolId"`
+	// ProviderID is the ID of the identity provider associated with the workload pool.
+	ProviderID string `json:"providerId" yaml:"providerId"`
+	// ServiceAccount is the email address of the service account to use.
+	ServiceAccount string `json:"serviceAccount" yaml:"serviceAccount"`
+	// TokenLifetime is the lifetime of the temporary credentials.
+	TokenLifetime DeploymentDuration `json:"tokenLifetime,omitempty" yaml:"tokenLifetime,omitempty"`
+}
+
+// OperationContextOptions is a bag of settings to specify or override default behavior in a deployment
+type OperationContextOptions struct {
+	SkipInstallDependencies     bool   `json:"skipInstallDependencies" yaml:"skipInstallDependencies"`
+	SkipIntermediateDeployments bool   `json:"skipIntermediateDeployments" yaml:"skipIntermediateDeployments"`
+	Shell                       string `json:"shell" yaml:"shell,omitempty"`
+	DeleteAfterDestroy          bool   `json:"deleteAfterDestroy" yaml:"deleteAfterDestroy"`
+	RemediateIfDriftDetected    bool   `json:"remediateIfDriftDetected" yaml:"remediateIfDriftDetected"`
+}
+
+// CreateDeploymentResponse defines the response given when a new Deployment is created.
+type CreateDeploymentResponse struct {
+	// ID represents the generated Deployment ID.
+	ID string `json:"id"`
+	// ConsoleURL is the Console URL for the deployment.
+	ConsoleURL string `json:"consoleUrl"`
+}
+
+type DeploymentLogLine struct {
+	Header    string    `json:"header,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	Line      string    `json:"line,omitempty"`
+}
+
+type DeploymentLogs struct {
+	Lines     []DeploymentLogLine `json:"lines,omitempty"`
+	NextToken string              `json:"nextToken,omitempty"`
+}
+
+// A SecretValue describes a possibly-secret value.
+type SecretValue struct {
+	Value      string
+	Ciphertext string
+	Secret     bool
+}
+
+// secretWireValue is the on-the-wire representation of a SecretValue. It covers two shapes:
+//
+//   - The legacy shape, where the secret-ness of a value is encoded structurally: a bare string
+//     is a non-secret plaintext value, and any object is a secret whose plaintext lives in the
+//     Secret field (or whose ciphertext lives in Ciphertext). Written by MarshalJSON today.
+//   - The explicit shape, where IsSecret is a present boolean and the plaintext lives in Value.
+//     Not written today, but accepted on unmarshal so CLI installs become new-format-tolerant
+//     before any server starts emitting it.
+//
+// Exactly one of Value or Secret should be set; senders should not populate both.
+type secretWireValue struct {
+	// Legacy fields.
+	Secret     string `json:"secret,omitempty" yaml:"secret,omitempty"`
+	Ciphertext string `json:"ciphertext,omitempty" yaml:"ciphertext,omitempty"`
+	// Explicit-form fields. IsSecret is a pointer so its presence distinguishes the two shapes.
+	IsSecret *bool  `json:"isSecret,omitempty" yaml:"isSecret,omitempty"`
+	Value    string `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+func (v SecretValue) MarshalJSON() ([]byte, error) {
+	switch {
+	case len(v.Ciphertext) != 0:
+		return json.Marshal(secretWireValue{Ciphertext: v.Ciphertext})
+	case v.Secret:
+		return json.Marshal(secretWireValue{Secret: v.Value})
+	default:
+		return json.Marshal(v.Value)
+	}
+}
+
+func (v *SecretValue) UnmarshalJSON(bytes []byte) error {
+	var w secretWireValue
+	if err := json.Unmarshal(bytes, &w); err == nil {
+		v.fromWire(w)
+		return nil
+	}
+
+	var plaintext string
+	if err := json.Unmarshal(bytes, &plaintext); err != nil {
+		return err
+	}
+	v.Value, v.Secret = plaintext, false
+	return nil
+}
+
+func (v SecretValue) MarshalYAML() (any, error) {
+	switch {
+	case len(v.Ciphertext) != 0:
+		return secretWireValue{Ciphertext: v.Ciphertext}, nil
+	case v.Secret:
+		return secretWireValue{Secret: v.Value}, nil
+	default:
+		return v.Value, nil
+	}
+}
+
+func (v *SecretValue) UnmarshalYAML(node *yaml.Node) error {
+	var w secretWireValue
+	if err := node.Decode(&w); err == nil {
+		v.fromWire(w)
+		return nil
+	}
+
+	var plaintext string
+	if err := node.Decode(&plaintext); err != nil {
+		return err
+	}
+	v.Value, v.Secret = plaintext, false
+	return nil
+}
+
+// fromWire populates v from a decoded secretWireValue. If IsSecret is present the wire is in the
+// new explicit form and Value carries the plaintext; otherwise the legacy form is assumed and any
+// object is treated as a secret.
+func (v *SecretValue) fromWire(w secretWireValue) {
+	v.Ciphertext = w.Ciphertext
+	if w.IsSecret != nil {
+		v.Value, v.Secret = w.Value, *w.IsSecret
+		return
+	}
+	v.Value, v.Secret = w.Secret, true
+}
+
+type GetDeploymentUpdatesUpdateInfo struct {
+	// UpdateID is the underlying Update's ID on the PPC.
+	UpdateID string `json:"updateID"`
+
+	// Version of the stack that this UpdateInfo describe.
+	Version int `json:"version"`
+	// LatestVersion of the stack in general. i.e. the latest when Version == LatestVersion.
+	LatestVersion int `json:"latestVersion"`
+}

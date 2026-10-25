@@ -1,0 +1,112 @@
+env:
+  ESC_ACTION_ENVIRONMENT: pulumi/github-secrets/pulumi-pulumi
+  ESC_ACTION_EXPORT_ENVIRONMENT_VARIABLES: false
+name: Post-Release PR
+
+permissions:
+  # To create a PR
+  contents: write
+  pull-requests: write
+  id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        description: "GitHub ref to use"
+        type: string
+      version:
+        required: true
+        description: "Version to produce"
+        type: string
+      branch_from_ref:
+        required: false
+        description: "Commit to branch from, if not the tag"
+        type: string
+      release-notes:
+        required: true
+        description: "Release notes to publish"
+        type: string
+      queue-merge:
+        required: false
+        default: false
+        description: "Whether to queue the release for immediate merge"
+        type: boolean
+
+jobs:
+  version-bump:
+    name: version bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate with Pulumi Cloud
+        id: pulumi-auth
+        uses: pulumi/auth-actions@40602447438aac90bca2b87b4528a81120a388b1 # main
+        with:
+          organization: pulumi
+          requested-token-type: urn:pulumi:token-type:access_token:organization
+          export-environment-variables: false
+      - name: Fetch secrets from ESC
+        id: esc-secrets
+        uses: pulumi/esc-action@ce885ce2ea6bf59194b7b0a3e94a4d3f7bacece0 # v4
+        with:
+          pulumi-access-token: ${{ steps.pulumi-auth.outputs.pulumi-access-token }}
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          # `inputs.ref` is the release tag, which points at a commit created
+          # before the freeze PR landed. Branch off master so we pick up the
+          # freeze PR's changes (sdk/.version bump, .release-pending marker).
+          ref: master
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: sdk/go.mod
+      - uses: ./.github/actions/retry
+        with:
+          action: jdx/mise-action@v2
+          with: |
+            version: 2026.10.3
+            experimental: true
+      - name: Create PR
+        env:
+          PULUMI_VERSION: ${{ inputs.version }}
+          QUEUE_MERGE: ${{ inputs.queue-merge }}
+          GITHUB_TOKEN: ${{ steps.esc-secrets.outputs.PULUMI_BOT_TOKEN }}
+          REVIEW_TOKEN: ${{ steps.esc-secrets.outputs.PULUMI_REVIEW_TOKEN }}
+        run: |
+          set -euo pipefail
+          git switch --create "automation/release-v${PULUMI_VERSION}"
+
+          python3 scripts/changie-pr-lookup.py
+          changie batch "${PULUMI_VERSION}"
+          changie merge
+
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          git add -A
+          git commit -m "chore: changelog for v${PULUMI_VERSION}"
+
+          # Update go module dependencies
+          (
+            cd pkg
+            go get -u "github.com/pulumi/pulumi/sdk/v3@v${PULUMI_VERSION}"
+          )
+          make tidy_fix
+          # Clear the release-in-progress marker dropped by set-version.py.
+          # Merging this PR re-opens the queue to other PRs.
+          rm -f .release-pending
+          git add -A
+          git commit -m "chore: post-release go.mod updates"
+
+          git push -u origin HEAD
+
+          # Note that the title of the PR is used in the on-push workflow.  If the title needs to
+          # change here, please also check on-push.yml
+          PR=$(gh pr create --title "Changelog and go.mod updates for v${PULUMI_VERSION}" --body "")
+
+          GITHUB_TOKEN="${REVIEW_TOKEN}" gh pr review --approve "${PR}"
+
+          if [ "${QUEUE_MERGE}" = "true" ]; then
+            gh pr merge --auto --squash "${PR}"
+          fi

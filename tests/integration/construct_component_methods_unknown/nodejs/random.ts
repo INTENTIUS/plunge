@@ -1,0 +1,15 @@
+// Copyright 2016, Pulumi Corporation.  All rights reserved.
+
+import * as pulumi from "@pulumi/pulumi";
+
+interface RandomArgs {
+    length: pulumi.Input<number>;
+}
+
+export class Random extends pulumi.CustomResource {
+    declare public readonly length: pulumi.Output<number>;
+    declare public readonly result: pulumi.Output<string>;
+    constructor(name: string, args: RandomArgs, opts?: pulumi.CustomResourceOptions) {
+        super("testprovider:index:Random", name, args, opts);
+    }
+}

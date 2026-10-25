@@ -1,0 +1,1143 @@
+// Copyright 2020, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package python
+
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
+	"math/big"
+	"strings"
+	"unicode"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/zclconf/go-cty/cty"
+
+	"github.com/pulumi/pulumi/pkg/v3/codegen/cgstrings"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/hcl2/model"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/pcl"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/schema"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+type nameInfo int
+
+func (nameInfo) Format(name string) string {
+	return PyName(name)
+}
+
+func (g *generator) lowerExpression(expr model.Expression, typ model.Type) (model.Expression, []*quoteTemp) {
+	// TODO(pdg): diagnostics
+
+	expr = pcl.RewritePropertyReferences(expr)
+	skipToJSONWhenRewritingApplies := true
+	expr, diags := pcl.RewriteAppliesWithSkipToJSON(expr, nameInfo(0), false, skipToJSONWhenRewritingApplies)
+	expr, lowerProxyDiags := g.lowerProxyApplies(expr)
+	expr, convertDiags := pcl.RewriteConversions(expr, typ)
+	// Guard dereferences of conditionally-created resources after applies and
+	// conversions are rewritten, so the guard wraps the (converted) apply rather
+	// than being hoisted inside it, and the `null` fallback is left untouched.
+	expr = pcl.RewriteOptionalResourceGuards(expr)
+	expr, quotes, quoteDiags := g.rewriteQuotes(expr)
+
+	diags = diags.Extend(lowerProxyDiags)
+	diags = diags.Extend(convertDiags)
+	diags = diags.Extend(quoteDiags)
+
+	g.diagnostics = g.diagnostics.Extend(diags)
+
+	return expr, quotes
+}
+
+func (g *generator) lowerHookCommandExpression(expr model.Expression) (model.Expression, []*quoteTemp) {
+	expr, convertDiags := pcl.RewriteConversions(expr, model.StringType)
+	expr, quotes, quoteDiags := g.rewriteQuotes(expr)
+
+	g.diagnostics = g.diagnostics.Extend(convertDiags)
+	g.diagnostics = g.diagnostics.Extend(quoteDiags)
+
+	return expr, quotes
+}
+
+func (g *generator) GetPrecedence(expr model.Expression) int {
+	// Precedence is taken from https://docs.python.org/3/reference/expressions.html#operator-precedence.
+	switch expr := expr.(type) {
+	case *model.AnonymousFunctionExpression:
+		return 1
+	case *model.ConditionalExpression:
+		return 2
+	case *model.BinaryOpExpression:
+		switch expr.Operation {
+		case hclsyntax.OpLogicalOr:
+			return 3
+		case hclsyntax.OpLogicalAnd:
+			return 4
+		case hclsyntax.OpGreaterThan, hclsyntax.OpGreaterThanOrEqual, hclsyntax.OpLessThan, hclsyntax.OpLessThanOrEqual,
+			hclsyntax.OpEqual, hclsyntax.OpNotEqual:
+			return 6
+		case hclsyntax.OpAdd, hclsyntax.OpSubtract:
+			return 11
+		case hclsyntax.OpMultiply, hclsyntax.OpDivide, hclsyntax.OpModulo:
+			return 12
+		default:
+			contract.Failf("unexpected binary expression %v", expr)
+		}
+	case *model.UnaryOpExpression:
+		return 13
+	case *model.FunctionCallExpression, *model.IndexExpression, *model.RelativeTraversalExpression,
+		*model.TemplateJoinExpression:
+		return 16
+	case *model.ForExpression, *model.ObjectConsExpression, *model.SplatExpression, *model.TupleConsExpression:
+		return 17
+	case *model.LiteralValueExpression, *model.ScopeTraversalExpression, *model.TemplateExpression:
+		return 18
+	default:
+		contract.Failf("unexpected expression %v of type %T", expr, expr)
+	}
+	return 0
+}
+
+func (g *generator) GenAnonymousFunctionExpression(w io.Writer, expr *model.AnonymousFunctionExpression) {
+	rangeCapture := ""
+	if g.rangeVariable != "" && referencesRange(expr.Body) {
+		rangeCapture = "_" + g.rangeVariable
+		for {
+			conflicts := false
+			for _, p := range expr.Signature.Parameters {
+				if PyName(p.Name) == rangeCapture {
+					conflicts = true
+					break
+				}
+			}
+			if !conflicts {
+				break
+			}
+			rangeCapture = "_" + rangeCapture
+		}
+	}
+
+	g.Fgen(w, "lambda")
+	for i, p := range expr.Signature.Parameters {
+		if i > 0 {
+			g.Fgen(w, ",")
+		}
+		g.Fgenf(w, " %s", PyName(p.Name))
+	}
+	if rangeCapture != "" {
+		if len(expr.Signature.Parameters) > 0 {
+			g.Fgen(w, ",")
+		}
+		// Python closures capture loop variables by reference. A default argument
+		// snapshots the value for the current resource-range iteration.
+		g.Fgenf(w, " %s=%s", rangeCapture, g.rangeVariable)
+	}
+
+	g.Fgen(w, ": ")
+	if rangeCapture == "" {
+		g.Fgenf(w, "%.v", expr.Body)
+		return
+	}
+
+	previousRangeVariable := g.rangeVariable
+	g.rangeVariable = rangeCapture
+	g.Fgenf(w, "%.v", expr.Body)
+	g.rangeVariable = previousRangeVariable
+}
+
+func referencesRange(expr model.Expression) bool {
+	found := false
+	_, _ = model.VisitExpression(expr, model.IdentityVisitor,
+		func(expr model.Expression) (model.Expression, hcl.Diagnostics) {
+			if traversal, ok := expr.(*model.ScopeTraversalExpression); ok && traversal.RootName == "range" {
+				found = true
+			}
+			return expr, nil
+		})
+	return found
+}
+
+// isNoneLiteral reports whether expr is the `null`/`None` literal, so equality
+// comparisons against it can be rendered with Python's identity operators
+// (`is`/`is not`), which read idiomatically and let type checkers narrow.
+func isNoneLiteral(expr model.Expression) bool {
+	switch expr := expr.(type) {
+	case *model.LiteralValueExpression:
+		return expr.Value.IsNull()
+	case *model.ScopeTraversalExpression:
+		if len(expr.Parts) == 1 {
+			if c, ok := expr.Parts[0].(*model.Constant); ok {
+				return c.ConstantValue.IsNull()
+			}
+		}
+	}
+	return false
+}
+
+func (g *generator) GenBinaryOpExpression(w io.Writer, expr *model.BinaryOpExpression) {
+	var opstr string
+	precedence := g.GetPrecedence(expr)
+	switch expr.Operation {
+	case hclsyntax.OpAdd:
+		opstr = "+"
+	case hclsyntax.OpDivide:
+		opstr = "/"
+	case hclsyntax.OpEqual:
+		opstr = "=="
+		if isNoneLiteral(expr.RightOperand) || isNoneLiteral(expr.LeftOperand) {
+			opstr = "is"
+		}
+	case hclsyntax.OpGreaterThan:
+		opstr = ">"
+	case hclsyntax.OpGreaterThanOrEqual:
+		opstr = ">="
+	case hclsyntax.OpLessThan:
+		opstr = "<"
+	case hclsyntax.OpLessThanOrEqual:
+		opstr = "<="
+	case hclsyntax.OpLogicalAnd:
+		opstr = "and"
+	case hclsyntax.OpLogicalOr:
+		opstr = "or"
+	case hclsyntax.OpModulo:
+		opstr = "%"
+	case hclsyntax.OpMultiply:
+		opstr = "*"
+	case hclsyntax.OpNotEqual:
+		opstr = "!="
+		if isNoneLiteral(expr.RightOperand) || isNoneLiteral(expr.LeftOperand) {
+			opstr = "is not"
+		}
+	case hclsyntax.OpSubtract:
+		opstr = "-"
+	default:
+		opstr, precedence = ",", 0
+	}
+
+	g.Fgenf(w, "%.[1]*[2]v %[3]v %.[1]*[4]o", precedence, expr.LeftOperand, opstr, expr.RightOperand)
+}
+
+func (g *generator) GenConditionalExpression(w io.Writer, expr *model.ConditionalExpression) {
+	g.Fgenf(w, "%.2v if %.2v else %.2v", expr.TrueResult, expr.Condition, expr.FalseResult)
+}
+
+func (g *generator) GenForExpression(w io.Writer, expr *model.ForExpression) {
+	closedelim := "]"
+	if expr.Key != nil {
+		// Dictionary comprehension
+		//
+		// TODO(pdg): grouping
+		g.Fgenf(w, "{%.v: %.v", expr.Key, expr.Value)
+		closedelim = "}"
+	} else {
+		// List comprehension
+		g.Fgenf(w, "[%.v", expr.Value)
+	}
+
+	keyUsed := expr.KeyVariable != nil && expr.KeyVariable.Name != "_"
+
+	switch {
+	case !keyUsed && isMapType(expr.Collection.Type()):
+		g.Fgenf(w, " for %v in %.v.values()", expr.ValueVariable.Name, expr.Collection)
+	case !keyUsed:
+		g.Fgenf(w, " for %v in %.v", expr.ValueVariable.Name, expr.Collection)
+	case isMapType(expr.Collection.Type()):
+		g.Fgenf(w, " for %v, %v in sorted(%.v.items())", expr.KeyVariable.Name, expr.ValueVariable.Name, expr.Collection)
+	default:
+		g.Fgenf(w, " for %v, %v in enumerate(%.v)", expr.KeyVariable.Name, expr.ValueVariable.Name, expr.Collection)
+	}
+
+	if expr.Condition != nil {
+		g.Fgenf(w, " if %.v", expr.Condition)
+	}
+
+	g.Fprint(w, closedelim)
+}
+
+// listElementType extracts the element type from a list type,
+// unwrapping output, promise, and union wrappers.
+// Returns nil if the type is not a list type.
+func listElementType(t model.Type) model.Type {
+	if l, ok := pcl.UnwrapOption(model.ResolveOutputs(t)).(*model.ListType); ok {
+		return l.ElementType
+	}
+	return nil
+}
+
+// isMapType returns true if the given type is a map or object type,
+// unwrapping output, promise, and optional wrappers.
+func isMapType(t model.Type) bool {
+	switch pcl.UnwrapOption(model.ResolveOutputs(t)).(type) {
+	case *model.MapType, *model.ObjectType:
+		return true
+	default:
+		return false
+	}
+}
+
+func (g *generator) genApply(w io.Writer, expr *model.FunctionCallExpression) {
+	// Extract the list of outputs and the continuation expression from the `__apply` arguments.
+	applyArgs, then := pcl.ParseApplyCall(expr)
+
+	prev := g.insideApplyLambda
+	g.insideApplyLambda = true
+	defer func() { g.insideApplyLambda = prev }()
+
+	if len(applyArgs) == 1 {
+		// If we only have a single output, just generate a normal `.apply`.
+		g.Fgenf(w, "%.16v.apply(%.v)", applyArgs[0], then)
+	} else {
+		// Otherwise, generate a call to `pulumi.all([]).apply()`.
+		g.Fgen(w, "pulumi.Output.all(\n")
+		g.Indented(func() {
+			for i, arg := range applyArgs {
+				argName := then.Signature.Parameters[i].Name
+				g.Fgenf(w, "%s%s=%v", g.Indent, argName, arg)
+				if i < len(applyArgs)-1 {
+					g.Fgen(w, ",")
+				}
+				g.Fgen(w, "\n")
+			}
+		})
+		g.Fgen(w, ").apply(lambda resolved_outputs: ")
+		rewrittenLambdaBody := rewriteApplyLambdaBody(then, "resolved_outputs")
+		g.Fgenf(w, "%.v)\n", rewrittenLambdaBody)
+	}
+}
+
+// functionName computes the Python package, module, and name for the given function token.
+func functionName(tokenArg model.Expression) (string, string, string, hcl.Diagnostics) {
+	token := tokenArg.(*model.TemplateExpression).Parts[0].(*model.LiteralValueExpression).Value.AsString()
+	tokenRange := tokenArg.SyntaxNode().Range()
+
+	// Compute the resource type from the Pulumi type token.
+	pkg, module, member, diagnostics := pcl.DecomposeToken(token, tokenRange)
+	// the index module is not put into a submodule
+	if module == "index" {
+		module = ""
+	}
+	module = moduleToPythonModule(module, nil)
+	return makeValidIdentifier(pkg), strings.ReplaceAll(module, "/", "."), cgstrings.UppercaseFirst(member), diagnostics
+}
+
+var functionImports = map[string][]string{
+	"fileArchive":      {"pulumi"},
+	"remoteArchive":    {"pulumi"},
+	"assetArchive":     {"pulumi"},
+	"fileAsset":        {"pulumi"},
+	"stringAsset":      {"pulumi"},
+	"remoteAsset":      {"pulumi"},
+	"rootDirectory":    {"pulumi"},
+	"filebase64":       {"base64"},
+	"filebase64sha256": {"base64", "hashlib"},
+	"toBase64":         {"base64"},
+	"fromBase64":       {"base64"},
+	"toJSON":           {"json"},
+	"sha1":             {"hashlib"},
+	"stack":            {"pulumi"},
+	"project":          {"pulumi"},
+	"organization":     {"pulumi"},
+	"cwd":              {"os"},
+}
+
+func (g *generator) getFunctionImports(x *model.FunctionCallExpression) []string {
+	if x.Name != pcl.Invoke {
+		return functionImports[x.Name]
+	}
+	return nil
+}
+
+func (g *generator) GenFunctionCallExpression(w io.Writer, expr *model.FunctionCallExpression) {
+	switch expr.Name {
+	case pcl.IntrinsicConvert:
+		from := expr.Args[0]
+		to := pcl.LowerConversion(from, expr.Signature.ReturnType)
+		to = model.ResolveOutputs(to)
+		if cns, ok := to.(*model.ConstType); ok {
+			to = cns.Type
+		}
+
+		fromType := from.Type()
+		isFromOutput, isFromPromise := model.ContainsEventuals(fromType)
+		fromType = model.ResolveOutputs(fromType)
+		if cns, ok := fromType.(*model.ConstType); ok {
+			fromType = cns.Type
+		}
+		// If fromType is optional (union(T, None)), unwrap to T. LowerConversion already selects a specific element
+		// type from the target union (stripping optionality from to), so we symmetrically unwrap fromType to avoid
+		// false type mismatches (e.g., treating Optional[bool] as needing string-to-bool conversion).
+		if union, ok := fromType.(*model.UnionType); ok && len(union.ElementTypes) == 2 {
+			if union.ElementTypes[0] == model.NoneType {
+				fromType = union.ElementTypes[1]
+			} else if union.ElementTypes[1] == model.NoneType {
+				fromType = union.ElementTypes[0]
+			}
+		}
+
+		genMaybeOutputConversion := func(conversionExpr func(string)) {
+			if isFromPromise {
+				g.Fgenf(w, "output(%.v).apply(lambda x: ", from)
+				conversionExpr("x")
+				g.Fgenf(w, ")")
+				return
+			}
+			if isFromOutput {
+				g.Fgenf(w, "%.v.apply(lambda x: ", from)
+				conversionExpr("x")
+				g.Fgenf(w, ")")
+				return
+			}
+			var t bytes.Buffer
+			g.Fgenf(&t, "%.v", from)
+			conversionExpr(t.String())
+		}
+		switch to := to.(type) {
+		case *model.EnumType:
+			components := strings.Split(to.Token, ":")
+			contract.Assertf(len(components) == 3, "malformed token %v", to.Token)
+			enum, ok := pcl.GetSchemaForType(to)
+			if !ok {
+				// No schema was provided
+				g.Fgenf(w, "%.v", expr.Args[0])
+				return
+			}
+			var moduleNameOverrides map[string]string
+			if pkg, err := enum.(*schema.EnumType).PackageReference.Definition(); err == nil {
+				if pkgInfo, ok := pkg.Language["python"].(PackageInfo); ok {
+					moduleNameOverrides = pkgInfo.ModuleNameOverrides
+				}
+			}
+			pkg := strings.ReplaceAll(components[0], "-", "_")
+			enumName := tokenToName(to.Token)
+			if m := tokenToModule(to.Token, nil, moduleNameOverrides); m != "" {
+				modParts := strings.Split(m, "/")
+				if len(modParts) == 2 && strings.EqualFold(modParts[1], enumName) {
+					m = modParts[0]
+				}
+				pkg += "." + strings.ReplaceAll(m, "/", ".")
+			}
+
+			if isFromOutput {
+				g.Fgenf(w, "%.v.apply(lambda x: %s.%s(x))", from, pkg, enumName)
+			} else {
+				diag := pcl.GenEnum(to, from, func(member *schema.Enum) {
+					tag := member.Name
+					if tag == "" {
+						tag = fmt.Sprintf("%v", member.Value)
+					}
+					tag, err := makeSafeEnumName(tag, enumName)
+					contract.AssertNoErrorf(err, "error sanitizing enum name")
+					g.Fgenf(w, "%s.%s.%s", pkg, enumName, tag)
+				}, func(from model.Expression) {
+					g.Fgenf(w, "%s.%s(%.v)", pkg, enumName, from)
+				})
+				if diag != nil {
+					g.diagnostics = append(g.diagnostics, diag)
+				}
+			}
+		default:
+			switch {
+			case model.BoolType.AssignableFrom(to) && !model.BoolType.AssignableFrom(fromType):
+				genMaybeOutputConversion(func(v string) {
+					g.Fgenf(w, `%s == "true"`, v)
+				})
+			// ids and strings are treated interchangeably in Python, so if we are casting to id but
+			// already have string _or_ id that's fine. Same for casting to string.
+			case model.StringType.AssignableFrom(to) &&
+				!model.StringType.AssignableFrom(fromType) &&
+				!model.IDType.AssignableFrom(fromType),
+				model.IDType.AssignableFrom(to) &&
+					!model.StringType.AssignableFrom(fromType) &&
+					!model.IDType.AssignableFrom(fromType):
+				genMaybeOutputConversion(func(v string) {
+					if model.BoolType.AssignableFrom(fromType) {
+						g.Fgenf(w, `"true" if %s else "false"`, v)
+						return
+					}
+					g.Fgenf(w, "str(%s)", v)
+				})
+			case model.NumberType.AssignableFrom(to) && !model.NumberType.AssignableFrom(fromType):
+				genMaybeOutputConversion(func(v string) {
+					g.Fgenf(w, "float(%s)", v)
+				})
+			case model.IntType.AssignableFrom(to) && !model.IntType.AssignableFrom(fromType):
+				genMaybeOutputConversion(func(v string) {
+					g.Fgenf(w, "int(%s)", v)
+				})
+			default:
+				switch arg := from.(type) {
+				case *model.ObjectConsExpression:
+					g.genObjectConsExpression(w, arg, expr.Type())
+				default:
+					g.Fgenf(w, "%.v", expr.Args[0])
+				}
+			}
+		}
+	case pcl.IntrinsicApply:
+		g.genApply(w, expr)
+	case "recover":
+		g.Fgenf(w, "%.16v.recover(lambda __error: (lambda error: %.v)(str(__error)))", expr.Args[0], expr.Args[1])
+	case "element":
+		g.Fgenf(w, "%.16v[%.v]", expr.Args[0], expr.Args[1])
+	case "entries":
+		g.Fgenf(w, `[{"key": k, "value": v} for k, v in sorted(%.v.items())]`, expr.Args[0])
+	case "fileArchive":
+		g.Fgenf(w, "pulumi.FileArchive(%.v)", expr.Args[0])
+	case "remoteArchive":
+		g.Fgenf(w, "pulumi.RemoteArchive(%.v)", expr.Args[0])
+	case "assetArchive":
+		g.Fgenf(w, "pulumi.AssetArchive(%.v)", expr.Args[0])
+	case "fileAsset":
+		g.Fgenf(w, "pulumi.FileAsset(%.v)", expr.Args[0])
+	case "stringAsset":
+		g.Fgenf(w, "pulumi.StringAsset(%.v)", expr.Args[0])
+	case "remoteAsset":
+		g.Fgenf(w, "pulumi.RemoteAsset(%.v)", expr.Args[0])
+	case "filebase64":
+		g.Fgenf(w, "(lambda path: base64.b64encode(open(path).read().encode()).decode())(%.v)", expr.Args[0])
+	case "filebase64sha256":
+		// Assuming the existence of the following helper method
+		g.Fgenf(w, "computeFilebase64sha256(%v)", expr.Args[0])
+	case "notImplemented":
+		g.Fgenf(w, "not_implemented(%v)", expr.Args[0])
+	case "singleOrNone":
+		g.Fgenf(w, "single_or_none(%v)", expr.Args[0])
+	case pcl.Call:
+		self := expr.Args[0]
+		method := expr.Args[1].(*model.TemplateExpression).Parts[0].(*model.LiteralValueExpression).Value.AsString()
+
+		if expr.Signature.MultiArgumentInputs {
+			err := fmt.Errorf("python program-gen does not implement MultiArgumentInputs for method '%s'", method)
+			panic(err)
+		}
+
+		validMethod := PyName(method)
+		g.Fgenf(w, "%v.%s(", self, validMethod)
+
+		var args *model.ObjectConsExpression
+		if converted, objectArgs, _ := pcl.RecognizeTypedObjectCons(expr.Args[2]); converted {
+			args = objectArgs
+		} else {
+			args = expr.Args[2].(*model.ObjectConsExpression)
+		}
+		if len(args.Items) > 0 {
+			indenter := func(f func()) { f() }
+			if len(args.Items) > 1 {
+				indenter = g.Indented
+			}
+			indenter(func() {
+				for i, item := range args.Items {
+					// Ignore non-literal keys
+					key, ok := item.Key.(*model.LiteralValueExpression)
+					if !ok || !key.Value.Type().Equals(cty.String) {
+						continue
+					}
+					keyVal := PyName(key.Value.AsString())
+					if i == 0 {
+						g.Fgenf(w, "%s=%.v", keyVal, item.Value)
+					} else {
+						g.Fgenf(w, ",\n%s%s=%.v", g.Indent, keyVal, item.Value)
+					}
+				}
+			})
+		}
+
+		g.Fprint(w, ")")
+	case pcl.Invoke:
+		pkg, module, fn, diags := functionName(expr.Args[0])
+		contract.Assertf(len(diags) == 0, "unexpected diagnostics: %v", diags)
+		if module != "" {
+			module = "." + module
+		}
+		name := fmt.Sprintf("%s%s.%s", g.packageAlias(pkg), module, PyName(fn))
+
+		isOut := pcl.IsOutputVersionInvokeCall(expr)
+		if isOut {
+			name = name + "_output"
+		}
+
+		if len(expr.Args) == 1 {
+			g.Fprintf(w, "%s()", name)
+			return
+		}
+
+		optionsBag := ""
+		invokeOptions, hasOptions := pcl.InvokeOptions(expr)
+		parentSelf := g.isComponent && !pcl.InvokeOptionSet(expr, "parent")
+		if hasOptions || parentSelf {
+			var buf bytes.Buffer
+			if isOut {
+				g.Fgen(&buf, ", opts=pulumi.InvokeOutputOptions(")
+			} else {
+				g.Fgen(&buf, ", opts=pulumi.InvokeOptions(")
+			}
+			args := []string{}
+			if parentSelf {
+				args = append(args, "parent=self")
+			}
+			if hasOptions {
+				for _, item := range invokeOptions.Items {
+					var argBuf bytes.Buffer
+					key := PyName(pcl.LiteralValueString(item.Key))
+					g.Fgenf(&argBuf, "%s=%v", key, item.Value)
+					args = append(args, argBuf.String())
+				}
+			}
+			g.Fgen(&buf, strings.Join(args, ", "))
+			g.Fgen(&buf, ")")
+
+			optionsBag = buf.String()
+		}
+
+		g.Fgenf(w, "%s(", name)
+
+		genFuncArgs := func(objectExpr *model.ObjectConsExpression) {
+			indenter := func(f func()) { f() }
+			if len(objectExpr.Items) > 1 {
+				indenter = g.Indented
+			}
+			indenter(func() {
+				for i, item := range objectExpr.Items {
+					// Ignore non-literal keys
+					key, ok := item.Key.(*model.LiteralValueExpression)
+					if !ok || !key.Value.Type().Equals(cty.String) {
+						continue
+					}
+					keyVal := PyName(key.Value.AsString())
+					if i == 0 {
+						g.Fgenf(w, "%s=%.v", keyVal, item.Value)
+					} else {
+						g.Fgenf(w, ",\n%s%s=%.v", g.Indent, keyVal, item.Value)
+					}
+				}
+			})
+		}
+
+		if expr.Signature.MultiArgumentInputs {
+			// A multi-argument invoke spreads its inputs into positional arguments, ordered by the
+			// schema's multiArgumentInputs list, with None standing in for omitted optional inputs.
+			var invokeArgs *model.ObjectConsExpression
+			if converted, objectArgs, _ := pcl.RecognizeTypedObjectCons(expr.Args[1]); converted {
+				invokeArgs = objectArgs
+			} else {
+				invokeArgs = expr.Args[1].(*model.ObjectConsExpression)
+			}
+			pcl.GenerateMultiArguments(g.Formatter, w, "None", invokeArgs, pcl.SortedFunctionParameters(expr), false)
+		} else {
+			switch arg := expr.Args[1].(type) {
+			case *model.FunctionCallExpression:
+				if argsObject, ok := arg.Args[0].(*model.ObjectConsExpression); ok {
+					genFuncArgs(argsObject)
+				}
+
+			case *model.ObjectConsExpression:
+				genFuncArgs(arg)
+			}
+		}
+
+		g.Fgenf(w, "%v)", optionsBag)
+	case "join":
+		g.Fgenf(w, "%.16v.join(%v)", expr.Args[0], expr.Args[1])
+	case "max":
+		g.Fgen(w, "max(")
+		for i, arg := range expr.Args {
+			if i > 0 {
+				g.Fgen(w, ", ")
+			}
+			if expr.ExpandFinal && i == len(expr.Args)-1 {
+				g.Fgen(w, "*")
+			}
+			g.Fgenf(w, "%v", arg)
+		}
+		g.Fgen(w, ")")
+	case "min":
+		g.Fgen(w, "min(")
+		for i, arg := range expr.Args {
+			if i > 0 {
+				g.Fgen(w, ", ")
+			}
+			if expr.ExpandFinal && i == len(expr.Args)-1 {
+				g.Fgen(w, "*")
+			}
+			g.Fgenf(w, "%v", arg)
+		}
+		g.Fgen(w, ")")
+	case "length":
+		argType := pcl.UnwrapOption(model.ResolveOutputs(expr.Args[0].Type()))
+		functionName := "len"
+		if model.StringType.AssignableFrom(argType) {
+			functionName = "grapheme_length"
+		}
+		if _, isOutput := expr.Args[0].Type().(*model.OutputType); isOutput {
+			g.Fgenf(w, "%.16v.apply(lambda value: %s(value))", expr.Args[0], functionName)
+		} else if model.ContainsOutputs(expr.Args[0].Type()) {
+			g.Fgenf(w, "pulumi.Output.from_input(%.v).apply(lambda value: %s(value))", expr.Args[0], functionName)
+		} else {
+			g.Fgenf(w, "%s(%.v)", functionName, expr.Args[0])
+		}
+	case "lookup":
+		g.Fgenf(w, "%.16v.get(%.v, %.v)",
+			expr.Args[0], expr.Args[1], expr.Args[2])
+	case "range":
+		g.Fprint(w, "range(")
+		for i, arg := range expr.Args {
+			if i > 0 {
+				g.Fprint(w, ", ")
+			}
+			g.Fgenf(w, "%.v", arg)
+		}
+		g.Fprint(w, ")")
+	case "readFile":
+		g.Fgenf(w, "(lambda path: open(path).read())(%.v)", expr.Args[0])
+	case "secret":
+		g.Fgenf(w, "pulumi.Output.secret(%v)", expr.Args[0])
+	case "unsecret":
+		g.Fgenf(w, "pulumi.Output.unsecret(%v)", expr.Args[0])
+	case "split":
+		g.Fgenf(w, "%.16v.split(%.v)", expr.Args[1], expr.Args[0])
+	case "toBase64":
+		g.Fgenf(w, "base64.b64encode(%.16v.encode()).decode()", expr.Args[0])
+	case "fromBase64":
+		g.Fgenf(w, "base64.b64decode(%.16v.encode()).decode()", expr.Args[0])
+	case "toJSON":
+		if model.ContainsOutputs(expr.Args[0].Type()) {
+			g.Fgenf(w, "pulumi.Output.json_dumps(%.v)", expr.Args[0])
+		} else {
+			g.Fgenf(w, "json.dumps(%.v)", expr.Args[0])
+		}
+	case "sha1":
+		g.Fgenf(w, "hashlib.sha1(%v.encode()).hexdigest()", expr.Args[0])
+	case "project":
+		g.Fgen(w, "pulumi.get_project()")
+	case "stack":
+		g.Fgen(w, "pulumi.get_stack()")
+	case "organization":
+		g.Fgen(w, "pulumi.get_organization()")
+	case "cwd":
+		g.Fgen(w, "os.getcwd()")
+	case "getOutput":
+		g.Fgenf(w, "%v.get_output(%v)", expr.Args[0], expr.Args[1])
+	case "try":
+		g.genTry(w, expr.Args)
+	case "can":
+		g.genCan(w, expr.Args)
+	case "rootDirectory":
+		g.genRootDirectory(w)
+	case "pulumiResourceName":
+		g.Fgenf(w, "%v.pulumi_resource_name", expr.Args[0])
+	case "pulumiResourceType":
+		g.Fgenf(w, "%v.pulumi_resource_type", expr.Args[0])
+	default:
+		var rng hcl.Range
+		if expr.Syntax != nil {
+			rng = expr.Syntax.Range()
+		}
+		g.genNYI(w, "FunctionCallExpression: %v (%v)", expr.Name, rng)
+	}
+}
+
+// genTry generates code for a `try` expression. Each argument is transformed into a closure to prevent its evaluation
+// (which may fail) from happening until the `try_` utility function chooses. This results in an expression of the form:
+//
+//	try_(
+//	    lambda: <arg1>,
+//	    lambda: <arg2>,
+//	    ...
+//	)
+func (g *generator) genTry(w io.Writer, args []model.Expression) {
+	contract.Assertf(len(args) > 0, "expected at least one argument to try")
+
+	g.Fprintf(w, "try_(")
+	for i, arg := range args {
+		g.Indented(func() {
+			g.Fgenf(w, "\n%slambda: %v", g.Indent, arg)
+		})
+		if i < len(args)-1 {
+			g.Fgen(w, ",")
+		} else {
+			g.Fgen(w, "\n")
+		}
+	}
+	g.Fprintf(w, "%s)", g.Indent)
+}
+
+// genCan generates code for a `can` expression. The argument is transformed into a closure to prevent its evaluation
+// (which may fail) from happening until the `can_` utility function chooses. This results in an expression of the form:
+//
+//	can_(lambda: <arg>)
+func (g *generator) genCan(w io.Writer, args []model.Expression) {
+	contract.Assertf(len(args) == 1, "expected exactly one argument to can")
+	g.Fgenf(w, "can_(lambda: %v)", args[0])
+}
+
+func (g *generator) genRootDirectory(w io.Writer) {
+	g.Fgen(w, "pulumi.get_root_directory()")
+}
+
+func (g *generator) GenIndexExpression(w io.Writer, expr *model.IndexExpression) {
+	g.Fgenf(w, "%.16v[%.v]", expr.Collection, expr.Key)
+}
+
+type runeWriter interface {
+	WriteRune(c rune) (int, error)
+}
+
+func escapeRune(c rune) string {
+	if c < 0xFF {
+		return fmt.Sprintf("\\x%02x", c)
+	} else if c < 0xFFFF {
+		return fmt.Sprintf("\\u%04x", c)
+	}
+	return fmt.Sprintf("\\U%08x", c)
+}
+
+//nolint:errcheck
+func (g *generator) genEscapedString(w runeWriter, v string, escapeNewlines, escapeBraces bool) {
+	for _, c := range v {
+		switch c {
+		case '\n':
+			if escapeNewlines {
+				w.WriteRune('\\')
+				w.WriteRune('n')
+			} else {
+				w.WriteRune(c)
+			}
+			continue
+		case '"', '\\':
+			if escapeNewlines {
+				w.WriteRune('\\')
+				w.WriteRune(c)
+				continue
+			}
+		case '{', '}':
+			if escapeBraces {
+				w.WriteRune(c)
+				w.WriteRune(c)
+				continue
+			}
+		}
+
+		if unicode.IsPrint(c) {
+			w.WriteRune(c)
+			continue
+		}
+
+		// This is a non-printable character. We'll emit a Python escape sequence for it.
+		codepoint := escapeRune(c)
+		for _, r := range codepoint {
+			w.WriteRune(r)
+		}
+	}
+}
+
+func (g *generator) genStringLiteral(w io.Writer, quotes, v string) {
+	builder := &strings.Builder{}
+
+	builder.WriteString(quotes)
+	escapeNewlines := quotes == `"` || quotes == `'`
+	g.genEscapedString(builder, v, escapeNewlines, false)
+	builder.WriteString(quotes)
+
+	g.Fgenf(w, "%s", builder.String())
+}
+
+func (g *generator) GenLiteralValueExpression(w io.Writer, expr *model.LiteralValueExpression) {
+	typ := expr.Type()
+	if cns, ok := typ.(*model.ConstType); ok {
+		typ = cns.Type
+	}
+
+	switch typ {
+	case model.BoolType:
+		if expr.Value.True() {
+			g.Fgen(w, "True")
+		} else {
+			g.Fgen(w, "False")
+		}
+	case model.NoneType:
+		g.Fgen(w, "None")
+	case model.NumberType, model.IntType:
+		bf := expr.Value.AsBigFloat()
+		if i, acc := bf.Int64(); acc == big.Exact {
+			g.Fgenf(w, "%d", i)
+		} else {
+			f, _ := bf.Float64()
+			g.Fgenf(w, "%g", f)
+		}
+	case model.StringType:
+		quotes := g.quotes[expr]
+		g.genStringLiteral(w, quotes, expr.Value.AsString())
+	default:
+		contract.Failf("unexpected literal type in GenLiteralValueExpression: %v (%v)", expr.Type(),
+			expr.SyntaxNode().Range())
+	}
+}
+
+func (g *generator) GenObjectConsExpression(w io.Writer, expr *model.ObjectConsExpression) {
+	g.genObjectConsExpression(w, expr, expr.Type())
+}
+
+func objectKey(item model.ObjectConsItem) string {
+	switch key := item.Key.(type) {
+	case *model.LiteralValueExpression:
+		return key.Value.AsString()
+	case *model.TemplateExpression:
+		// assume a template expression has one constant part that is a LiteralValueExpression
+		if len(key.Parts) == 1 {
+			if literal, ok := key.Parts[0].(*model.LiteralValueExpression); ok {
+				return literal.Value.AsString()
+			}
+		}
+	}
+
+	return ""
+}
+
+func (g *generator) genObjectConsExpression(w io.Writer, expr *model.ObjectConsExpression, destType model.Type) {
+	targetType := pcl.LowerConversion(expr, destType)
+	typeName := g.argumentTypeName(expr, targetType) // Example: aws.s3.BucketLoggingArgs
+	td := g.typedDictEnabled(expr, targetType)
+
+	// Inside apply lambda bodies, pyright infers dict literals as dict[str, str]
+	// rather than the expected TypedDict. The union in `Input[T] = T | Output[T]`
+	// at the call site prevents pyright from propagating downward type context
+	// through `apply` into the lambda body.
+	// See https://github.com/microsoft/pyright/issues/11324.
+	// When the resource input's destination type has typed dicts enabled, resolve
+	// the type name from that destination type so we generate Args class form
+	// instead.
+	useArgsInApply := false
+	if g.insideApplyLambda && g.applyLambdaType != nil {
+		if elemType := listElementType(g.applyLambdaType); elemType != nil {
+			elemTargetType := pcl.LowerConversion(expr, elemType)
+			if g.typedDictEnabled(expr, elemTargetType) {
+				if name := g.argumentTypeName(expr, elemTargetType); name != "" {
+					typeName = name
+					useArgsInApply = true
+				}
+			}
+		}
+	}
+
+	if typeName != "" && (!td || useArgsInApply) {
+		// If a typeName exists and we're not using TypedDicts (or we're inside
+		// an apply lambda where dicts don't type-check), generate an Input Class.
+		// e.g. aws.s3.BucketLoggingArgs(key="value", foo="bar", ...)
+		if len(expr.Items) == 0 {
+			g.Fgenf(w, "%s()", typeName)
+		} else {
+			g.Fgenf(w, "%s(\n", typeName)
+			g.Indented(func() {
+				for _, item := range expr.Items {
+					g.Fgenf(w, "%s", g.Indent)
+					propertyKey := objectKey(item)
+					g.Fprint(w, PyName(propertyKey))
+					g.Fgenf(w, "=%.v,\n", item.Value)
+				}
+			})
+			g.Fgenf(w, "%s)", g.Indent)
+		}
+	} else {
+		// Otherwise treat this as a typed or untyped dictionary e.g. {"key": "value", "foo": "bar", ...}
+		if len(expr.Items) == 0 {
+			g.Fgen(w, "{}")
+		} else {
+			g.Fgen(w, "{")
+			g.Indented(func() {
+				for _, item := range expr.Items {
+					if td {
+						// If we're inside a typedDict, use the PyName of the key.
+						propertyKey := objectKey(item)
+						key := PyName(propertyKey)
+						g.Fgenf(w, "\n%s%q: %.v,", g.Indent, key, item.Value)
+					} else {
+						g.Fgenf(w, "\n%s%.v: %.v,", g.Indent, item.Key, item.Value)
+					}
+				}
+			})
+			g.Fgenf(w, "\n%s}", g.Indent)
+		}
+	}
+}
+
+func (g *generator) genRelativeTraversal(w io.Writer, traversal hcl.Traversal, parts []model.Traversable) {
+	for _, traverser := range traversal {
+		var key cty.Value
+		switch traverser := traverser.(type) {
+		case hcl.TraverseAttr:
+			key = cty.StringVal(PyName(traverser.Name))
+		case hcl.TraverseIndex:
+			key = traverser.Key
+		default:
+			contract.Failf("unexpected traverser of type %T (%v)", traverser, traverser.SourceRange())
+		}
+
+		switch key.Type() {
+		case cty.String:
+			keyVal := PyName(key.AsString())
+			contract.Assertf(isLegalIdentifier(keyVal), "illegal identifier: %q", keyVal)
+			g.Fgenf(w, ".%s", keyVal)
+		case cty.Number:
+			idx, _ := key.AsBigFloat().Int64()
+			g.Fgenf(w, "[%d]", idx)
+		default:
+			keyExpr := &model.LiteralValueExpression{Value: key}
+			diags := keyExpr.Typecheck(false)
+			contract.Ignore(diags)
+
+			g.Fgenf(w, "[%v]", keyExpr)
+		}
+	}
+}
+
+func (g *generator) GenRelativeTraversalExpression(w io.Writer, expr *model.RelativeTraversalExpression) {
+	g.Fgenf(w, "%.16v", expr.Source)
+	g.genRelativeTraversal(w, expr.Traversal, expr.Parts)
+}
+
+func (g *generator) GenScopeTraversalExpression(w io.Writer, expr *model.ScopeTraversalExpression) {
+	// Hook command expressions may reference `args.X` to access resource data at call time.
+	if isHookArgsTraversal(expr) && len(expr.Traversal) >= 2 {
+		if attr, ok := expr.Traversal[1].(hcl.TraverseAttr); ok {
+			switch attr.Name {
+			case "urn", "id", "name", "type":
+				g.Fgenf(w, "args.%s", attr.Name)
+				return
+			}
+			mapFields := map[string]string{
+				"newInputs":  "new_inputs",
+				"oldInputs":  "old_inputs",
+				"newOutputs": "new_outputs",
+				"oldOutputs": "old_outputs",
+			}
+			if pyField, ok := mapFields[attr.Name]; ok && len(expr.Traversal) >= 3 {
+				if subAttr, ok := expr.Traversal[2].(hcl.TraverseAttr); ok {
+					g.Fgenf(w, `str(args.%s["%s"])`, pyField, subAttr.Name)
+					return
+				}
+			}
+		}
+	}
+
+	rootName := g.nodeName(expr.RootName)
+	if expr.RootName == "range" && g.rangeVariable != "" {
+		rootName = g.rangeVariable
+	}
+	if g.isComponent {
+		configVars := map[string]*pcl.ConfigVariable{}
+		for _, configVar := range g.program.ConfigVariables() {
+			configVars[configVar.Name()] = configVar
+		}
+
+		if _, isConfig := configVars[expr.RootName]; isConfig {
+			if _, configReference := expr.Parts[0].(*pcl.ConfigVariable); configReference {
+				rootName = fmt.Sprintf("args[\"%s\"]", expr.RootName)
+			}
+		}
+	}
+
+	if _, ok := expr.Parts[0].(*model.SplatVariable); ok {
+		rootName = "__item"
+	}
+
+	g.Fgen(w, rootName)
+	g.genRelativeTraversal(w, expr.Traversal.SimpleSplit().Rel, expr.Parts)
+}
+
+func isHookArgsTraversal(expr *model.ScopeTraversalExpression) bool {
+	if expr.RootName != "args" || len(expr.Parts) == 0 {
+		return false
+	}
+	rootVar, ok := expr.Parts[0].(*model.Variable)
+	if !ok {
+		return false
+	}
+	objType, ok := model.ResolveOutputs(rootVar.VariableType).(*model.ObjectType)
+	if !ok {
+		return false
+	}
+	for _, prop := range []string{
+		"urn", "id", "name", "type",
+		"newInputs", "oldInputs", "newOutputs", "oldOutputs",
+	} {
+		if _, ok := objType.Properties[prop]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (g *generator) GenSplatExpression(w io.Writer, expr *model.SplatExpression) {
+	g.Fgenf(w, "[%.v for __item in %.v]", expr.Each, expr.Source)
+}
+
+func (g *generator) GenTemplateExpression(w io.Writer, expr *model.TemplateExpression) {
+	quotes := g.quotes[expr]
+	escapeNewlines := quotes == `"` || quotes == `'`
+
+	prefix, escapeBraces := "", false
+	for _, part := range expr.Parts {
+		if lit, ok := part.(*model.LiteralValueExpression); !ok || !model.StringType.AssignableFrom(lit.Type()) {
+			prefix, escapeBraces = "f", true
+			break
+		}
+	}
+
+	b := bufio.NewWriter(w)
+	defer b.Flush()
+
+	g.Fprintf(b, "%s%s", prefix, quotes)
+	for _, expr := range expr.Parts {
+		if lit, ok := expr.(*model.LiteralValueExpression); ok && model.StringType.AssignableFrom(lit.Type()) {
+			g.genEscapedString(b, lit.Value.AsString(), escapeNewlines, escapeBraces)
+		} else {
+			g.Fgenf(b, "{%.v}", expr)
+		}
+	}
+	g.Fprint(b, quotes)
+}
+
+func (g *generator) GenTemplateJoinExpression(w io.Writer, expr *model.TemplateJoinExpression) {
+	g.genNYI(w, "TemplateJoinExpression")
+}
+
+func (g *generator) GenTupleConsExpression(w io.Writer, expr *model.TupleConsExpression) {
+	switch len(expr.Expressions) {
+	case 0:
+		g.Fgen(w, "[]")
+	case 1:
+		g.Fgenf(w, "[%.v]", expr.Expressions[0])
+	default:
+		g.Fgen(w, "[")
+		g.Indented(func() {
+			for _, v := range expr.Expressions {
+				g.Fgenf(w, "\n%s%.v,", g.Indent, v)
+			}
+		})
+		g.Fgen(w, "\n", g.Indent, "]")
+	}
+}
+
+func (g *generator) GenUnaryOpExpression(w io.Writer, expr *model.UnaryOpExpression) {
+	opstr, precedence := "", g.GetPrecedence(expr)
+	switch expr.Operation {
+	case hclsyntax.OpLogicalNot:
+		opstr = "not "
+	case hclsyntax.OpNegate:
+		opstr = "-"
+	}
+	g.Fgenf(w, "%[2]v%.[1]*[3]v", precedence, opstr, expr.Operand)
+}

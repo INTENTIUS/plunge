@@ -1,0 +1,330 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package deploy
+
+import (
+	"context"
+	"testing"
+
+	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy/deploytest"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/urn"
+	"github.com/pulumi/pulumi/sdk/v3/go/property"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi-internal/gsync"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestBuiltinProvider(t *testing.T) {
+	t.Parallel()
+	t.Run("Close", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		require.NoError(t, p.Close())
+	})
+	t.Run("GetSchema", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		b, err := p.GetSchema(t.Context(), plugin.GetSchemaRequest{})
+		require.NoError(t, err)
+		assert.Equal(t, []byte("{}"), b.Schema)
+	})
+	t.Run("GetMapping", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		m, err := p.GetMapping(t.Context(), plugin.GetMappingRequest{Key: "key", Provider: "provider"})
+		require.NoError(t, err)
+		assert.Nil(t, m.Data)
+		assert.Equal(t, "", m.Provider)
+	})
+	t.Run("GetMappings", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		strs, err := p.GetMappings(t.Context(), plugin.GetMappingsRequest{Key: "key"})
+		require.NoError(t, err)
+		assert.Empty(t, strs)
+	})
+	t.Run("Check", func(t *testing.T) {
+		t.Parallel()
+		t.Run("builtin only supports stack reference type", func(t *testing.T) {
+			t.Parallel()
+			p := &builtinProvider{}
+			_, err := p.Check(t.Context(), plugin.CheckRequest{
+				URN:           resource.CreateURN("foo", "not-stack-reference-type", "", "proj", "stack"),
+				OldInputs:     property.Map{},
+				NewInputs:     property.Map{},
+				AllowUnknowns: true,
+			})
+			assert.ErrorContains(t, err, "unrecognized resource type")
+		})
+		t.Run("missing `name` input property", func(t *testing.T) {
+			t.Parallel()
+			p := &builtinProvider{
+				diag: &deploytest.NoopSink{},
+			}
+			resp, err := p.Check(t.Context(), plugin.CheckRequest{
+				URN:           resource.CreateURN("foo", stackReferenceType, "", "proj", "stack"),
+				OldInputs:     property.Map{},
+				NewInputs:     property.Map{},
+				AllowUnknowns: true,
+			})
+			assert.Equal(t, []plugin.CheckFailure{
+				{
+					Property: "name",
+					Reason:   `missing required property "name"`,
+				},
+			}, resp.Failures)
+			require.NoError(t, err)
+		})
+		t.Run(`property "name" must be a string`, func(t *testing.T) {
+			t.Parallel()
+			p := &builtinProvider{
+				diag: &deploytest.NoopSink{},
+			}
+			resp, err := p.Check(t.Context(), plugin.CheckRequest{
+				URN:       resource.CreateURN("foo", stackReferenceType, "", "proj", "stack"),
+				OldInputs: property.Map{},
+				NewInputs: property.NewMap(map[string]property.Value{
+					"name": property.New(10.0),
+				}),
+				AllowUnknowns: true,
+			})
+			assert.Equal(t, []plugin.CheckFailure{
+				{
+					Property: "name",
+					Reason:   `property "name" must be a string`,
+				},
+			}, resp.Failures)
+			require.NoError(t, err)
+		})
+		t.Run("ok", func(t *testing.T) {
+			t.Parallel()
+			p := &builtinProvider{
+				diag: &deploytest.NoopSink{},
+			}
+			resp, err := p.Check(t.Context(), plugin.CheckRequest{
+				URN: resource.CreateURN("foo", stackReferenceType, "", "proj", "stack"),
+				NewInputs: property.NewMap(map[string]property.Value{
+					"name": property.New("res-name"),
+				}),
+				AllowUnknowns: true,
+			})
+			assert.Nil(t, resp.Failures)
+			require.NoError(t, err)
+			assert.Equal(t, property.NewMap(map[string]property.Value{
+				"name": property.New("res-name"),
+			}), resp.Properties)
+		})
+	})
+	t.Run("Update (always fails)", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		oldOutputs := resource.PropertyMap{"cookie": resource.NewProperty("yum")}
+		_, err := p.Update(t.Context(), plugin.UpdateRequest{
+			URN:        resource.CreateURN("foo", "not-stack-reference-type", "", "proj", "stack"),
+			ID:         "some-id",
+			OldInputs:  property.Map{},
+			OldOutputs: resource.FromResourcePropertyMap(oldOutputs),
+			NewInputs:  property.Map{},
+		})
+		require.ErrorContains(t, err, "unrecognized resource type 'not-stack-reference-type'")
+	})
+	t.Run("Construct (always fails)", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		_, err := p.Construct(t.Context(), plugin.ConstructRequest{Inputs: property.Map{}})
+		assert.ErrorContains(t, err, "builtin resources may not be constructed")
+	})
+	t.Run("Invoke", func(t *testing.T) {
+		t.Parallel()
+		t.Run(readStackOutputs, func(t *testing.T) {
+			t.Parallel()
+			t.Run("err", func(t *testing.T) {
+				t.Parallel()
+				p := &builtinProvider{}
+				_, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: readStackOutputs,
+					Args: property.NewMap(map[string]property.Value{
+						"name": property.New("res-name"),
+					}),
+				})
+				assert.ErrorContains(t, err, "no backend client is available")
+			})
+			t.Run("ok", func(t *testing.T) {
+				t.Parallel()
+				var called bool
+				p := &builtinProvider{
+					backendClient: &deploytest.BackendClient{
+						GetStackOutputsF: func(ctx context.Context, name string, _ func(error) error) (property.Map, error) {
+							called = true
+							return property.NewMap(map[string]property.Value{
+								"normal": property.New("foo"),
+								"secret": property.New("bar").WithSecret(true),
+							}), nil
+						},
+					},
+				}
+				resp, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: readStackOutputs,
+					Args: property.NewMap(map[string]property.Value{
+						"name": property.New("res-name"),
+					}),
+				})
+				require.NoError(t, err)
+				assert.True(t, called)
+				assert.Nil(t, resp.Failures)
+
+				assert.Equal(t, "res-name", resp.Properties.Get("name").AsString())
+
+				assert.Equal(t, "foo", resp.Properties.Get("outputs").AsMap().Get("normal").AsString())
+				require.Equal(t, 1, resp.Properties.Get("secretOutputNames").AsArray().Len())
+			})
+		})
+		t.Run(readStackResourceOutputs, func(t *testing.T) {
+			t.Parallel()
+			t.Run("err", func(t *testing.T) {
+				t.Parallel()
+				p := &builtinProvider{}
+				_, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: readStackResourceOutputs,
+					Args: property.NewMap(map[string]property.Value{
+						"stackName": property.New("res-name"),
+					}),
+				})
+				assert.ErrorContains(t, err, "no backend client is available")
+			})
+			t.Run("ok", func(t *testing.T) {
+				t.Parallel()
+				var called bool
+				p := &builtinProvider{
+					backendClient: &deploytest.BackendClient{
+						GetStackResourceOutputsF: func(ctx context.Context, name string) (property.Map, error) {
+							called = true
+							return property.Map{}, nil
+						},
+					},
+				}
+				_, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: readStackResourceOutputs,
+					Args: property.NewMap(map[string]property.Value{
+						"stackName": property.New("res-name"),
+					}),
+				})
+				require.NoError(t, err)
+				assert.True(t, called)
+			})
+		})
+		t.Run(getResource, func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("ok new", func(t *testing.T) {
+				t.Parallel()
+
+				p := &builtinProvider{
+					news:  &gsync.Map[urn.URN, *pkgresource.State]{},
+					reads: &gsync.Map[urn.URN, *pkgresource.State]{},
+				}
+
+				expected := &pkgresource.State{
+					Outputs: resource.PropertyMap{
+						"foo": resource.NewProperty("bar"),
+					},
+				}
+
+				p.news.Store("res-name", expected)
+
+				actual, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: getResource,
+					Args: property.NewMap(map[string]property.Value{
+						"urn": property.New("res-name"),
+					}),
+				})
+
+				require.NoError(t, err)
+				assert.Equal(t, resource.FromResourcePropertyMap(expected.Outputs), actual.Properties.Get("state").AsMap())
+			})
+
+			t.Run("ok read", func(t *testing.T) {
+				t.Parallel()
+
+				p := &builtinProvider{
+					news:  &gsync.Map[urn.URN, *pkgresource.State]{},
+					reads: &gsync.Map[urn.URN, *pkgresource.State]{},
+				}
+
+				expected := &pkgresource.State{
+					Outputs: resource.PropertyMap{
+						"foo": resource.NewProperty("bar"),
+					},
+				}
+
+				p.reads.Store("res-name", expected)
+
+				actual, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: getResource,
+					Args: property.NewMap(map[string]property.Value{
+						"urn": property.New("res-name"),
+					}),
+				})
+
+				require.NoError(t, err)
+				assert.Equal(t, resource.FromResourcePropertyMap(expected.Outputs), actual.Properties.Get("state").AsMap())
+			})
+
+			t.Run("err", func(t *testing.T) {
+				t.Parallel()
+				p := &builtinProvider{
+					news:  &gsync.Map[urn.URN, *pkgresource.State]{},
+					reads: &gsync.Map[urn.URN, *pkgresource.State]{},
+				}
+				_, err := p.Invoke(t.Context(), plugin.InvokeRequest{
+					Tok: getResource,
+					Args: property.NewMap(map[string]property.Value{
+						"urn": property.New("res-name"),
+					}),
+				})
+				assert.ErrorContains(t, err, "unknown resource")
+			})
+		})
+	})
+	t.Run("Call (unimplemented)", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		_, err := p.Call(t.Context(), plugin.CallRequest{})
+		assert.ErrorContains(t, err, "the builtin provider does not implement call")
+	})
+	t.Run("GetPluginInfo (always fails)", func(t *testing.T) {
+		t.Parallel()
+		p := &builtinProvider{}
+		_, err := p.GetPluginInfo(t.Context())
+		assert.ErrorContains(t, err, "the builtin provider does not report plugin info")
+	})
+	t.Run("SignalCancellation", func(t *testing.T) {
+		t.Parallel()
+		var called bool
+		p := &builtinProvider{
+			cancel: func() {
+				called = true
+			},
+		}
+		require.NoError(t, p.SignalCancellation(t.Context()))
+		assert.True(t, called)
+		// Ensure idempotent.
+		require.NoError(t, p.SignalCancellation(t.Context()))
+	})
+}

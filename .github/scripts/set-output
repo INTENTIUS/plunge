@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# Sets an output value in GitHub Actions, escaping quotes, newlines, and special characters by JSON
+# stringifying it.
+#
+# The value may be passed either as the second argument or, when omitted, on stdin. Prefer stdin for
+# large values: command-line arguments are capped at 128 KiB per argument (MAX_ARG_STRLEN), so
+# passing a big value as an argument fails with "Argument list too long" (exit code 126). stdin has
+# no such limit.
+#
+# To use this, invoke the script with an output variable name and either a quoted value or piped
+# input, and then declare the output like so:
+#
+# ```github-action.yaml
+#  job:
+#    steps:
+#    - run: |
+#        .github/scripts/set-output my-output "$(some-shell-command ...)"
+#        # or, for large values:
+#        some-shell-command ... | .github/scripts/set-output my-output
+#    outputs:
+#       my-output: "${{ fromJSON(steps.job.outputs.my-output) }}"
+# ```
+
+
+set -euo pipefail
+
+OUTPUT_NAME="$1"
+
+if [ "$#" -ge 2 ]; then
+  ESCAPED="$(printf '%s' "$2" | jq -Rsc ".")" # JSON encode the argument
+else
+  ESCAPED="$(jq -Rsc ".")" # JSON encode stdin
+fi
+echo "${OUTPUT_NAME}=${ESCAPED}" >> "${GITHUB_OUTPUT}"

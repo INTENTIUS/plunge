@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Build bin/plunge with plunge's and the Pulumi-compatible version stamped"
+set -euo pipefail
+mkdir -p bin
+go build -C pkg -o ../bin/plunge -ldflags "$(./scripts/plunge-version.sh ldflags)" ./cmd/pulumi

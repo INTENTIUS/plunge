@@ -1,0 +1,280 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package workspace
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/blang/semver"
+
+	"github.com/pulumi/pulumi/pkg/v3/codegen/convert"
+	pkghost "github.com/pulumi/pulumi/pkg/v3/host"
+	"github.com/pulumi/pulumi/pkg/v3/pluginstorage"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	"github.com/pulumi/pulumi/pkg/v3/util"
+	"github.com/pulumi/pulumi/pkg/v3/util/cmdutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
+	diagutil "github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/logging"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+)
+
+// InstallPluginError is returned by InstallPlugin if we couldn't install the plugin
+type InstallPluginError struct {
+	// The specification of the plugin to install
+	Spec workspace.PluginDescriptor
+	// The underlying error that occurred during the download or install.
+	Err error
+}
+
+func (err *InstallPluginError) Error() string {
+	var server string
+	if err.Spec.PluginDownloadURL != "" {
+		server = " --server " + err.Spec.PluginDownloadURL
+	}
+
+	if err.Spec.Version != nil {
+		return fmt.Sprintf("Could not automatically download and install %[1]s plugin 'pulumi-%[1]s-%[2]s'"+
+			" at version v%[3]s"+
+			", install the plugin using `pulumi plugin install %[1]s %[2]s v%[3]s%[4]s`: %[5]v",
+			err.Spec.Kind, err.Spec.Name, err.Spec.Version, server, err.Err)
+	}
+
+	return fmt.Sprintf("Could not automatically download and install %[1]s plugin 'pulumi-%[1]s-%[2]s'"+
+		", install the plugin using `pulumi plugin install %[1]s %[2]s%[3]s`: %[4]v",
+		err.Spec.Kind, err.Spec.Name, server, err.Err)
+}
+
+func (err *InstallPluginError) Unwrap() error {
+	return err.Err
+}
+
+func InstallPlugin(ctx context.Context, pluginSpec workspace.PluginDescriptor,
+	log func(sev diag.Severity, msg string),
+	newLoader plugin.NewLoaderFunc,
+) (*semver.Version, error) {
+	downloadedFile, err := downloadPlugin(ctx, &pluginSpec, log)
+	if err != nil {
+		return nil, err
+	}
+
+	logging.V(1).Infof("Automatically installing provider %s", pluginSpec.Name)
+	err = InstallPluginContent(ctx, pluginSpec, pluginstorage.TarPlugin(downloadedFile), false, newLoader)
+	if err != nil {
+		return nil, &InstallPluginError{
+			Spec: pluginSpec,
+			Err:  fmt.Errorf("error installing provider %s: %w", pluginSpec.Name, err),
+		}
+	}
+
+	return pluginSpec.Version, nil
+}
+
+// downloadPlugin resolves the plugin's version, if unset, and downloads its archive to a file,
+// retrying and logging progress along the way.
+func downloadPlugin(
+	ctx context.Context, pluginSpec *workspace.PluginDescriptor, log func(sev diag.Severity, msg string),
+) (*os.File, error) {
+	util.SetKnownPluginDownloadURL(pluginSpec)
+	if pluginSpec.Version == nil {
+		var err error
+		pluginSpec.Version, err = pluginstorage.Instance.GetLatestVersion(ctx, *pluginSpec)
+		if err != nil {
+			return nil, fmt.Errorf("could not find latest version for provider %s: %w", pluginSpec.Name, err)
+		}
+	}
+
+	wrapper := func(stream io.ReadCloser, size int64) io.ReadCloser {
+		// Log at info but to stderr so we don't pollute stdout for commands like `package get-schema`
+		log(diag.Infoerr, "Downloading provider: "+pluginSpec.Name)
+		return stream
+	}
+
+	retry := func(err error, attempt int, limit int, delay time.Duration) {
+		log(diag.Warning, fmt.Sprintf("error downloading provider: %s\n"+
+			"Will retry in %v [%d/%d]", err, delay, attempt, limit))
+	}
+
+	logging.V(1).Infof("Automatically downloading provider %s", pluginSpec.Name)
+	downloadedFile, err := workspace.DownloadToFile(ctx, *pluginSpec, wrapper, retry)
+	if err != nil {
+		return nil, &InstallPluginError{
+			Spec: *pluginSpec,
+			Err:  fmt.Errorf("error downloading provider %s to file: %w", pluginSpec.Name, err),
+		}
+	}
+	return downloadedFile, nil
+}
+
+// EnsureLanguageInstalled downloads and installs the named language runtime if it is not
+// bundled with the CLI and not already cached. This is the language-plugin analogue of
+// EnsurePluginsAreInstalled: it lets the CLI transparently fetch unbundled language runtimes
+// on first use, just like a resource provider.
+//
+// It satisfies plugin.LanguageInstaller and is wired into the plugin host at construction so
+// that every load of a language runtime through a default host triggers the install, rather
+// than each caller of Host.LanguageRuntime having to ensure the plugin is present.
+func EnsureLanguageInstalled(ctx context.Context, runtime string) error {
+	if runtime == "" {
+		return nil
+	}
+	if workspace.IsPluginBundled(apitype.LanguagePlugin, runtime) {
+		return nil
+	}
+	spec := workspace.PluginDescriptor{
+		Kind: apitype.LanguagePlugin,
+		Name: runtime,
+	}
+	if !util.SetKnownPluginDownloadURL(&spec) {
+		return nil
+	}
+	// If the runtime is already resolvable (on $PATH or in the plugin cache) reuse it rather than
+	// downloading, since that is the version the language host will load anyway.
+	quiet := diag.DefaultSink(io.Discard, io.Discard, diag.FormatOptions{Color: colors.Never})
+	if path, err := workspace.GetPluginPath(ctx, quiet, spec, nil); err == nil && path != "" {
+		return nil
+	}
+	if env.DisableAutomaticPluginAcquisition.Value() {
+		return nil
+	}
+	log := func(sev diag.Severity, msg string) {
+		logging.V(7).Infof("EnsureLanguageInstalled(%s): %s", runtime, msg)
+	}
+
+	// Language hosts are self-contained executables, shared across workspaces and never run with
+	// the support of another language runtime (which would be a bootstrapping cycle). Installing
+	// one is therefore a plain download-and-unpack with no dependency-install step.
+	downloadedFile, err := downloadPlugin(ctx, &spec, log)
+	if err != nil {
+		return err
+	}
+	logging.V(1).Infof("Automatically installing language runtime %s", runtime)
+	done, err := pluginstorage.UnpackContents(ctx, spec, pluginstorage.TarPlugin(downloadedFile), false)
+	if err == nil {
+		err = done(true)
+	}
+	if err != nil {
+		return &InstallPluginError{Spec: spec, Err: fmt.Errorf("error installing language runtime %s: %w", runtime, err)}
+	}
+
+	if dir, err := spec.DirPath(); err == nil {
+		pluginYaml := filepath.Join(dir, spec.SubDir(), "PulumiPlugin.yaml")
+		if _, err := os.Stat(pluginYaml); err == nil {
+			logging.Warningf("language runtime %s ships a PulumiPlugin.yaml; language hosts must be "+
+				"self-contained executables, so its dependencies will not be installed", runtime)
+		}
+	}
+	return nil
+}
+
+// InstallPluginContent installs a plugin's tarball into the cache, then installs it's
+// dependencies.
+//
+// TODO[https://github.com/pulumi/pulumi/issues/21005]: This function is known to be wrong
+// when a plugin needs it's dependencies to be installed before it can safely be
+// installed.
+func InstallPluginContent(
+	ctx context.Context, spec workspace.PluginDescriptor, content pluginstorage.Content, reinstall bool,
+	newLoader plugin.NewLoaderFunc,
+) (err error) {
+	done, err := pluginstorage.UnpackContents(ctx, spec, content, reinstall)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == nil {
+			err = done(true)
+		} else {
+			contract.IgnoreError(done(false))
+		}
+	}()
+
+	return installDependenciesForPluginSpec(ctx, spec,
+		os.Stderr /* redirect stdout to stderr */, os.Stderr, newLoader)
+}
+
+func installDependenciesForPluginSpec(
+	ctx context.Context, spec workspace.PluginDescriptor, stdout, stderr io.Writer,
+	newLoader plugin.NewLoaderFunc,
+) error {
+	dir, err := spec.DirPath()
+	if err != nil {
+		return err
+	}
+	subdir := filepath.Join(dir, spec.SubDir())
+
+	// Install dependencies, if needed.
+	proj, err := workspace.LoadPluginProject(filepath.Join(subdir, "PulumiPlugin.yaml"))
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("loading PulumiPlugin.yaml: %w", err)
+	}
+	if proj == nil {
+		return nil
+	}
+
+	pluginHost, err := pkghost.New(
+		context.WithoutCancel(ctx), diagutil.Diag(), diagutil.Diag(), nil, EnsureLanguageInstalled,
+		newLoader, convert.NewMapperServerFromContext, nil)
+	if err != nil {
+		return err
+	}
+
+	pctx, err := plugin.NewContextWithRoot(ctx,
+		diagutil.Diag(),
+		diagutil.Diag(),
+		pluginHost, // host
+		subdir,     // pwd
+		subdir,     // root
+		proj.RuntimeInfo().Options(),
+		false, // disableProviderPreview
+		nil,   // tracingSpan
+		nil,   // Plugins
+		proj.GetPackageSpecs(),
+		nil, // config
+	)
+	if err != nil {
+		return errors.Join(err, pluginHost.Close())
+	}
+
+	// The host is owned here, not by the context, so close it after the context.
+	return errors.Join(InstallPluginAtPath(pctx, proj, stdout, stderr), pctx.Close(), pluginHost.Close())
+}
+
+func InstallPluginAtPath(pctx *plugin.Context, proj *workspace.PluginProject, stdout, stderr io.Writer) error {
+	if err := proj.Validate(); err != nil {
+		return err
+	}
+	runtime, err := pctx.Host.LanguageRuntime(pctx, proj.Runtime.Name())
+	if err != nil {
+		return err
+	}
+	entryPoint := "." // Plugin's are not able to set a non-standard entry point.
+	pInfo := plugin.NewProgramInfo(pctx.Root, pctx.Pwd, entryPoint, proj.Runtime.Options())
+	return cmdutil.InstallDependencies(pctx.Request(), runtime, plugin.InstallDependenciesRequest{
+		Info:                    pInfo,
+		UseLanguageVersionTools: false,
+		IsPlugin:                true,
+	}, stdout, stderr)
+}

@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "pulumi-python-poetry"
+description = ""
+package-mode = false
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+# We want to depend on the local SDK, not a published version This avoids issues
+# when updating the supported python versions beyond what any published SDK
+# supports.
+pulumi = { path = "PULUMI_CORE_SDK_PATH_PLACEHOLDER" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

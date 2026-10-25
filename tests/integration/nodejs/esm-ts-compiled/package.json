@@ -1,0 +1,23 @@
+{
+    "name": "esm-ts-compiled",
+    "license": "Apache-2.0",
+    "type": "module",
+    "main": "bin",
+    "scripts": {
+        "build": "tsc"
+    },
+    "devDependencies": {
+        "@types/node": "18.19.130"
+    },
+    "peerDependencies": {
+        "@pulumi/pulumi": "latest"
+    },
+    "dependencies": {
+        "ts-node": "10.9.2",
+        "typescript": "4.9.5"
+    },
+    "resolutions": {
+        "ts-node": "10.9.2",
+        "typescript": "4.9.5"
+    }
+}

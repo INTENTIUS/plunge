@@ -1,0 +1,137 @@
+// Copyright 2020, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package utils
+
+import (
+	"context"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+
+	"github.com/blang/semver"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy/deploytest"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/slice"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+type SchemaProvider struct {
+	name    string
+	version string
+}
+
+func NewSchemaProvider(name, version string) SchemaProvider {
+	return SchemaProvider{name, version}
+}
+
+// NewContextWithProviders creates a plugin context with a schema-only plugin host, supporting
+// multiple package versions in tests. This enables running tests offline. If this host is used
+// to load a plugin, that is, to run a Pulumi program, it will panic.
+func NewContextWithProviders(schemaDirectoryPath string, providers ...SchemaProvider) *plugin.Context {
+	mockProvider := func(name tokens.Package, version string) *deploytest.PluginLoader {
+		return deploytest.NewProviderLoader(name, semver.MustParse(version), func() (plugin.Provider, error) {
+			return &deploytest.Provider{
+				ParameterizeF: func(_ context.Context, req plugin.ParameterizeRequest) (plugin.ParameterizeResponse, error) {
+					name := ""
+					var version semver.Version
+					if paramValues, ok := req.Parameters.(*plugin.ParameterizeValue); ok {
+						name = paramValues.Name
+						version = paramValues.Version
+					}
+					return plugin.ParameterizeResponse{
+						Name:    name,
+						Version: version,
+					}, nil
+				},
+				GetSchemaF: func(_ context.Context, req plugin.GetSchemaRequest) (plugin.GetSchemaResponse, error) {
+					// Provider schemas resolve from the embedded canonical set;
+					// schemaDirectoryPath is a fallback for schemas supplied on
+					// disk by downstream consumers (e.g. pulumi-yaml's downloaded
+					// real-provider schemas).
+					filename := fmt.Sprintf("%s-%s.json", name, version)
+					data, err := fs.ReadFile(SchemaFS(), filename)
+					if err != nil {
+						data, err = os.ReadFile(filepath.Join(schemaDirectoryPath, filename))
+						if err != nil {
+							return plugin.GetSchemaResponse{}, err
+						}
+					}
+					return plugin.GetSchemaResponse{
+						Schema: data,
+					}, nil
+				},
+			}, nil
+		})
+	}
+
+	pluginLoaders := slice.Prealloc[*deploytest.PluginLoader](len(providers))
+
+	for _, v := range providers {
+		pluginLoaders = append(pluginLoaders, mockProvider(tokens.Package(v.name), v.version))
+	}
+
+	// For the pulumi/pulumi repository, this must be kept in sync with the makefile and/or committed
+	// schema files in the given schema directory. This is the minimal set of schemas that must be
+	// supplied.
+	host := deploytest.NewPluginHost(nil, nil, nil,
+		pluginLoaders...,
+	)
+	pctx, err := plugin.NewContextWithHost(context.Background(), nil, nil, host, "", "", nil)
+	contract.AssertNoErrorf(err, "failed to create schema-only plugin context")
+	return pctx
+}
+
+// NewContext creates a plugin context with a schema-only plugin host, supporting multiple package
+// versions in tests. This enables running tests offline. If this host is used to load a plugin,
+// that is, to run a Pulumi program, it will panic.
+func NewContext(schemaDirectoryPath string) *plugin.Context {
+	// For the pulumi/pulumi repository, this must be kept in sync with the makefile and/or committed
+	// schema files in the given schema directory. This is the minimal set of schemas that must be
+	// supplied.
+	return NewContextWithProviders(schemaDirectoryPath,
+		SchemaProvider{"tls", "4.10.0"},
+		SchemaProvider{"random", "4.11.2"},
+		SchemaProvider{"std", "1.0.0"},
+		SchemaProvider{"multiarg", "1.0.0"},
+
+		SchemaProvider{"component", "13.3.7"},
+		SchemaProvider{"importer", "1.0.0"},
+		SchemaProvider{"infra", "1.0.0"},
+		SchemaProvider{"other", "0.1.0"},
+		SchemaProvider{"synthetic", "1.0.0"},
+		SchemaProvider{"range", "1.0.0"},
+		SchemaProvider{"lambda", "0.1.0"},
+		SchemaProvider{"remoteref", "1.0.0"},
+		SchemaProvider{"splat", "1.0.0"},
+		SchemaProvider{"snowflake", "0.66.1"},
+		SchemaProvider{"using-dashes", "1.0.0"},
+		SchemaProvider{"auto-deploy", "0.0.1"},
+		SchemaProvider{"localref", "1.0.0"},
+		SchemaProvider{"enum", "1.0.0"},
+		SchemaProvider{"plain-properties", "1.0.0"},
+		SchemaProvider{"recursive", "1.0.0"},
+		SchemaProvider{"nodecompat", "1.0.0"},
+
+		SchemaProvider{"aliases", "1.0.0"},
+		SchemaProvider{"goalias", "1.0.0"},
+		SchemaProvider{"dangling-reference-bad", "0.1.0"},
+		SchemaProvider{"dangling-reference-good", "0.1.0"},
+
+		// parameterized schemas
+		SchemaProvider{"tfe", "0.68.2"},
+	)
+}

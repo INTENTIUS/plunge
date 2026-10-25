@@ -1,0 +1,5 @@
+name: log_debug_py
+runtime:
+  name: python
+  options:
+    toolchain: uv

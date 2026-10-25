@@ -1,0 +1,10 @@
+name: construct_component_plain_py
+description: A program that constructs a remote component resource with prompt inputs.
+runtime:
+  name: python
+  options:
+    toolchain: uv
+plugins:
+  providers:
+    - name: testprovider
+      path: ../../../testprovider

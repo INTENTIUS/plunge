@@ -1,0 +1,300 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package examples
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/pulumi/pulumi/pkg/v3/testing/integration"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/providers"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+func getCwd(t *testing.T) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.FailNow()
+	}
+	return cwd
+}
+
+func getBaseOptions() integration.ProgramTestOptions {
+	return integration.ProgramTestOptions{
+		Dependencies: []string{"@pulumi/pulumi"},
+	}
+}
+
+// runWithBackends runs the program test against both a local DIY backend and the Pulumi
+// service. The service subtest is skipped unless PULUMI_TEST_USE_SERVICE=true, so PR runs
+// only pay for the local variant. makeOpts is called once per subtest so the subtests
+// don't share mutable state (e.g. output buffers).
+func runWithBackends(t *testing.T, makeOpts func(t *testing.T) integration.ProgramTestOptions) {
+	t.Parallel()
+
+	t.Run("local", func(t *testing.T) {
+		test := makeOpts(t)
+		test.CloudURL = integration.MakeTempBackend(t)
+		integration.ProgramTest(t, &test)
+	})
+
+	t.Run("service", func(t *testing.T) {
+		if os.Getenv("PULUMI_TEST_USE_SERVICE") != "true" {
+			t.Skip("Skipping: PULUMI_TEST_USE_SERVICE is not \"true\"")
+		}
+		test := makeOpts(t)
+		test.RequireService = true
+		integration.ProgramTest(t, &test)
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccMinimal(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "minimal"),
+				Config: map[string]string{
+					"name": "Pulumi",
+				},
+				Secrets: map[string]string{
+					"secret": "this is my secret message",
+				},
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					// Simple runtime validation that just ensures the checkpoint was written and read.
+					require.NotNil(t, stackInfo.Deployment)
+				},
+				RunBuild: true,
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccDynamicProviderSimple(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "dynamic-provider/simple"),
+				Config: map[string]string{
+					"simple:config:w": "1",
+					"simple:config:x": "1",
+					"simple:config:y": "1",
+				},
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccDynamicProviderClassWithComments(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "dynamic-provider/class-with-comments"),
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccDynamicProviderMultipleTurns(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "dynamic-provider/multiple-turns"),
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					for _, res := range stackInfo.Deployment.Resources {
+						if !providers.IsProviderType(res.Type) && res.Parent == "" {
+							assert.Equal(t, stackInfo.RootResource.URN, res.URN,
+								"every resource but the root resource should have a parent, but %v didn't", res.URN)
+						}
+					}
+				},
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccDynamicProviderMultipleTurns2(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "dynamic-provider/multiple-turns-2"),
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccDynamicProviderSecrets(t *testing.T) {
+	test := getBaseOptions().
+		With(integration.ProgramTestOptions{
+			Dir: filepath.Join(getCwd(t), "dynamic-provider/secrets"),
+			Secrets: map[string]string{
+				"password": "s3cret",
+			},
+			ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+				// Ensure the __provider input (and corresponding output) was marked secret
+				dynRes := stackInfo.Deployment.Resources[2]
+				for _, providerVal := range []any{dynRes.Inputs["__provider"], dynRes.Outputs["__provider"]} {
+					switch v := providerVal.(type) {
+					case string:
+						assert.Fail(t, "__provider was not a secret")
+					case map[string]any:
+						assert.Equal(t, resource.SecretSig, v[resource.SigKey])
+					}
+				}
+				// Ensure the resulting output had the expected value
+				code, ok := stackInfo.Outputs["out"].(string)
+				assert.True(t, ok)
+				assert.Equal(t, "200", code)
+			},
+		})
+
+	integration.ProgramTest(t, &test)
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccDynamicProviderDerivedInputs(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "dynamic-provider/derived-inputs"),
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestDynamicProviderGenericTypes(t *testing.T) {
+	test := getBaseOptions().
+		With(integration.ProgramTestOptions{
+			Dir: filepath.Join(getCwd(t), "dynamic-provider/generic-types"),
+		})
+
+	integration.ProgramTest(t, &test)
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccFormattable(t *testing.T) {
+	runWithBackends(t, func(t *testing.T) integration.ProgramTestOptions {
+		var formattableStdout, formattableStderr bytes.Buffer
+		return getBaseOptions().
+			With(integration.ProgramTestOptions{
+				Dir: filepath.Join(getCwd(t), "formattable"),
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					// Note that we're abusing this hook to validate stdout. We don't actually care about the checkpoint.
+					stdout := formattableStdout.String()
+					assert.False(t, strings.Contains(stdout, "MISSING"))
+				},
+				Stdout: &formattableStdout,
+				Stderr: &formattableStderr,
+			})
+	})
+}
+
+//nolint:paralleltest // uses parallel programtest
+func TestAccSecrets(t *testing.T) {
+	test := getBaseOptions().
+		With(integration.ProgramTestOptions{
+			Dir: filepath.Join(getCwd(t), "secrets"),
+			Config: map[string]string{
+				"message": "plaintext message",
+			},
+			Secrets: map[string]string{
+				"apiKey": "FAKE_API_KEY_FOR_TESTING",
+			},
+			Quick: true,
+			ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+				require.NotNil(t, stackInfo.Deployment.SecretsProviders, "Deployment should have a secrets provider")
+
+				isEncrypted := func(v any) bool {
+					if m, ok := v.(map[string]any); ok {
+						sigKey := m[resource.SigKey]
+						if sigKey == nil {
+							return false
+						}
+
+						v, vOk := sigKey.(string)
+						if !vOk {
+							return false
+						}
+
+						if v != resource.SecretSig {
+							return false
+						}
+
+						ciphertext := m["ciphertext"]
+						if ciphertext == nil {
+							return false
+						}
+
+						_, cOk := ciphertext.(string)
+						return cOk
+					}
+
+					return false
+				}
+
+				assertEncryptedValue := func(m map[string]any, key string) {
+					assert.Truef(t, isEncrypted(m[key]), "%s value should be encrypted", key)
+				}
+
+				assertPlaintextValue := func(m map[string]any, key string) {
+					assert.Truef(t, !isEncrypted(m[key]), "%s value should not encrypted", key)
+				}
+
+				for _, res := range stackInfo.Deployment.Resources {
+					if res.Type == "pulumi-nodejs:dynamic:Resource" {
+						switch res.URN.Name() {
+						case "sValue", "sApply", "cValue", "cApply":
+							assertEncryptedValue(res.Inputs, "value")
+							assertEncryptedValue(res.Outputs, "value")
+						case "pValue", "pApply":
+							assertPlaintextValue(res.Inputs, "value")
+							assertPlaintextValue(res.Outputs, "value")
+						case "pDummy":
+							assertPlaintextValue(res.Outputs, "value")
+						case "sDummy":
+							// Creation of this resource passes in a custom resource options to ensure that "value" is
+							// treated as secret.  In the state file, we'll see this as an uncrypted input with an
+							// encrypted output.
+							assertEncryptedValue(res.Outputs, "value")
+						case "rValue":
+							assertEncryptedValue(res.Inputs["value"].(map[string]any), "secret")
+							assertEncryptedValue(res.Outputs["value"].(map[string]any), "secret")
+							assertPlaintextValue(res.Inputs["value"].(map[string]any), "plain")
+							assertPlaintextValue(res.Outputs["value"].(map[string]any), "plain")
+						default:
+							contract.Assertf(false, "unknown name type: %s", res.URN.Name())
+						}
+					}
+				}
+
+				assertEncryptedValue(stackInfo.Outputs, "combinedApply")
+				assertEncryptedValue(stackInfo.Outputs, "combinedMessage")
+				assertPlaintextValue(stackInfo.Outputs, "plaintextApply")
+				assertPlaintextValue(stackInfo.Outputs, "plaintextMessage")
+				assertEncryptedValue(stackInfo.Outputs, "secretApply")
+				assertEncryptedValue(stackInfo.Outputs, "secretMessage")
+				assertEncryptedValue(stackInfo.Outputs, "richStructure")
+			},
+		})
+
+	integration.ProgramTest(t, &test)
+}

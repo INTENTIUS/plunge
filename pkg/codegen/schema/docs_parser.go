@@ -1,0 +1,260 @@
+// Copyright 2020, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schema
+
+import (
+	"bytes"
+	"io"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/pgavlin/goldmark"
+	"github.com/pgavlin/goldmark/ast"
+	"github.com/pgavlin/goldmark/parser"
+	"github.com/pgavlin/goldmark/text"
+	"github.com/pgavlin/goldmark/util"
+)
+
+const (
+	// ExamplesShortcode is the name for the `{{% examples %}}` shortcode, which demarcates a set of example sections.
+	ExamplesShortcode = "examples"
+
+	// ExampleShortcode is the name for the `{{% example %}}` shortcode, which demarcates the content for a single
+	// example.
+	ExampleShortcode = "example"
+
+	// RefShortcode is the name for the `{{% ref %}}` shortcode, which references a schema entity.
+	RefShortcode = "ref"
+)
+
+// Shortcode represents a shortcode element and its contents, e.g. `{{% examples %}}`.
+type Shortcode struct {
+	ast.BaseBlock
+
+	// Name is the name of the shortcode.
+	Name []byte
+}
+
+func (s *Shortcode) Dump(w io.Writer, source []byte, level int) {
+	m := map[string]string{
+		"Name": string(s.Name),
+	}
+	ast.DumpHelper(w, s, source, level, m, nil)
+}
+
+// KindShortcode is an ast.NodeKind for the Shortcode node.
+var KindShortcode = ast.NewNodeKind("Shortcode")
+
+// Kind implements ast.Node.Kind.
+func (*Shortcode) Kind() ast.NodeKind {
+	return KindShortcode
+}
+
+// NewShortcode creates a new shortcode with the given name.
+func NewShortcode(name []byte) *Shortcode {
+	return &Shortcode{Name: name}
+}
+
+// Ref represents an inline reference to a schema entity, e.g. `{{% ref #/resources/pkg:index:res %}}`.
+type Ref struct {
+	ast.BaseInline
+
+	// Destination is the reference destination (e.g. "#/resources/pkg:index:res").
+	Destination string
+}
+
+func (r *Ref) Dump(w io.Writer, source []byte, level int) {
+	m := map[string]string{
+		"Destination": r.Destination,
+	}
+	ast.DumpHelper(w, r, source, level, m, nil)
+}
+
+// KindRef is an ast.NodeKind for the Ref node.
+var KindRef = ast.NewNodeKind("Ref")
+
+// Kind implements ast.Node.Kind.
+func (*Ref) Kind() ast.NodeKind {
+	return KindRef
+}
+
+// NewRef creates a new Ref with the given destination.
+func NewRef(destination string) *Ref {
+	return &Ref{Destination: destination}
+}
+
+// parseShortcodeOpen parses a `{{% [/]name [body] %}}` sequence beginning at line[pos:]. On success it
+// returns the name, the trimmed body (the text between the name and the closing `%}}`), the position
+// just past the closing `%}}`, and whether the shortcode is a closing shortcode (`{{% /name %}}`).
+func parseShortcodeOpen(line []byte, pos int) (name, body []byte, end int, isClose, ok bool) {
+	// Look for `{{%` to open the shortcode.
+	text := line[pos:]
+	if len(text) < 3 || text[0] != '{' || text[1] != '{' || text[2] != '%' {
+		return nil, nil, 0, false, false
+	}
+	text, pos = text[3:], pos+3
+
+	// Scan through whitespace.
+	for {
+		if len(text) == 0 {
+			return nil, nil, 0, false, false
+		}
+
+		r, sz := utf8.DecodeRune(text)
+		if !unicode.IsSpace(r) {
+			break
+		}
+		text, pos = text[sz:], pos+sz
+	}
+
+	// Check for a '/' to indicate that this is a closing shortcode.
+	if text[0] == '/' {
+		isClose = true
+		text, pos = text[1:], pos+1
+	}
+
+	// Find the end of the name and the closing delimiter (`%}}`) for this shortcode.
+	nameStart, nameEnd, inName := pos, pos, true
+	for {
+		if len(text) == 0 {
+			return nil, nil, 0, false, false
+		}
+
+		if len(text) >= 3 && text[0] == '%' && text[1] == '}' && text[2] == '}' {
+			if inName {
+				nameEnd = pos
+			}
+			name = line[nameStart:nameEnd]
+			body = bytes.TrimSpace(line[nameEnd:pos])
+			return name, body, pos + 3, isClose, true
+		}
+
+		r, sz := utf8.DecodeRune(text)
+		if inName && unicode.IsSpace(r) {
+			nameEnd, inName = pos, false
+		}
+		text, pos = text[sz:], pos+sz
+	}
+}
+
+type shortcodeParser int
+
+// NewShortcodeParser returns a BlockParser that parses shortcode (e.g. `{{% examples %}}`).
+func NewShortcodeParser() parser.BlockParser {
+	return shortcodeParser(0)
+}
+
+func (shortcodeParser) Trigger() []byte {
+	return []byte{'{'}
+}
+
+func (shortcodeParser) Open(parent ast.Node, reader text.Reader, pc parser.Context) (ast.Node, parser.State) {
+	line, _ := reader.PeekLine()
+	pos := pc.BlockOffset()
+	if pos < 0 {
+		return nil, parser.NoChildren
+	}
+
+	name, _, shortcodeEnd, isClose, ok := parseShortcodeOpen(line, pos)
+	if !ok || isClose {
+		return nil, parser.NoChildren
+	}
+
+	// Skip "ref" shortcodes - they are handled as inline elements.
+	if bytes.Equal(name, []byte(RefShortcode)) {
+		return nil, parser.NoChildren
+	}
+
+	reader.Advance(shortcodeEnd)
+
+	return NewShortcode(name), parser.HasChildren
+}
+
+func (p shortcodeParser) Continue(node ast.Node, reader text.Reader, pc parser.Context) parser.State {
+	line, seg := reader.PeekLine()
+	pos := pc.BlockOffset()
+	if pos < 0 {
+		return parser.Continue | parser.HasChildren
+	} else if pos > seg.Len() {
+		return parser.Continue | parser.HasChildren
+	}
+
+	name, _, shortcodeEnd, isClose, ok := parseShortcodeOpen(line, pos)
+	if !ok || !isClose {
+		return parser.Continue | parser.HasChildren
+	}
+
+	shortcode := node.(*Shortcode)
+	if !bytes.Equal(name, shortcode.Name) {
+		return parser.Continue | parser.HasChildren
+	}
+
+	reader.Advance(shortcodeEnd)
+	return parser.Close
+}
+
+func (shortcodeParser) Close(node ast.Node, reader text.Reader, pc parser.Context) {
+}
+
+// CanInterruptParagraph returns true for shortcodes.
+func (shortcodeParser) CanInterruptParagraph() bool {
+	return true
+}
+
+// CanAcceptIndentedLine returns false for shortcodes; all shortcodes must start at the first column.
+func (shortcodeParser) CanAcceptIndentedLine() bool {
+	return false
+}
+
+type refParser int
+
+// NewRefParser returns an InlineParser that parses ref shortcodes (e.g. `{{% ref #/resources/pkg:index:res %}}`).
+func NewRefParser() parser.InlineParser {
+	return refParser(0)
+}
+
+func (refParser) Trigger() []byte {
+	return []byte{'{'}
+}
+
+func (refParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
+	line, _ := block.PeekLine()
+
+	name, body, end, isClose, ok := parseShortcodeOpen(line, 0)
+	if !ok || isClose {
+		return nil
+	}
+
+	// Only handle `{{% ref destination %}}`. Other shortcodes are block-level.
+	if !bytes.Equal(name, []byte(RefShortcode)) {
+		return nil
+	}
+	if len(body) == 0 {
+		return nil
+	}
+
+	block.Advance(end)
+	return NewRef(string(body))
+}
+
+// ParseDocs parses the given documentation text as Markdown with shortcodes and returns the AST.
+func ParseDocs(docs []byte) ast.Node {
+	p := goldmark.DefaultParser()
+	p.AddOptions(
+		parser.WithBlockParsers(util.Prioritized(shortcodeParser(0), 50)),
+		parser.WithInlineParsers(util.Prioritized(NewRefParser(), 50)),
+	)
+	return p.Parse(text.NewReader(docs))
+}

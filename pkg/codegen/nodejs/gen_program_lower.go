@@ -1,0 +1,344 @@
+// Copyright 2020, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package nodejs
+
+import (
+	"strings"
+
+	mapset "github.com/deckarep/golang-set/v2"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/hcl2/model"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/pcl"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/zclconf/go-cty/cty"
+)
+
+var outputMemberNames = mapset.NewSet(
+	"allResources",
+	"apply",
+	"constructor",
+	"deploymentOnlyModule",
+	"doNotCapture",
+	"get",
+	"hasOwnProperty",
+	"isKnown",
+	"isPrototypeOf",
+	"isSecret",
+	"promise",
+	"propertyIsEnumerable",
+	"resources",
+	"then",
+	"toJSON",
+	"toLocaleString",
+	"toString",
+	"valueOf",
+)
+
+func isOutputType(t model.Type) bool {
+	switch t := t.(type) {
+	case *model.OutputType:
+		return true
+	case *model.UnionType:
+		for _, t := range t.ElementTypes {
+			if _, isOutput := t.(*model.OutputType); isOutput {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isPromiseType(t model.Type) bool {
+	switch t := t.(type) {
+	case *model.PromiseType:
+		return true
+	case *model.UnionType:
+		isPromise := false
+		for _, t := range t.ElementTypes {
+			switch t.(type) {
+			case *model.OutputType:
+				return false
+			case *model.PromiseType:
+				isPromise = true
+			}
+		}
+		return isPromise
+	}
+	return false
+}
+
+func isDirectParameterReference(parameters mapset.Set[model.Traversable], x model.Expression) bool {
+	scopeTraversal, ok := x.(*model.ScopeTraversalExpression)
+	if !ok || len(scopeTraversal.Parts) != 1 {
+		return false
+	}
+
+	return parameters.Contains(scopeTraversal.Parts[0])
+}
+
+func parameterRelativeTraversal(parameters mapset.Set[model.Traversable], x model.Expression) (
+	hcl.Traversal, []model.Traversable, bool,
+) {
+	switch x := x.(type) {
+	case *model.ScopeTraversalExpression:
+		if !parameters.Contains(x.Parts[0]) {
+			return nil, nil, false
+		}
+		return x.Traversal.SimpleSplit().Rel, x.Parts, true
+	case *model.RelativeTraversalExpression:
+		if !isDirectParameterReference(parameters, x.Source) {
+			return nil, nil, false
+		}
+		return x.Traversal, x.Parts, true
+	default:
+		return nil, nil, false
+	}
+}
+
+func canLiftOutputTraversal(traversal hcl.Traversal) bool {
+	for _, traverser := range traversal {
+		var name string
+		switch traverser := traverser.(type) {
+		case hcl.TraverseAttr:
+			name = traverser.Name
+		case hcl.TraverseIndex:
+			if traverser.Key.Type() != cty.String {
+				continue
+			}
+			name = traverser.Key.AsString()
+		default:
+			continue
+		}
+
+		// The Output proxy resolves real Output and Object members before lifting properties.
+		if strings.HasPrefix(name, "__") || outputMemberNames.Contains(name) {
+			return false
+		}
+	}
+	return true
+}
+
+// canLiftTraversal returns true if this traversal can be lifted. Any traversal that does not traverse through
+// possibly-undefined values can be lifted. The result itself may be undefined.
+func (g *generator) canLiftTraversal(parts []model.Traversable) bool {
+	if len(parts) < 2 {
+		return false
+	}
+	// Only check nonterminal parts: the final part is the result and may itself be undefined.
+	for _, part := range parts[:len(parts)-1] {
+		t := model.GetTraversableType(part)
+		if model.IsOptionalType(t) || isPromiseType(t) {
+			return false
+		}
+	}
+	return true
+}
+
+// parseProxyApply attempts to match and rewrite the given parsed apply using the following patterns:
+//
+// - __apply(<expr>, eval(x, x[index])) -> <expr>[index]
+// - __apply(<expr>, eval(x, x.attr))) -> <expr>.attr
+// - __apply(scope.traversal, eval(x, x.attr)) -> scope.traversal.attr
+//
+// Each of these patterns matches an apply that can be handled by `pulumi.Output`'s property access proxy.
+func (g *generator) parseProxyApply(parameters mapset.Set[model.Traversable], args []model.Expression,
+	then model.Expression,
+) (model.Expression, bool) {
+	if len(args) != 1 {
+		return nil, false
+	}
+
+	arg := args[0]
+	// If arg is output<dynamic>, then we can't lift the traversal.
+	if arg.Type().Equals(model.NewOutputType(model.DynamicType)) {
+		return nil, false
+	}
+
+	switch then := then.(type) {
+	case *model.IndexExpression:
+		t := arg.Type()
+		skipType := model.IsOptionalType(t) || isPromiseType(t) || isOutputType(t)
+		if !isDirectParameterReference(parameters, then.Collection) || skipType {
+			return nil, false
+		}
+		newIndex := &model.IndexExpression{
+			Collection: arg,
+			Key:        then.Key,
+		}
+		if diags := newIndex.Typecheck(false); diags.HasErrors() {
+			return nil, false
+		}
+		return newIndex, true
+	case *model.ScopeTraversalExpression, *model.RelativeTraversalExpression:
+		traversal, parts, ok := parameterRelativeTraversal(parameters, then)
+		if !ok || isPromiseType(arg.Type()) {
+			return nil, false
+		}
+		// A direct parameter reference is the identity projection. Preserve its argument so interpolation lowering can
+		// use it without introducing an explicit apply.
+		if len(traversal) == 0 {
+			return arg, true
+		}
+		if !g.canLiftTraversal(parts) || !canLiftOutputTraversal(traversal) {
+			return nil, false
+		}
+		newTraversal := &model.RelativeTraversalExpression{
+			Source:    arg,
+			Traversal: traversal,
+		}
+		if diags := newTraversal.Typecheck(false); diags.HasErrors() {
+			return nil, false
+		}
+		return newTraversal, true
+	default:
+		return nil, false
+	}
+}
+
+func callbackParameterReferences(expr model.Expression, parameters mapset.Set[model.Traversable]) []*model.Variable {
+	var refs []*model.Variable
+	visitor := func(expr model.Expression) (model.Expression, hcl.Diagnostics) {
+		if expr, isScopeTraversal := expr.(*model.ScopeTraversalExpression); isScopeTraversal {
+			if parameters.Contains(expr.Parts[0]) {
+				refs = append(refs, expr.Parts[0].(*model.Variable))
+			}
+		}
+		return expr, nil
+	}
+
+	_, diags := model.VisitExpression(expr, model.IdentityVisitor, visitor)
+	contract.Assertf(len(diags) == 0, "unexpected type error: %v", diags)
+	return refs
+}
+
+// parseInterpolate attempts to match the given parsed apply against a template whose parts are a mix of prompt
+// expressions and proxyable applies.
+//
+// If a match is found, parseInterpolate returns an appropriate call to the __interpolate intrinsic with a mix of
+// expressions and proxied applies.
+func (g *generator) parseInterpolate(parameters mapset.Set[model.Traversable], args []model.Expression,
+	then *model.AnonymousFunctionExpression,
+) (model.Expression, bool) {
+	template, ok := then.Body.(*model.TemplateExpression)
+	if !ok {
+		return nil, false
+	}
+
+	indices := map[*model.Variable]int{}
+	for i, p := range then.Parameters {
+		indices[p] = i
+	}
+
+	exprs := make([]model.Expression, len(template.Parts))
+	for i, expr := range template.Parts {
+		parameterRefs := callbackParameterReferences(expr, parameters)
+		if len(parameterRefs) == 0 {
+			exprs[i] = expr
+			continue
+		}
+
+		proxyArgs := make([]model.Expression, len(parameterRefs))
+		for i, p := range parameterRefs {
+			argIndex, ok := indices[p]
+			contract.Assertf(ok, "parameter index not found")
+
+			proxyArgs[i] = args[argIndex]
+		}
+
+		expr, ok := g.parseProxyApply(parameters, proxyArgs, expr)
+		if !ok {
+			return nil, false
+		}
+		exprs[i] = expr
+	}
+
+	return newInterpolateCall(exprs), true
+}
+
+// lowerProxyApplies lowers certain calls to the apply intrinsic into proxied property accesses and/or calls to the
+// pulumi.interpolate function. Concretely, this boils down to rewriting the following shapes
+//
+// - __apply(<expr>, eval(x, x[index]))
+// - __apply(<expr>, eval(x, x.attr))
+// - __apply(scope.traversal, eval(x, x.attr))
+// - __apply(<proxy-apply>, ..., eval(x, ..., "foo ${<proxy-apply>} bar ${...}"))
+//
+// into (respectively)
+//
+// - <expr>[index]
+// - <expr>.attr
+// - scope.traversal.attr
+// - __interpolate("foo ", <proxy-apply>, " bar ", ...)
+//
+// The first two forms will be generated as proxied applies; the lattermost will be generated as an interpolated string
+// that uses `pulumi.interpolate`.
+func (g *generator) lowerProxyApplies(expr model.Expression) (model.Expression, hcl.Diagnostics) {
+	rewriter := func(expr model.Expression) (model.Expression, hcl.Diagnostics) {
+		// Ignore the node if it is not a call to the apply intrinsic.
+		apply, ok := expr.(*model.FunctionCallExpression)
+		if !ok || apply.Name != pcl.IntrinsicApply {
+			return expr, nil
+		}
+
+		// Parse the apply call.
+		args, then := pcl.ParseApplyCall(apply)
+
+		parameters := mapset.NewSet[model.Traversable]()
+		for _, p := range then.Parameters {
+			parameters.Add(p)
+		}
+
+		// Attempt to match (call __apply (rvar) (call __applyArg 0))
+		if v, ok := g.parseProxyApply(parameters, args, then.Body); ok {
+			return v, nil
+		}
+
+		// Attempt to match (call __apply (rvar 0) ... (rvar n) (output /* mix of literals and calls to __applyArg)
+		if v, ok := g.parseInterpolate(parameters, args, then); ok {
+			return v, nil
+		}
+
+		return expr, nil
+	}
+	return model.VisitExpression(expr, model.IdentityVisitor, rewriter)
+}
+
+// awaitInvokes wraps each call to `invoke` with a call to the `await` intrinsic. This rewrite should only be used
+// if we are generating an async main, in which case the apply rewriter should also be configured not to treat
+// promises as eventuals. The cumulative effect of these options is to avoid the use of `then` within async contexts.
+// Note that this depends on the fact that invokes are the only way to introduce promises in to a Pulumi program; if
+// this changes in the future, this transform will need to be applied in a more general way (e.g. by the apply
+// rewriter).
+func (g *generator) awaitInvokes(x model.Expression) model.Expression {
+	contract.Assertf(g.asyncMain, "main must be async to wrap invokes with await")
+
+	rewriter := func(x model.Expression) (model.Expression, hcl.Diagnostics) {
+		// Ignore the node if it is not a call to invoke.
+		call, ok := x.(*model.FunctionCallExpression)
+		if !ok || call.Name != pcl.Invoke {
+			return x, nil
+		}
+
+		if _, isPromise := call.Type().(*model.PromiseType); isPromise {
+			return newAwaitCall(call), nil
+		}
+
+		return call, nil
+	}
+	x, diags := model.VisitExpression(x, model.IdentityVisitor, rewriter)
+	contract.Assertf(len(diags) == 0, "unexpected diagnostics: %v", diags)
+	return x
+}

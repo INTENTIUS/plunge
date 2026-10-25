@@ -1,0 +1,290 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/pulumi/pulumi/sdk/v3"
+
+	pulumirpc "github.com/pulumi/pulumi/sdk/v3/proto/go"
+
+	codegen "github.com/pulumi/pulumi/pkg/v3/codegen/python"
+	ptesting "github.com/pulumi/pulumi/sdk/v3/go/common/testing"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/rpcutil"
+	testingrpc "github.com/pulumi/pulumi/sdk/v3/proto/go/testing"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+func runTestingHost(t *testing.T) (string, testingrpc.LanguageTestClient) {
+	// We can't just go run the pulumi-test-language package because of
+	// https://github.com/golang/go/issues/39172, so we build it to a temp file then run that.
+	binary := t.TempDir() + "/pulumi-test-language"
+	cmd := exec.Command("go", "build", "-C", "../../../../pkg", "-o", binary, "./testing/pulumi-test-language")
+	output, err := cmd.CombinedOutput()
+	t.Logf("build output: %s", output)
+	require.NoError(t, err)
+
+	cmd = exec.Command(binary)
+	stdout, err := cmd.StdoutPipe()
+	require.NoError(t, err)
+	stderr, err := cmd.StderrPipe()
+	require.NoError(t, err)
+	stderrReader := bufio.NewReader(stderr)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for {
+			text, err := stderrReader.ReadString('\n')
+			if err != nil {
+				wg.Done()
+				return
+			}
+			t.Log(text)
+		}
+	}()
+
+	err = cmd.Start()
+	require.NoError(t, err)
+
+	stdoutBytes, err := io.ReadAll(stdout)
+	require.NoError(t, err)
+
+	address := string(stdoutBytes)
+
+	conn, err := grpc.NewClient(
+		address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(rpcutil.OpenTracingClientInterceptor()),
+		grpc.WithStreamInterceptor(rpcutil.OpenTracingStreamClientInterceptor()),
+		rpcutil.GrpcChannelOptions(),
+	)
+	require.NoError(t, err)
+
+	client := testingrpc.NewLanguageTestClient(conn)
+
+	t.Cleanup(func() {
+		require.NoError(t, cmd.Process.Kill())
+		wg.Wait()
+		// We expect this to error because we just killed it.
+		contract.IgnoreError(cmd.Wait())
+	})
+
+	return address, client
+}
+
+// Add test names here that are expected to fail and the reason why they are failing
+var expectedFailures = map[string]string{
+	"l2-resource-exists":                 "Python program generation does not support resourceExists yet",
+	"l1-builtin-try":                     "Temporarily disabled until pr #18915 is submitted",
+	"l1-builtin-can":                     "Temporarily disabled until pr #18916 is submitted",
+	"l3-deferred-outputs":                "does not type-check",
+	"l3-component-primitive-conversions": "primitive conversions accepted by PCL bind, but not lowered correctly by SDK generators", //nolint:lll
+	"l2-resource-schema-secret":          "does not preserve schema-secret unknown outputs",
+	"l2-raw-string-bytes":                "the Python SDK does not set accepts_byte_string: strings containing non-UTF8 bytes cannot be received from the engine", //nolint:lll
+	"l2-invoke-per-value-deps":           "output aware invokes not yet implemented",
+	"l2-call-per-value-deps":             "output aware calls not yet implemented",
+}
+
+type languageTestConfig struct {
+	name        string
+	snapshotDir string
+	useTOML     bool
+	inputTypes  string
+	typechecker string
+	toolchain   string
+}
+
+func testLanguageWithConfig(t *testing.T, config languageTestConfig) {
+	if testing.Short() {
+		t.Skip("skipping language conformance tests in short mode")
+	}
+
+	// Set PATH to include the local dist directory so policy can run.
+	dist, err := filepath.Abs(filepath.Join("..", "..", "dist"))
+	require.NoError(t, err)
+	t.Setenv("PATH", fmt.Sprintf("%s%c%s", dist, os.PathListSeparator, os.Getenv("PATH")))
+
+	engineAddress, engine := runTestingHost(t)
+
+	tests, err := engine.GetLanguageTests(t.Context(), &testingrpc.GetLanguageTestsRequest{})
+	require.NoError(t, err)
+
+	for _, local := range []bool{false, true} {
+		t.Run(fmt.Sprintf("local=%v", local), func(t *testing.T) {
+			t.Parallel()
+
+			cancel := make(chan bool)
+
+			// Run the language plugin
+			handle, err := rpcutil.ServeWithOptions(rpcutil.ServeOptions{
+				Init: func(srv *grpc.Server) error {
+					pythonExec, err := filepath.Abs("../pulumi-language-python-exec")
+					if err != nil {
+						return err
+					}
+					host := newLanguageHost(pythonExec, engineAddress, "", "", config.typechecker, config.toolchain)
+					pulumirpc.RegisterLanguageRuntimeServer(srv, host)
+					return nil
+				},
+				Cancel: cancel,
+			})
+			require.NoError(t, err)
+
+			// Create a temp project dir for the test to run in
+			rootDir := t.TempDir()
+
+			snapshotDir := "./testdata/" + config.snapshotDir
+			if local {
+				snapshotDir += "/local"
+			} else {
+				snapshotDir += "/published"
+			}
+
+			var languageInfo string
+			if config.useTOML || config.inputTypes != "" {
+				var info codegen.PackageInfo
+				info.PyProject.Enabled = config.useTOML
+				info.InputTypes = config.inputTypes
+
+				json, err := json.Marshal(info)
+				require.NoError(t, err)
+				languageInfo = string(json)
+			}
+
+			// Prepare to run the tests
+			prepare, err := engine.PrepareLanguageTests(t.Context(), &testingrpc.PrepareLanguageTestsRequest{
+				LanguagePluginName:   "python",
+				LanguagePluginTarget: fmt.Sprintf("127.0.0.1:%d", handle.Port),
+				TemporaryDirectory:   rootDir,
+				SnapshotDirectory:    snapshotDir,
+				CoreSdkDirectory:     "../..",
+				CoreSdkVersion:       sdk.Version.String(),
+				PolicyPackDirectory:  "testdata/policies",
+				SnapshotEdits: []*testingrpc.PrepareLanguageTestsRequest_Replacement{
+					{
+						Path:        "requirements\\.txt",
+						Pattern:     fmt.Sprintf("pulumi-%s-py3-none-any.whl", sdk.Version.String()),
+						Replacement: "pulumi-CORE.VERSION-py3-none-any.whl",
+					},
+					{
+						Path:        "requirements\\.txt",
+						Pattern:     rootDir + "/artifacts",
+						Replacement: "ROOT/artifacts",
+					},
+				},
+				LanguageInfo:       languageInfo,
+				ProvidersDirectory: "testdata/providers",
+			})
+			require.NoError(t, err)
+
+			for _, tt := range tests.Tests {
+				t.Run(tt, func(t *testing.T) {
+					t.Parallel()
+
+					// We can skip the l1- local tests without any SDK there's nothing new being tested here.
+					if local && strings.HasPrefix(tt, "l1-") {
+						t.Skip("Skipping l1- tests in local mode")
+					}
+
+					// Only bother testing the provider plugin tests once.
+					if strings.HasPrefix(tt, "provider-") && config.name != "default" {
+						t.Skip("Skipping non-default provider tests")
+					}
+
+					if expected, ok := expectedFailures[tt]; ok {
+						t.Skipf("Skipping known failure: %s", expected)
+					}
+
+					result, err := engine.RunLanguageTest(t.Context(), &testingrpc.RunLanguageTestRequest{
+						Token: prepare.Token,
+						Test:  tt,
+					})
+
+					require.NoError(t, err)
+					for _, msg := range result.Messages {
+						t.Log(msg)
+					}
+					ptesting.LogIfVerbose(t, "stdout", result.Stdout)
+					ptesting.LogIfVerbose(t, "stderr", result.Stderr)
+					assert.True(t, result.Success)
+				})
+			}
+
+			t.Cleanup(func() {
+				close(cancel)
+				require.NoError(t, <-handle.Done)
+			})
+		})
+	}
+}
+
+// We need to run the python tests multiple times. Once with TOML projects and once with setup.py. We also want to
+// test that explicitly setting the input types works as expected, as well as the default. This shouldn't interact
+// with the project type so we vary both at once. We also want to test that the typechecker works, that doesn't vary
+// by project type but it will vary over classes-vs-dicts. We could run all combinations but we take some time/risk
+// tradeoff here only testing the old classes style with pyright.
+//
+// Python tests are split at the top level so that get-job-matrix.py can split them across multiple runners
+
+//nolint:paralleltest // testLanguageClasses uses t.Setenv
+func TestLanguageDefault(t *testing.T) {
+	testLanguageWithConfig(t, languageTestConfig{
+		name:        "default",
+		snapshotDir: "setuppy",
+		useTOML:     false,
+		inputTypes:  "",
+		typechecker: "mypy",
+		toolchain:   "uv",
+	})
+}
+
+//nolint:paralleltest // testLanguageClasses uses t.Setenv
+func TestLanguageTOML(t *testing.T) {
+	testLanguageWithConfig(t, languageTestConfig{
+		name:        "toml",
+		snapshotDir: "toml",
+		useTOML:     true,
+		inputTypes:  "classes-and-dicts",
+		typechecker: "pyright",
+		toolchain:   "uv",
+	})
+}
+
+//nolint:paralleltest // testLanguageClasses uses t.Setenv
+func TestLanguageClasses(t *testing.T) {
+	testLanguageWithConfig(t, languageTestConfig{
+		name:        "classes",
+		snapshotDir: "classes",
+		useTOML:     false,
+		inputTypes:  "classes",
+		typechecker: "pyright",
+		toolchain:   "uv",
+	})
+}

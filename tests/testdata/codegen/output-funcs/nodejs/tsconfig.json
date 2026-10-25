@@ -1,0 +1,40 @@
+{
+    "compilerOptions": {
+        // Output
+        "outDir": "bin",
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "stripInternal": true,
+        // Environment
+        "target": "ES2022",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "moduleDetection": "force",
+        "types": ["node"],
+        // Type Checking
+        "strict": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "skipLibCheck": true
+    },
+    "files": [
+        "funcWithAllOptionalInputs.ts",
+        "funcWithConstInput.ts",
+        "funcWithDefaultValue.ts",
+        "funcWithDictParam.ts",
+        "funcWithEmptyOutputs.ts",
+        "funcWithListParam.ts",
+        "getBastionShareableLink.ts",
+        "getClientConfig.ts",
+        "getIntegrationRuntimeObjectMetadatum.ts",
+        "index.ts",
+        "listStorageAccountKeys.ts",
+        "provider.ts",
+        "tests/codegen.spec.ts",
+        "types/index.ts",
+        "types/input.ts",
+        "types/output.ts",
+        "utilities.ts"
+    ]
+}

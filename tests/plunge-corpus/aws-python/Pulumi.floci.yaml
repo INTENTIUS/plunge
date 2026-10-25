@@ -1,0 +1,28 @@
+# Stack "floci": every AWS call goes to the floci emulator, never to AWS.
+# The fake key pair below overrides any real credentials in the environment
+# or ~/.aws, and the skip flags stop the provider calling STS for the
+# account id or validating the region and credentials. Change the port in
+# both places (aws:endpoints and corpus:flociEndpoint) if floci listens
+# somewhere other than localhost:4566. encryptionsalt is added by
+# `pulumi stack init floci --secrets-provider passphrase`.
+config:
+  aws:region: us-east-1
+  aws:accessKey: test
+  aws:secretKey: test
+  aws:skipCredentialsValidation: true
+  aws:skipRequestingAccountId: true
+  aws:skipRegionValidation: true
+  aws:skipMetadataApiCheck: true
+  aws:s3UsePathStyle: true
+  aws:endpoints:
+    - ec2: http://localhost:4566
+      iam: http://localhost:4566
+      s3: http://localhost:4566
+      sns: http://localhost:4566
+      sqs: http://localhost:4566
+      ssm: http://localhost:4566
+      sts: http://localhost:4566
+  corpus:flociEndpoint: http://localhost:4566
+  corpus:prefix: plc-python
+  corpus:workerCount: "3"
+encryptionsalt: v1:e67j2d928PY=:v1:/vRw6XXAknEfuHyV:R8C38BhLdUnADaHsYrTBGWFwDDn9fw==

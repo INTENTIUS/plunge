@@ -1,0 +1,27 @@
+{
+    "name": "example",
+    "resources": {
+        "example:mod1:Wrapper": {
+            "inputProperties": {
+                "configs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "/goalias/v1.0.0/schema.json#/types/goalias:mod1%2Fv1:Config"
+                    }
+                },
+                "res": {
+                    "$ref": "/goalias/v1.0.0/schema.json#/resources/goalias:mod1%2Fv1:Res"
+                }
+            },
+            "isComponent": true
+        }
+    },
+    "language": {
+        "python": {
+            "requires": {
+                "pulumi": ">=3.0.0,<4.0.0",
+                "pulumi-goalias": ">=1.0.0,<2.0.0"
+            }
+        }
+    }
+}

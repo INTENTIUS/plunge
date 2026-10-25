@@ -1,0 +1,61 @@
+{
+  "comment": "The plunge corpus (INTENTIUS/plunge#4). One entry per program directory beside this file. A baseline script reads it; README.md says what each program exercises and how a baseline is recorded.",
+  "stack": "floci",
+  "passphrase": "plunge-baseline",
+  "programs": [
+    {
+      "name": "aws-ts",
+      "project": "corpus-aws-ts",
+      "language": "typescript",
+      "emulator": "floci",
+      "provider": "aws@7.51.1",
+      "install": ["npm", "ci"],
+      "compile": ["npx", "tsc", "--noEmit"]
+    },
+    {
+      "name": "aws-python",
+      "project": "corpus-aws-python",
+      "language": "python",
+      "emulator": "floci",
+      "provider": "aws@7.51.1",
+      "install": ["pulumi", "install"],
+      "compile": ["python3", "-m", "py_compile", "__main__.py"]
+    },
+    {
+      "name": "aws-go",
+      "project": "corpus-aws-go",
+      "language": "go",
+      "emulator": "floci",
+      "provider": "aws@7.51.1",
+      "install": ["go", "mod", "download"],
+      "compile": ["go", "build", "-o", "/dev/null", "."]
+    },
+    {
+      "name": "aws-yaml",
+      "project": "corpus-aws-yaml",
+      "language": "yaml",
+      "emulator": "floci",
+      "provider": "aws@7.51.1",
+      "install": [],
+      "compile": []
+    },
+    {
+      "name": "aws-csharp",
+      "project": "corpus-aws-csharp",
+      "language": "csharp",
+      "emulator": "floci",
+      "provider": "aws@7.51.1",
+      "install": ["dotnet", "restore"],
+      "compile": ["dotnet", "build", "-nologo"]
+    },
+    {
+      "name": "gcp-yaml",
+      "project": "corpus-gcp-yaml",
+      "language": "yaml",
+      "emulator": "floci-gcp",
+      "provider": "gcp@10.2.0",
+      "install": [],
+      "compile": []
+    }
+  ]
+}

@@ -1,0 +1,321 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package stack
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"runtime"
+	"sort"
+	"strings"
+
+	"github.com/kballard/go-shellquote"
+	"github.com/spf13/cobra"
+
+	"github.com/pulumi/pulumi/pkg/v3/backend"
+	"github.com/pulumi/pulumi/pkg/v3/backend/display"
+	"github.com/pulumi/pulumi/pkg/v3/backend/secrets"
+	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/constrictor"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/ui"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/pkg/v3/resource/stack"
+	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/slice"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
+)
+
+func newStackOutputCmd() *cobra.Command {
+	var socmd stackOutputCmd
+	cmd := &cobra.Command{
+		Use:   "output",
+		Short: "Show a stack's output properties",
+		Long: "Show a stack's output properties.\n" +
+			"\n" +
+			"By default, this command lists all output properties exported from a stack.\n" +
+			"If a specific property-name is supplied, just that property's value is shown.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if socmd.Stdout == nil {
+				socmd.Stdout = cmd.OutOrStdout()
+			}
+			return socmd.Run(cmd.Context(), args)
+		},
+	}
+
+	constrictor.AttachArguments(cmd, &constrictor.Arguments{
+		Arguments: []constrictor.Argument{
+			{Name: "property-name"},
+		},
+		Required: 0,
+	})
+
+	cmd.PersistentFlags().BoolVarP(
+		&socmd.jsonOut, "json", "j", false, "Emit output as JSON")
+	cmd.PersistentFlags().BoolVar(
+		&socmd.shellOut, "shell", false, "Emit output as a shell script")
+	cmd.PersistentFlags().StringVarP(
+		&socmd.stackName, "stack", "s", "", "The name of the stack to operate on. Defaults to the current stack")
+	cmd.PersistentFlags().BoolVar(
+		&socmd.showSecrets, "show-secrets", false, "Display outputs which are marked as secret in plaintext")
+
+	return cmd
+}
+
+type stackOutputCmd struct {
+	stackName   string
+	showSecrets bool
+	jsonOut     bool
+	shellOut    bool
+
+	ws pkgWorkspace.Context
+	OS string // defaults to runtime.GOOS
+
+	// requireStack is a reference to the top-level requireStack function.
+	// This is a field on stackOutputCmd so that we can replace it
+	// from tests.
+	requireStack func(
+		ctx context.Context, sink diag.Sink, ws pkgWorkspace.Context, lm cmdBackend.LoginManager,
+		name string, lopt LoadOption, opts display.Options, configFile string,
+	) (backend.Stack, error)
+
+	Stdout io.Writer // defaults to os.Stdout
+}
+
+func (cmd *stackOutputCmd) Run(ctx context.Context, args []string) error {
+	opts := display.Options{
+		Color: cmdutil.GetGlobalColorization(),
+	}
+
+	requireStack := RequireStack
+	if cmd.requireStack != nil {
+		requireStack = cmd.requireStack
+	}
+
+	if cmd.ws == nil {
+		cmd.ws = pkgWorkspace.Instance
+	}
+
+	osys := runtime.GOOS
+	if cmd.OS != "" {
+		osys = cmd.OS
+	}
+
+	stdout := cmd.Stdout
+
+	var outw stackOutputWriter
+	if cmd.shellOut && cmd.jsonOut {
+		return errors.New("only one of --json and --shell may be set")
+	} else if cmd.jsonOut {
+		outw = &jsonStackOutputWriter{W: stdout}
+	} else if cmd.shellOut {
+		outw = newShellStackOutputWriter(stdout, osys)
+	} else {
+		outw = &consoleStackOutputWriter{W: stdout}
+	}
+
+	// Fetch the current stack and its output properties.
+	s, err := requireStack(
+		ctx,
+		cmdutil.Diag(),
+		cmd.ws,
+		cmdBackend.DefaultLoginManager,
+		cmd.stackName,
+		LoadOnly,
+		opts,
+		"",
+	)
+	if err != nil {
+		return err
+	}
+	// When we're not showing secrets, use a blinding provider to prevent secrets from being disclosed.
+	secretsProvider := secrets.DefaultProvider
+	if !cmd.showSecrets {
+		secretsProvider = secrets.BlindingProvider
+	}
+	snapshotStackOutputs, err := s.SnapshotStackOutputs(ctx, secretsProvider)
+	if err != nil {
+		return err
+	}
+	snapshotStackOutputsMap := resource.ToResourcePropertyMap(snapshotStackOutputs)
+
+	// massageSecrets will remove all the secrets from the property map, so it should be safe to pass a panic
+	// crypter. This also ensures that if for some reason we didn't remove everything, we don't accidentally disclose
+	// secret values!
+	outputs, err := stack.SerializeProperties(ctx,
+		resource.ToResourcePropertyMap(display.MassageSecrets(
+			resource.FromResourcePropertyMap(snapshotStackOutputsMap), cmd.showSecrets)),
+		config.NewPanicCrypter(), cmd.showSecrets)
+	if err != nil {
+		return fmt.Errorf("getting outputs: %w", err)
+	}
+	if outputs == nil {
+		outputs = make(map[string]any)
+	}
+
+	// If there is an argument, just print that property.  Else, print them all (similar to `pulumi stack`).
+	if len(args) > 0 {
+		name := args[0]
+		v, has := outputs[name]
+		if has {
+			if err := outw.WriteOne(name, v); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("current stack does not have output property '%v'", name)
+		}
+	} else {
+		if err := outw.WriteMany(outputs); err != nil {
+			return err
+		}
+	}
+
+	if cmd.showSecrets {
+		Log3rdPartySecretsProviderDecryptionEvent(ctx, s, "", "pulumi stack output")
+	}
+
+	return nil
+}
+
+// stackOutputWriter writes one or more properties to stdout
+// on behalf of 'pulumi stack output'.
+type stackOutputWriter interface {
+	WriteOne(name string, value any) error
+	WriteMany(outputs map[string]any) error
+}
+
+// consoleStackOutputWriter writes human-readable stack output to stdout.
+type consoleStackOutputWriter struct {
+	W io.Writer
+}
+
+var _ stackOutputWriter = (*consoleStackOutputWriter)(nil)
+
+func (w *consoleStackOutputWriter) WriteOne(_ string, v any) error {
+	_, err := fmt.Fprintf(w.W, "%v\n", stringifyOutput(v))
+	return err
+}
+
+func (w *consoleStackOutputWriter) WriteMany(outputs map[string]any) error {
+	return fprintStackOutputs(w.W, outputs)
+}
+
+// jsonStackOutputWriter writes stack outputs as machine-parseable JSON.
+type jsonStackOutputWriter struct {
+	W io.Writer
+}
+
+var _ stackOutputWriter = (*jsonStackOutputWriter)(nil)
+
+func (w *jsonStackOutputWriter) WriteOne(_ string, v any) error {
+	return ui.FprintJSON(w.W, v)
+}
+
+func (w *jsonStackOutputWriter) WriteMany(outputs map[string]any) error {
+	return ui.FprintJSON(w.W, outputs)
+}
+
+// newShellStackOutputWriter builds a stackOutputWriter
+// that generates shell scripts for the given operating system.
+func newShellStackOutputWriter(w io.Writer, os string) stackOutputWriter {
+	switch os {
+	case "windows":
+		return &powershellStackOutputWriter{W: w}
+	default:
+		return &bashStackOutputWriter{W: w}
+	}
+}
+
+// bashStackOutputWriter prints stack outputs as a bash shell script.
+type bashStackOutputWriter struct {
+	W io.Writer
+}
+
+var _ stackOutputWriter = (*bashStackOutputWriter)(nil)
+
+func (w *bashStackOutputWriter) WriteOne(k string, v any) error {
+	s := shellquote.Join(stringifyOutput(v))
+	_, err := fmt.Fprintf(w.W, "%v=%v\n", k, s)
+	return err
+}
+
+func (w *bashStackOutputWriter) WriteMany(outputs map[string]any) error {
+	keys := slice.Prealloc[string](len(outputs))
+	for v := range outputs {
+		keys = append(keys, v)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		if err := w.WriteOne(k, outputs[k]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// powershellStackOutputWriter prints stack outputs as a powershell script.
+type powershellStackOutputWriter struct {
+	W io.Writer
+}
+
+var _ stackOutputWriter = (*powershellStackOutputWriter)(nil)
+
+func (w *powershellStackOutputWriter) WriteOne(k string, v any) error {
+	// In Powershell, single-quoted strings are taken verbatim.
+	// The only escaping necessary is to ' itself:
+	// replace each instance with two to escape.
+	s := strings.ReplaceAll(stringifyOutput(v), "'", "''")
+	_, err := fmt.Fprintf(w.W, "$%v = '%v'\n", k, s)
+	return err
+}
+
+func (w *powershellStackOutputWriter) WriteMany(outputs map[string]any) error {
+	keys := slice.Prealloc[string](len(outputs))
+	for v := range outputs {
+		keys = append(keys, v)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		if err := w.WriteOne(k, outputs[k]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getStackOutputs(snap *deploy.Snapshot, showSecrets bool) (map[string]any, error) {
+	state, err := stack.GetRootStackResource(snap)
+	if err != nil {
+		return nil, err
+	}
+
+	if state == nil {
+		return map[string]any{}, nil
+	}
+
+	// massageSecrets will remove all the secrets from the property map, so it should be safe to pass a panic
+	// crypter. This also ensures that if for some reason we didn't remove everything, we don't accidentally disclose
+	// secret values!
+	ctx := context.TODO()
+	return stack.SerializeProperties(ctx,
+		resource.ToResourcePropertyMap(display.MassageSecrets(resource.FromResourcePropertyMap(state.Outputs), showSecrets)),
+		config.NewPanicCrypter(), showSecrets)
+}

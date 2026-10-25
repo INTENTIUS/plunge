@@ -1,0 +1,392 @@
+// Copyright 2024, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package state
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"sort"
+	"strings"
+	"unicode"
+
+	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+
+	survey "github.com/AlecAivazis/survey/v2"
+	surveycore "github.com/AlecAivazis/survey/v2/core"
+	"github.com/texttheater/golang-levenshtein/levenshtein"
+
+	"github.com/pulumi/pulumi/pkg/v3/backend"
+	"github.com/pulumi/pulumi/pkg/v3/backend/display"
+	"github.com/pulumi/pulumi/pkg/v3/backend/secrets"
+	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/cmd"
+	cmdStack "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/stack"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/ui"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/pkg/v3/resource/edit"
+	"github.com/pulumi/pulumi/pkg/v3/resource/stack"
+	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/slice"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/result"
+)
+
+// runTotalStateEdit runs a snapshot-mutating function on the entirety of the given stack's snapshot.
+// Before mutating, the user may be prompted to for confirmation if the current session is interactive.
+func runTotalStateEdit(
+	ctx context.Context,
+	sink diag.Sink,
+	ws pkgWorkspace.Context,
+	lm cmdBackend.LoginManager,
+	stackName string,
+	showPrompt bool,
+	operation func(opts display.Options, snap *deploy.Snapshot) error,
+) error {
+	opts := display.Options{
+		Color: cmdutil.GetGlobalColorization(),
+	}
+	s, err := cmdStack.RequireStack(
+		ctx,
+		sink,
+		ws,
+		lm,
+		stackName,
+		cmdStack.OfferNew,
+		opts,
+		"",
+	)
+	if err != nil {
+		return err
+	}
+	return TotalStateEdit(ctx, s, showPrompt, opts, operation, nil)
+}
+
+// runTotalStateEditWithPrompt is the same as runTotalStateEdit, but allows the caller to
+// override the prompt message.
+func runTotalStateEditWithPrompt(
+	ctx context.Context,
+	sink diag.Sink,
+	ws pkgWorkspace.Context,
+	lm cmdBackend.LoginManager,
+	stackName string,
+	showPrompt bool,
+	operation func(opts display.Options, snap *deploy.Snapshot) error,
+	overridePromptMessage string,
+) error {
+	opts := display.Options{
+		Color: cmdutil.GetGlobalColorization(),
+	}
+	s, err := cmdStack.RequireStack(
+		ctx,
+		sink,
+		ws,
+		lm,
+		stackName,
+		cmdStack.OfferNew,
+		opts,
+		"",
+	)
+	if err != nil {
+		return err
+	}
+	return TotalStateEdit(ctx, s, showPrompt, opts, operation, &overridePromptMessage)
+}
+
+func TotalStateEdit(
+	ctx context.Context,
+	s backend.Stack,
+	showPrompt bool,
+	opts display.Options,
+	operation func(opts display.Options, snap *deploy.Snapshot) error,
+	overridePromptMessage *string,
+) error {
+	snap, err := s.Snapshot(ctx, secrets.DefaultProvider)
+	if err != nil {
+		return err
+	} else if snap == nil {
+		return nil
+	}
+
+	if showPrompt && cmdutil.Interactive() {
+		confirm := false
+		surveycore.DisableColor = true
+		prompt := opts.Color.Colorize(colors.Yellow + "warning" + colors.Reset + ": ")
+		if overridePromptMessage != nil {
+			prompt += *overridePromptMessage
+		} else {
+			prompt += "This command will edit your stack's state directly. Confirm?"
+		}
+		if err = survey.AskOne(&survey.Confirm{
+			Message: prompt,
+		}, &confirm, ui.SurveyIcons(opts.Color)); err != nil || !confirm {
+			// Shared helper; uses process stdout when not given a writer.
+			return result.FprintBailf(os.Stdout, "confirmation declined") //nolint:forbidigo
+		}
+	}
+
+	// The `operation` callback will mutate `snap` in-place. In order to validate the correctness of the transformation
+	// that we are doing here, we verify the integrity of the snapshot before the mutation. If the snapshot was valid
+	// before we mutated it, we'll assert that we didn't make it invalid by mutating it.
+	stackIsAlreadyHosed := snap.VerifyIntegrity() != nil
+	if err = operation(opts, snap); err != nil {
+		return err
+	}
+
+	// If the stack is already broken, don't bother verifying the integrity here.
+	if !stackIsAlreadyHosed && !backend.DisableIntegrityChecking {
+		contract.AssertNoErrorf(snap.VerifyIntegrity(), "state edit produced an invalid snapshot")
+	}
+
+	dep, err := stack.SerializeUntypedDeployment(ctx, snap, nil /*opts*/)
+	if err != nil {
+		return fmt.Errorf("serializing deployment: %w", err)
+	}
+
+	// Once we've mutated the snapshot, import it back into the backend so that it can be persisted.
+	return backend.ImportStackDeployment(ctx, s, dep)
+}
+
+// listURNsHint tells the user how to find the URNs of the resources in a stack's state. stack may be empty to
+// refer to the current stack.
+func listURNsHint(stack string) string {
+	var stackFlag string
+	if stack != "" {
+		stackFlag = " --stack " + stack
+	}
+	return fmt.Sprintf("To list the resource URNs in the stack, run `pulumi stack --show-urns%[1]s`; "+
+		"to inspect the full state, run `pulumi stack export%[1]s`.", stackFlag)
+}
+
+// snapshotURNs returns the distinct URNs of the resources in the snapshot, which may be nil.
+func snapshotURNs(snap *deploy.Snapshot) []resource.URN {
+	if snap == nil {
+		return nil
+	}
+	seen := map[resource.URN]struct{}{}
+	urns := slice.Prealloc[resource.URN](len(snap.Resources))
+	for _, res := range snap.Resources {
+		if _, ok := seen[res.URN]; !ok {
+			seen[res.URN] = struct{}{}
+			urns = append(urns, res.URN)
+		}
+	}
+	return urns
+}
+
+// similarURNs returns up to limit candidate URNs ordered by their edit distance to the given URN, keeping only
+// those within a distance proportional to the URN's length.
+func similarURNs(candidates []resource.URN, urn resource.URN, limit int) []resource.URN {
+	op := levenshtein.DefaultOptionsWithSub
+	op.Matches = func(r1, r2 rune) bool {
+		return unicode.ToLower(r1) == unicode.ToLower(r2)
+	}
+	threshold := max(2, len(urn)/4)
+
+	type scored struct {
+		urn      resource.URN
+		distance int
+	}
+	var ranked []scored
+	for _, candidate := range candidates {
+		distance := levenshtein.DistanceForStrings([]rune(string(urn)), []rune(string(candidate)), op)
+		if distance <= threshold {
+			ranked = append(ranked, scored{urn: candidate, distance: distance})
+		}
+	}
+	sort.SliceStable(ranked, func(i, j int) bool { return ranked[i].distance < ranked[j].distance })
+
+	urns := slice.Prealloc[resource.URN](min(limit, len(ranked)))
+	for _, c := range ranked[:min(limit, len(ranked))] {
+		urns = append(urns, c.urn)
+	}
+	return urns
+}
+
+// resourceNotFoundError builds the error returned when a URN does not match any of the candidate URNs eligible for
+// the operation, suggesting close-matching candidates and how to list the URNs in the state.
+func resourceNotFoundError(candidates []resource.URN, urn resource.URN) error {
+	var msg strings.Builder
+	fmt.Fprintf(&msg, "No such resource %q exists in the current state\n", urn)
+	if suggestions := similarURNs(candidates, urn, 3); len(suggestions) > 0 {
+		msg.WriteString("Did you mean:\n")
+		for _, suggestion := range suggestions {
+			fmt.Fprintf(&msg, "  %s\n", suggestion)
+		}
+	}
+	msg.WriteString(listURNsHint(""))
+	return errors.New(msg.String())
+}
+
+// locateStackResource attempts to find a unique resource associated with the given URN in the given snapshot. If the
+// given URN is ambiguous and this is an interactive terminal, it prompts the user to select one of the resources in
+// the list of resources with identical URNs to operate upon.
+func locateStackResource(opts display.Options, snap *deploy.Snapshot, urn resource.URN) (*pkgresource.State, error) {
+	candidateResources := edit.LocateResource(snap, urn)
+	switch {
+	case len(candidateResources) == 0: // resource was not found
+		return nil, resourceNotFoundError(snapshotURNs(snap), urn)
+	case len(candidateResources) == 1: // resource was unambiguously found
+		return candidateResources[0], nil
+	}
+
+	// If there exist multiple resources that have the requested URN, prompt the user to select one if we're running
+	// interactively. If we're not, early exit.
+	if !cmdutil.Interactive() {
+		var errorMsg strings.Builder
+		errorMsg.WriteString("Resource URN ambiguously referred to multiple resources. Did you mean:\n")
+		for _, res := range candidateResources {
+			fmt.Fprintf(&errorMsg, "  %s\n", res.ID)
+		}
+		return nil, errors.New(errorMsg.String())
+	}
+
+	// Note: this is done to adhere to the same color scheme as the `pulumi new` picker, which also does this.
+	surveycore.DisableColor = true
+	prompt := "Multiple resources with the given URN exist, please select the one to edit:"
+	prompt = opts.Color.Colorize(colors.SpecPrompt + prompt + colors.Reset)
+
+	options := slice.Prealloc[string](len(candidateResources))
+	optionMap := make(map[string]*pkgresource.State)
+	for _, ambiguousResource := range candidateResources {
+		// Prompt the user to select from a list of IDs, since these resources are known to all have the same URN.
+		message := fmt.Sprintf("%q", ambiguousResource.ID)
+		if ambiguousResource.Protect {
+			message += " (Protected)"
+		}
+
+		if ambiguousResource.Delete {
+			message += " (Pending Deletion)"
+		}
+
+		options = append(options, message)
+		optionMap[message] = ambiguousResource
+	}
+
+	var option string
+	if err := survey.AskOne(&survey.Select{
+		Message:  prompt,
+		Options:  options,
+		PageSize: cmd.OptimalPageSize(cmd.OptimalPageSizeOpts{Nopts: len(options)}),
+	}, &option, ui.SurveyIcons(opts.Color)); err != nil {
+		return nil, errors.New("no resource selected")
+	}
+
+	return optionMap[option], nil
+}
+
+// resolveStateResourceArg resolves a CLI argument (must be a valid resource URN) to a resource
+// in the snapshot, with interactive disambiguation when multiple state entries share the same URN.
+func resolveStateResourceArg(opts display.Options, snap *deploy.Snapshot, arg string) (*pkgresource.State, error) {
+	urn := resource.URN(arg)
+	if !urn.IsValid() {
+		return nil, fmt.Errorf("%q is not a valid resource URN\n%s", arg, listURNsHint(""))
+	}
+	return locateStackResource(opts, snap, urn)
+}
+
+// Prompt the user to select a URN from the passed in state.
+//
+// stackName is the name of the current stack.
+//
+// snap is the snapshot of the current stack.  If (*snap) is not nil, it will be set to
+// the retrieved snapshot value. This allows caching between calls.
+//
+// Prompt is displayed to the user when selecting the URN.
+func getURNFromState(
+	ctx context.Context, sink diag.Sink, ws pkgWorkspace.Context, lm cmdBackend.LoginManager,
+	stackName string, snap **deploy.Snapshot, prompt string,
+) (resource.URN, error) {
+	if snap == nil {
+		// This means we won't cache the value.
+		snap = new(*deploy.Snapshot)
+	}
+	if *snap == nil {
+		opts := display.Options{
+			Color: cmdutil.GetGlobalColorization(),
+		}
+
+		s, err := cmdStack.RequireStack(
+			ctx,
+			sink,
+			ws,
+			lm,
+			stackName,
+			cmdStack.LoadOnly,
+			opts,
+			"",
+		)
+		if err != nil {
+			return "", err
+		}
+		*snap, err = s.Snapshot(ctx, secrets.DefaultProvider)
+		if err != nil {
+			return "", err
+		}
+		if *snap == nil {
+			return "", errors.New("no snapshot found")
+		}
+	}
+	urnList := make([]string, len((*snap).Resources))
+	for i, r := range (*snap).Resources {
+		urnList[i] = string(r.URN)
+	}
+	var urn string
+	err := survey.AskOne(&survey.Select{
+		Message: prompt,
+		Options: urnList,
+	}, &urn, survey.WithValidator(survey.Required), ui.SurveyIcons(cmdutil.GetGlobalColorization()))
+	if err != nil {
+		return "", err
+	}
+	result := resource.URN(urn)
+	contract.Assertf(result.IsValid(),
+		"Because we chose from an existing URN, it must be valid")
+	return result, nil
+}
+
+// Ask the user for a resource name.
+func getNewResourceName() (string, error) {
+	var resourceName string
+	err := survey.AskOne(&survey.Input{
+		Message: "Choose a new resource name:",
+	}, &resourceName, ui.SurveyIcons(cmdutil.GetGlobalColorization()))
+	if err != nil {
+		return "", err
+	}
+	return resourceName, nil
+}
+
+// Format a non-nil error that indicates some arguments are missing for a
+// non-interactive session.
+func missingNonInteractiveArg(args ...string) error {
+	switch len(args) {
+	case 0:
+		panic("cannot create an error message for missing zero args")
+	case 1:
+		return fmt.Errorf("Must supply <%s> unless pulumi is run interactively", args[0])
+	default:
+		for i, s := range args {
+			args[i] = "<" + s + ">"
+		}
+		return fmt.Errorf("Must supply %s and %s unless pulumi is run interactively",
+			strings.Join(args[:len(args)-1], ", "), args[len(args)-1])
+	}
+}

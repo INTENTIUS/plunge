@@ -1,0 +1,415 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package pcl
+
+import (
+	"context"
+	"slices"
+
+	mapset "github.com/deckarep/golang-set/v2"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/hcl2/model"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+// hasReferenceTo returns true if the source node has a reference to the target node.
+// In other words, if the target node is a dependency of the source node.
+func hasReferenceTo(source Node, target Node) bool {
+	for _, dep := range source.GetDependencies() {
+		if dep.Name() == target.Name() {
+			return true
+		}
+	}
+	return false
+}
+
+// selfReferencingNode returns true if the given node references itself.
+func selfReferencingNode(node Node) bool {
+	return hasReferenceTo(node, node)
+}
+
+// isComponent returns true if the given node is a component.
+func isComponent(node Node) bool {
+	_, ok := node.(*Component)
+	return ok
+}
+
+// mutuallyDependantComponents returns true if the given nodes are components that reference each other.
+func mutuallyDependantComponents(a Node, b Node) bool {
+	return isComponent(a) &&
+		isComponent(b) &&
+		hasReferenceTo(a, b) &&
+		hasReferenceTo(b, a) &&
+		a.Name() != b.Name()
+}
+
+// bindNode binds a single node in a program. The node's dependencies are bound prior to the node itself; it is an
+// error for a node to depend--directly or indirectly--upon itself.
+func (b *binder) bindNode(ctx context.Context, node Node) hcl.Diagnostics {
+	if node.isBound() {
+		return nil
+	}
+	if node.isBinding() {
+		// We encountered the same node while binding its dependencies, so we have a circular reference.
+		// However we need to make an exception for nodes of type Component when
+		// - they are not self-referencing
+		// - the circular reference is only between other nodes of type Component
+		if !isComponent(node) || selfReferencingNode(node) {
+			// TODO(pdg): print better trace
+			rng := node.SyntaxNode().Range()
+			return hcl.Diagnostics{{
+				Severity: hcl.DiagError,
+				Summary:  "circular reference",
+				Subject:  &rng,
+			}}
+		}
+	}
+	node.markBinding()
+
+	var diagnostics hcl.Diagnostics
+
+	deps := b.getDependencies(node)
+	node.setDependencies(deps)
+
+	// Bind any nodes this node depends on.
+	for _, dep := range deps {
+		if dep.isBinding() && mutuallyDependantComponents(node, dep) {
+			// We encountered a dependant node that is already being bound
+			// usually this is a circular reference, but we need to make an exception for nodes
+			// that are components and reference each other (mutually dependant components)
+			continue
+		}
+		diags := b.bindNode(ctx, dep)
+		diagnostics = append(diagnostics, diags...)
+	}
+
+	switch node := node.(type) {
+	case *ConfigVariable:
+		diags := b.bindConfigVariable(node)
+		diagnostics = append(diagnostics, diags...)
+	case *LocalVariable:
+		diags := b.bindLocalVariable(node)
+		diagnostics = append(diagnostics, diags...)
+	case *Resource:
+		diags := b.bindResource(ctx, node)
+		diagnostics = append(diagnostics, diags...)
+	case *ReadResource:
+		diags := b.bindReadResource(ctx, node)
+		diagnostics = append(diagnostics, diags...)
+	case *Component:
+		diags := b.bindComponent(node)
+		diagnostics = append(diagnostics, diags...)
+	case *OutputVariable:
+		diags := b.bindOutputVariable(node)
+		diagnostics = append(diagnostics, diags...)
+	case *Hook:
+		diags := b.bindHook(node)
+		diagnostics = append(diagnostics, diags...)
+	case *PulumiBlock:
+		diags := b.bindPulumi(node)
+		diagnostics = append(diagnostics, diags...)
+	default:
+		contract.Failf("unexpected node of type %T (%v)", node, node.SyntaxNode().Range())
+	}
+
+	node.markBound()
+	return diagnostics
+}
+
+// getDependencies returns the dependencies for the given node.
+func (b *binder) getDependencies(node Node) []Node {
+	depSet := mapset.NewSet[Node]()
+	var deps []Node
+	visit := func(node hclsyntax.Node) hcl.Diagnostics {
+		var depName string
+		switch node := node.(type) {
+		case *hclsyntax.FunctionCallExpr:
+			// TODO(pdg): function scope binds tighter than "normal" scope
+			depName = node.Name
+		case *hclsyntax.ScopeTraversalExpr:
+			depName = node.Traversal.RootName()
+		default:
+			return nil
+		}
+
+		// Missing reference errors will be issued during expression binding.
+		referent, _ := b.root.BindReference(depName)
+		if node, ok := referent.(Node); ok && !depSet.Contains(node) {
+			depSet.Add(node)
+			deps = append(deps, node)
+		}
+		return nil
+	}
+
+	if body := resourceSyntaxBody(node); body != nil {
+		walkResourceBodyForDeps(body, visit)
+	} else {
+		diags := hclsyntax.VisitAll(node.SyntaxNode(), visit)
+		contract.Assertf(len(diags) == 0, "unexpected diagnostics: %v", diags)
+	}
+	return SourceOrderNodes(deps)
+}
+
+func resourceSyntaxBody(node Node) *hclsyntax.Body {
+	switch n := node.(type) {
+	case *Resource:
+		if n.syntax != nil {
+			return n.syntax.Body
+		}
+	case *ReadResource:
+		if n.syntax != nil {
+			return n.syntax.Body
+		}
+	}
+	return nil
+}
+
+// walkResourceBodyForDeps mirrors optionsScopes.GetScopeForAttribute: the
+// property-name attributes resolve identifiers against the resource's own
+// inputs, not the root scope, so the dep walker must skip them or it will
+// report spurious circular references.
+func walkResourceBodyForDeps(body *hclsyntax.Body, visit hclsyntax.VisitFunc) {
+	for _, attr := range body.Attributes {
+		_ = hclsyntax.VisitAll(attr.Expr, visit)
+	}
+	for _, block := range body.Blocks {
+		if block.Type == "options" {
+			walkOptionsBlockForDeps(block.Body, visit)
+			continue
+		}
+		_ = hclsyntax.VisitAll(block, visit)
+	}
+}
+
+func walkOptionsBlockForDeps(body *hclsyntax.Body, visit hclsyntax.VisitFunc) {
+	for _, attr := range body.Attributes {
+		switch attr.Name {
+		case "ignoreChanges", "hideDiffs", "replaceOnChanges", "additionalSecretOutputs":
+			continue
+		}
+		_ = hclsyntax.VisitAll(attr.Expr, visit)
+	}
+	for _, block := range body.Blocks {
+		_ = hclsyntax.VisitAll(block, visit)
+	}
+}
+
+func expressionIsLiteralNull(expr model.Expression) bool {
+	switch expr := expr.(type) {
+	case *model.LiteralValueExpression:
+		return expr.Value.IsNull()
+	default:
+		return false
+	}
+}
+
+func (b *binder) bindConfigVariable(node *ConfigVariable) hcl.Diagnostics {
+	block, diagnostics := model.BindBlock(node.syntax, model.StaticScope(b.root), b.tokens, b.options.modelOptions()...)
+	if defaultValue, ok := block.Body.Attribute("default"); ok {
+		node.DefaultValue = defaultValue.Value
+		// when default is null and the type is not already optional
+		// turn the config type T into option(T)
+		if expressionIsLiteralNull(node.DefaultValue) && !model.IsOptionalType(node.typ) {
+			node.typ = model.NewOptionalType(node.typ)
+			node.Nullable = true
+		}
+
+		if model.InputType(node.typ).ConversionFrom(node.DefaultValue.Type()) == model.NoConversion {
+			errorDiagnostic := model.ExprNotConvertible(model.InputType(node.typ), node.DefaultValue)
+			diagnostics = append(diagnostics, errorDiagnostic)
+		}
+	}
+
+	if attr, ok := block.Body.Attribute(LogicalNamePropertyKey); ok {
+		logicalName, lDiags := getStringAttrValue(attr)
+		if lDiags != nil {
+			diagnostics = diagnostics.Append(lDiags)
+		} else {
+			node.logicalName = logicalName
+		}
+	}
+
+	if descriptionAttr, ok := block.Body.Attribute("description"); ok {
+		description, diags := getStringAttrValue(descriptionAttr)
+		if diags != nil {
+			diagnostics = diagnostics.Append(diags)
+		} else {
+			node.Description = description
+		}
+	}
+
+	if nullableAttr, ok := block.Body.Attribute("nullable"); ok {
+		nullable, diags := getBooleanAttributeValue(nullableAttr)
+		if diags != nil {
+			diagnostics = diagnostics.Append(diags)
+		} else {
+			node.Nullable = nullable
+		}
+	}
+
+	if secretAttr, ok := block.Body.Attribute("secret"); ok {
+		secret, diags := getBooleanAttributeValue(secretAttr)
+		if diags != nil {
+			diagnostics = diagnostics.Append(diags)
+		} else {
+			node.Secret = secret
+		}
+	}
+
+	if node.Secret {
+		node.typ = model.NewOutputType(node.typ)
+	}
+
+	node.Definition = block
+	return diagnostics
+}
+
+func (b *binder) bindLocalVariable(node *LocalVariable) hcl.Diagnostics {
+	attr, diagnostics := model.BindAttribute(node.syntax, b.root, b.tokens, b.options.modelOptions()...)
+	node.Definition = attr
+	return diagnostics
+}
+
+func (b *binder) bindOutputVariable(node *OutputVariable) hcl.Diagnostics {
+	block, diagnostics := model.BindBlock(node.syntax, model.StaticScope(b.root), b.tokens, b.options.modelOptions()...)
+
+	if logicalNameAttr, ok := block.Body.Attribute(LogicalNamePropertyKey); ok {
+		logicalName, lDiags := getStringAttrValue(logicalNameAttr)
+		if lDiags != nil {
+			diagnostics = diagnostics.Append(lDiags)
+		} else {
+			node.logicalName = logicalName
+		}
+	}
+
+	if value, ok := block.Body.Attribute("value"); ok {
+		node.Value = value.Value
+		if model.InputType(node.typ).ConversionFrom(node.Value.Type()) == model.NoConversion {
+			diagnostics = append(diagnostics, model.ExprNotConvertible(model.InputType(node.typ), node.Value))
+		}
+	}
+	node.Definition = block
+	return diagnostics
+}
+
+type hookScope struct {
+	root *model.Scope
+	kind HookKind
+}
+
+func (s *hookScope) GetScopesForBlock(block *hclsyntax.Block) (model.Scopes, hcl.Diagnostics) {
+	return model.StaticScope(s.root), nil
+}
+
+func (s *hookScope) GetScopeForAttribute(attr *hclsyntax.Attribute) (*model.Scope, hcl.Diagnostics) {
+	if attr.Name == "command" {
+		scope := s.root.Push(attr)
+
+		properties := map[string]model.Type{
+			"urn":        model.StringType,
+			"id":         model.IDType,
+			"name":       model.StringType,
+			"type":       model.StringType,
+			"newInputs":  model.NewMapType(model.DynamicType),
+			"oldInputs":  model.NewMapType(model.DynamicType),
+			"oldOutputs": model.NewMapType(model.DynamicType),
+		}
+		// Error hooks fire after an operation fails, so there are no new outputs.
+		if s.kind != HookKindError {
+			properties["newOutputs"] = model.NewMapType(model.DynamicType)
+		}
+
+		scope.Define("args", &model.Variable{
+			Name:         "args",
+			VariableType: model.NewObjectType(properties),
+		})
+		return scope, nil
+	}
+	return s.root, nil
+}
+
+func (b *binder) bindHook(node *Hook) hcl.Diagnostics {
+	// Create a child scope that exposes the resource data to the hook.
+	hookScope := &hookScope{root: b.root, kind: node.Kind}
+	block, diagnostics := model.BindBlock(node.syntax, hookScope, b.tokens, b.options.modelOptions()...)
+
+	if cmd, ok := block.Body.Attribute("command"); ok {
+		node.Command = cmd.Value
+		// Command must be a list. Elements may include dynamic expressions (e.g. inputs.X) but must resolve to strings.
+		listType := model.NewListType(model.StringType)
+		if model.InputType(listType).ConversionFrom(node.Command.Type()) == model.NoConversion {
+			diagnostics = append(diagnostics, model.ExprNotConvertible(model.InputType(listType), node.Command))
+		}
+	} else {
+		diagnostics = append(diagnostics, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Missing required attribute",
+			Detail:   "Hook blocks must have a 'command' attribute",
+			Subject:  node.syntax.OpenBraceRange.Ptr(),
+		})
+	}
+
+	if onDryRun, ok := block.Body.Attribute("onDryRun"); ok {
+		node.OnDryRun = onDryRun.Value
+		if model.InputType(model.BoolType).ConversionFrom(node.OnDryRun.Type()) == model.NoConversion {
+			diagnostics = append(diagnostics, model.ExprNotConvertible(model.InputType(model.BoolType), node.OnDryRun))
+		}
+	}
+
+	if ignoreErrors, ok := block.Body.Attribute("ignoreErrors"); ok {
+		node.IgnoreErrors = ignoreErrors.Value
+		if model.InputType(model.BoolType).ConversionFrom(node.IgnoreErrors.Type()) == model.NoConversion {
+			diagnostics = append(diagnostics, model.ExprNotConvertible(model.InputType(model.BoolType), node.IgnoreErrors))
+		}
+	}
+
+	// Error on any other attribute. Error hooks always run on failures of actual operations,
+	// so onDryRun and ignoreErrors do not apply to them.
+	valid := []string{"onDryRun", "ignoreErrors", "command"}
+	if node.Kind == HookKindError {
+		valid = []string{"command"}
+	}
+	for _, i := range block.Body.Items {
+		switch item := i.(type) {
+		case *model.Attribute:
+			if !slices.Contains(valid, item.Name) {
+				diagnostics = append(diagnostics, model.UnknownObjectProperty(item.Name, item.Syntax.NameRange, valid))
+			}
+		case *model.Block:
+			diagnostics = append(diagnostics, model.UnknownObjectProperty(item.Type, item.Syntax.TypeRange, valid))
+		default:
+			contract.Failf("unrecognized block item type %v", item)
+		}
+	}
+
+	node.Definition = block
+	return diagnostics
+}
+
+func (b *binder) bindPulumi(node *PulumiBlock) hcl.Diagnostics {
+	block, diagnostics := model.BindBlock(node.syntax, model.StaticScope(b.root), b.tokens, b.options.modelOptions()...)
+
+	if value, ok := block.Body.Attribute("requiredVersionRange"); ok {
+		node.RequiredVersion = value.Value
+		if model.InputType(model.StringType).ConversionFrom(node.RequiredVersion.Type()) == model.NoConversion {
+			diagnostics = append(diagnostics, model.ExprNotConvertible(model.InputType(model.StringType), node.RequiredVersion))
+		}
+	}
+
+	node.Definition = block
+	return diagnostics
+}

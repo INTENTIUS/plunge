@@ -1,0 +1,88 @@
+# Scheduled upstream merge (INTENTIUS/plunge#5, P-L2).
+#
+# Fetches pulumi/pulumi master and merges it into a fresh upstream-merge/<date>-<sha> branch off
+# integration/pulumi-engine with scripts/plunge-upstream-merge.sh, rebuilds, pushes that branch, and opens
+# an issue with the report. It only pulls from pulumi/pulumi: no PR, issue or push goes there. It never
+# pushes to main or to the integration branch and opens no PR; a human merges the branch.
+#
+# Upstream's commits touch .github/workflows in their own history, and GitHub refuses a push of such
+# commits made with GITHUB_TOKEN (it can't hold the `workflows` permission). Set the PLUNGE_MERGE_TOKEN
+# secret to a fine-grained token on INTENTIUS/plunge with contents and workflows write; without it the push
+# step will likely be refused and the report issue says so.
+#
+# GitHub runs scheduled workflows from the default branch, so the schedule takes effect once this file is
+# on main. workflow_dispatch runs it from any branch.
+name: plunge-upstream-merge
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays 05:17 UTC; pulumi/pulumi releases about weekly
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Branch to merge upstream into (a fresh branch is cut from it)
+        default: integration/pulumi-engine
+
+permissions:
+  contents: write # push the upstream-merge/* branch to this repo
+  issues: write # open the report issue in this repo
+
+concurrency:
+  group: plunge-upstream-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.repository == 'INTENTIUS/plunge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BASE: ${{ inputs.base || 'integration/pulumi-engine' }}
+      OUT: ${{ github.workspace }}/plunge-upstream-merge-out
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE }}
+          fetch-depth: 0
+          token: ${{ secrets.PLUNGE_MERGE_TOKEN || github.token }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: pkg/go.mod
+          cache-dependency-path: |
+            pkg/go.sum
+            sdk/go.sum
+      - name: Configure git
+        run: |
+          git config user.name "plunge-upstream-merge"
+          git config user.email "plunge-upstream-merge@users.noreply.github.com"
+          # Fetch-only upstream; the push URL can't work.
+          git remote add upstream https://github.com/pulumi/pulumi.git
+          git remote set-url --push upstream no-push://upstream-is-fetch-only
+      - name: Merge upstream
+        id: merge
+        run: |
+          set +e
+          scripts/plunge-upstream-merge.sh --push
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          echo "verdict=$(cat "$OUT/verdict.txt" 2>/dev/null)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: plunge-upstream-merge
+          path: plunge-upstream-merge-out/
+      - name: Open the report issue
+        if: always() && !startsWith(steps.merge.outputs.verdict, 'UPSTREAM-MERGE UP-TO-DATE')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERDICT: ${{ steps.merge.outputs.verdict }}
+        run: |
+          {
+            echo "Verdict: \`${VERDICT:-none}\`"
+            echo
+            cat "$OUT/report.md" 2>/dev/null || echo "No report was written; see the run log."
+            echo
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > issue.md
+          gh issue create -R "$GITHUB_REPOSITORY" \
+            --title "upstream merge $(date -u +%Y-%m-%d): ${VERDICT#UPSTREAM-MERGE }" \
+            --body-file issue.md

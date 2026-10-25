@@ -1,0 +1,7 @@
+name: corpus-aws-python
+description: plunge corpus, Python program against the floci AWS emulator (INTENTIUS/plunge#4)
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv

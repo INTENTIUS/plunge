@@ -1,0 +1,134 @@
+// Copyright 2022, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schema
+
+import (
+	"context"
+
+	"github.com/blang/semver"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+func newPulumiPackage() *Package {
+	spec := PackageSpec{
+		Name:        "pulumi",
+		DisplayName: "Pulumi",
+		Version:     "3.0.0",
+		Description: "mock pulumi package",
+		Resources: map[string]ResourceSpec{
+			"pulumi:index:Stash": {
+				ObjectTypeSpec: ObjectTypeSpec{
+					Description: "Stash stores an arbitrary value in the state.",
+					Properties: map[string]PropertySpec{
+						"output": {
+							Description: "The value saved in the state for the stash.",
+							TypeSpec: TypeSpec{
+								Ref: "pulumi.json#/Any",
+							},
+						},
+						"input": {
+							Description: "The most recent value passed to the stash resource.",
+							TypeSpec: TypeSpec{
+								Ref: "pulumi.json#/Any",
+							},
+						},
+					},
+					Required: []string{
+						"input", "output",
+					},
+				},
+				InputProperties: map[string]PropertySpec{
+					"input": {
+						Description: "The value to store in the stash resource.",
+						TypeSpec: TypeSpec{
+							Ref: "pulumi.json#/Any",
+						},
+					},
+				},
+				RequiredInputs: []string{
+					"input",
+				},
+			},
+			"pulumi:pulumi:StackReference": {
+				ObjectTypeSpec: ObjectTypeSpec{
+					Properties: map[string]PropertySpec{
+						"outputs": {TypeSpec: TypeSpec{
+							Type: "object",
+							AdditionalProperties: &TypeSpec{
+								Ref: "pulumi.json#/Any",
+							},
+						}},
+						"secretOutputNames": {TypeSpec: TypeSpec{
+							Type: "object",
+							AdditionalProperties: &TypeSpec{
+								Type: "string",
+							},
+						}},
+						"name": {TypeSpec: TypeSpec{Type: "string"}},
+					},
+					Required: []string{
+						"outputs",
+					},
+				},
+				InputProperties: map[string]PropertySpec{
+					"name": {TypeSpec: TypeSpec{Type: "string"}},
+				},
+			},
+		},
+		Provider: &ResourceSpec{
+			InputProperties: map[string]PropertySpec{
+				"name": {
+					Description: "fully qualified name of stack, i.e. <organization>/<project>/<stack>",
+					TypeSpec: TypeSpec{
+						Type: "string",
+					},
+				},
+			},
+		},
+		Language: map[string]RawMessage{
+			"go": []byte(`{
+				"importBasePath": "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+			}`),
+		},
+	}
+
+	pkg, diags, err := bindSpec(context.Background(), spec, nil, nullLoader{}, false, ValidationOptions{
+		AllowPulumiPackage:      true,
+		AllowDanglingReferences: true,
+	})
+	if err == nil && diags.HasErrors() {
+		err = diags
+	}
+	contract.AssertNoErrorf(err, "failed to bind mock pulumi package")
+	return pkg
+}
+
+// NewNullLoader returns a [Loader] that fails if asked to load a package. Bind a spec with it when the
+// spec references no other packages, so binding needs a non-nil loader but never actually loads one.
+func NewNullLoader() Loader { return nullLoader{} }
+
+type nullLoader struct{}
+
+func (nullLoader) LoadPackage(pkg string, version *semver.Version) (*Package, error) {
+	contract.Failf("nullLoader invoked on %s,%s", pkg, version)
+	return nil, nil
+}
+
+func (nullLoader) LoadPackageV2(ctx context.Context, descriptor *PackageDescriptor) (*Package, error) {
+	contract.Failf("nullLoader invoked on %s,%s", descriptor.Name, descriptor.Version)
+	return nil, nil
+}
+
+var DefaultPulumiPackage = newPulumiPackage()

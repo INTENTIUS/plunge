@@ -1,0 +1,103 @@
+// Copyright 2026, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package tests
+
+import (
+	"maps"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
+	"github.com/pulumi/pulumi/sdk/v3/go/property"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func init() {
+	commonConfig := config.Map{
+		config.MustMakeKey("l1-builtin-list", "aList"):   config.NewObjectValue(`["foo","bar","baz"]`),
+		config.MustMakeKey("l1-builtin-list", "aString"): config.NewObjectValue(`"foo-bar-baz"`),
+	}
+
+	commonOutputs := map[string]property.Value{
+		"elementOutput1": property.New("bar"),
+		"elementOutput2": property.New("baz"),
+		"joinOutput":     property.New("foo|bar|baz"),
+		"lengthOutput":   property.New(3.0),
+		"splitOutput": property.New([]property.Value{
+			property.New("foo"),
+			property.New("bar"),
+			property.New("baz"),
+		}),
+	}
+
+	LanguageTests["l1-builtin-list"] = LanguageTest{
+		RunsShareSource: true,
+		Runs: []TestRun{
+			{
+				// Run 1: singleOrNone with a single-element list returns that element.
+				Config: func() config.Map {
+					cfg := config.Map{}
+					maps.Copy(cfg, commonConfig)
+					cfg[config.MustMakeKey("l1-builtin-list", "singleOrNoneList")] = config.NewObjectValue(`["single"]`)
+					return cfg
+				}(),
+				Assert: func(l *L, res AssertArgs) {
+					RequireStackResource(l, res.Err, res.Changes)
+					stack := RequireSingleResource(l, res.Snap.Resources, "pulumi:pulumi:Stack")
+
+					want := map[string]property.Value{}
+					maps.Copy(want, commonOutputs)
+					want["singleOrNoneOutput"] = property.New([]property.Value{
+						property.New("single"),
+					})
+
+					assert.Equal(l, property.NewMap(want), resource.FromResourcePropertyMap(stack.Outputs))
+				},
+			},
+			{
+				// Run 2: singleOrNone with a multi-element list errors at runtime.
+				Config: func() config.Map {
+					cfg := config.Map{}
+					maps.Copy(cfg, commonConfig)
+					cfg[config.MustMakeKey("l1-builtin-list", "singleOrNoneList")] = config.NewObjectValue(`["a","b"]`)
+					return cfg
+				}(),
+				AssertPreview: func(l *L, res AssertPreviewArgs) { require.Error(l, res.Err) },
+				Assert:        func(l *L, res AssertArgs) { require.Error(l, res.Err) },
+			},
+			{
+				// Run 3: singleOrNone with an empty list returns null.
+				Config: func() config.Map {
+					cfg := config.Map{}
+					maps.Copy(cfg, commonConfig)
+					cfg[config.MustMakeKey("l1-builtin-list", "singleOrNoneList")] = config.NewObjectValue(`[]`)
+					return cfg
+				}(),
+				Assert: func(l *L, res AssertArgs) {
+					require.NoError(l, res.Err)
+					stack := RequireSingleResource(l, res.Snap.Resources, "pulumi:pulumi:Stack")
+
+					want := map[string]property.Value{}
+					maps.Copy(want, commonOutputs)
+					want["singleOrNoneOutput"] = property.New([]property.Value{
+						property.New(property.Null),
+					})
+
+					assert.Equal(l, property.NewMap(want), resource.FromResourcePropertyMap(stack.Outputs))
+				},
+			},
+		},
+	}
+}

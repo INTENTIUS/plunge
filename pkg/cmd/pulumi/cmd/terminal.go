@@ -1,0 +1,64 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cmd
+
+import (
+	"io"
+	"os"
+
+	"golang.org/x/term"
+)
+
+const defaultTerminalWidth = 120
+
+// WriterWidth returns the width in columns of w when it is a terminal,
+// falling back to a reasonable default otherwise (piped output, CI, or
+// non-file writers such as a bytes.Buffer in tests).
+func WriterWidth(w io.Writer) int {
+	f, ok := w.(*os.File)
+	if !ok {
+		return defaultTerminalWidth
+	}
+	cols, _, err := term.GetSize(int(f.Fd()))
+	if err != nil || cols <= 0 {
+		return defaultTerminalWidth
+	}
+	return cols
+}
+
+type OptimalPageSizeOpts struct {
+	Nopts          int
+	TerminalHeight int
+}
+
+// Computes how many options to display in a Terminal UI multi-select.
+// Tries to auto-detect and take terminal height into account.
+func OptimalPageSize(opts OptimalPageSizeOpts) int {
+	pageSize := 15
+	if opts.TerminalHeight != 0 {
+		pageSize = opts.TerminalHeight
+	} else if _, height, err := term.GetSize(0); err == nil {
+		pageSize = height
+	}
+	// Subtract the buffer from the terminal height, not from the option count.
+	const buffer = 5
+	if pageSize > buffer {
+		pageSize = pageSize - buffer
+	}
+	if pageSize > opts.Nopts {
+		pageSize = opts.Nopts
+	}
+	return pageSize
+}

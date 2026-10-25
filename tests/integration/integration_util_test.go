@@ -1,0 +1,488 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package ints
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/pulumi/pulumi/pkg/v3/testing/integration"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/rpcutil"
+	pulumirpc "github.com/pulumi/pulumi/sdk/v3/proto/go"
+	"github.com/pulumi/pulumi/tests/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+const WindowsOS = "windows"
+
+func testComponentSlowLocalProvider(t *testing.T) integration.LocalDependency {
+	return integration.LocalDependency{
+		Package: "testcomponent",
+		Path:    filepath.Join("construct_component_slow", "testcomponent"),
+	}
+}
+
+func testComponentProviderSchema(t *testing.T, path string) {
+	const testDir = "component_provider_schema"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		name          string
+		env           []string
+		version       int32
+		expected      string
+		expectedError string
+	}{
+		{
+			name:     "Default",
+			expected: "{}",
+		},
+		{
+			name:     "Schema",
+			env:      []string{"INCLUDE_SCHEMA=true"},
+			expected: `{"hello": "world"}`,
+		},
+		{
+			name:          "Invalid Version",
+			version:       15,
+			expectedError: "unsupported schema version 15",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			// Start the plugin binary.
+			cmd := exec.Command(path, "ignored")
+			cmd.Env = append(os.Environ(), test.env...)
+			stdout, err := cmd.StdoutPipe()
+			require.NoError(t, err)
+			err = cmd.Start()
+			require.NoError(t, err)
+			defer func() {
+				// Ignore the error as it may fail with access denied on Windows.
+				cmd.Process.Kill() //nolint:errcheck
+			}()
+
+			// Read the port from standard output.
+			reader := bufio.NewReader(stdout)
+			bytes, err := reader.ReadBytes('\n')
+			require.NoError(t, err)
+			port := strings.TrimSpace(string(bytes))
+
+			// Create a connection to the server.
+			conn, err := grpc.NewClient(
+				"127.0.0.1:"+port,
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				rpcutil.GrpcChannelOptions(),
+			)
+			require.NoError(t, err)
+			client := pulumirpc.NewResourceProviderClient(conn)
+
+			// Call GetSchema and verify the results.
+			resp, err := client.GetSchema(t.Context(), &pulumirpc.GetSchemaRequest{Version: test.version})
+			if test.expectedError != "" {
+				assert.ErrorContains(t, err, test.expectedError)
+			} else {
+				assert.Equal(t, test.expected, resp.GetSchema())
+			}
+		})
+	}
+}
+
+// Test remote component inputs properly handle unknowns.
+func testConstructUnknown(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_unknown"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			localProviders := []integration.LocalDependency{
+				{Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir)},
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:                    filepath.Join(testDir, lang),
+				Dependencies:           dependencies,
+				LocalProviders:         localProviders,
+				SkipRefresh:            true,
+				SkipPreview:            false,
+				SkipUpdate:             true,
+				SkipExportImport:       true,
+				SkipEmptyPreviewUpdate: true,
+				Quick:                  false,
+			})
+		})
+	}
+}
+
+// Test methods properly handle unknowns.
+func testConstructMethodsUnknown(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_methods_unknown"
+	integration.RunComponentSetup(t, testDir)
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			localProviders := []integration.LocalDependency{
+				{Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir)},
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:                    filepath.Join(testDir, lang),
+				Dependencies:           dependencies,
+				LocalProviders:         localProviders,
+				SkipRefresh:            true,
+				SkipPreview:            false,
+				SkipUpdate:             true,
+				SkipExportImport:       true,
+				SkipEmptyPreviewUpdate: true,
+				Quick:                  false,
+			})
+		})
+	}
+}
+
+// Test methods that create resources.
+func testConstructMethodsResources(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_methods_resources"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			localProviders := []integration.LocalDependency{
+				{Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir)},
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:            filepath.Join(testDir, lang),
+				Dependencies:   dependencies,
+				LocalProviders: localProviders,
+				Quick:          true,
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					require.NotNil(t, stackInfo.Deployment)
+					require.Len(t, stackInfo.Deployment.Resources, 6)
+					var hasExpectedResource bool
+					var result string
+					for _, res := range stackInfo.Deployment.Resources {
+						if res.URN.Name() == "myrandom" {
+							hasExpectedResource = true
+							result = res.Outputs["result"].(string)
+							assert.Equal(t, float64(10), res.Inputs["length"])
+							require.Len(t, result, 10)
+						}
+					}
+					assert.True(t, hasExpectedResource)
+					assert.Equal(t, result, stackInfo.Outputs["result"])
+				},
+			})
+		})
+	}
+}
+
+// Test failures returned from methods are observed.
+func testConstructMethodsErrors(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_methods_errors"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			stderr := &bytes.Buffer{}
+			expectedError := "the failure reason (the failure property)"
+
+			localProvider := integration.LocalDependency{
+				Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir),
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:            filepath.Join(testDir, lang),
+				Dependencies:   dependencies,
+				LocalProviders: []integration.LocalDependency{localProvider},
+				Quick:          true,
+				Stderr:         stderr,
+				ExpectFailure:  true,
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					output := stderr.String()
+					assert.Contains(t, output, expectedError)
+				},
+			})
+		})
+	}
+}
+
+// Tests methods work when there is an explicit provider for another provider set on the component.
+func testConstructMethodsProvider(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_methods_provider"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			localProvider := integration.LocalDependency{
+				Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir),
+			}
+			testProvider := integration.LocalDependency{
+				Package: "testprovider", Path: testutil.TestProviderDir(t),
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:            filepath.Join(testDir, lang),
+				Dependencies:   dependencies,
+				LocalProviders: []integration.LocalDependency{localProvider, testProvider},
+				Quick:          true,
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					assert.Equal(t, "Hello World, Alice!", stackInfo.Outputs["message1"])
+					assert.Equal(t, "Hi There, Bob!", stackInfo.Outputs["message2"])
+				},
+			})
+		})
+	}
+}
+
+func testConstructOutputValues(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_output_values"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			localProviders := []integration.LocalDependency{
+				{Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir)},
+				{Package: "testprovider", Path: testutil.TestProviderDir(t)},
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:            filepath.Join(testDir, lang),
+				Dependencies:   dependencies,
+				LocalProviders: localProviders,
+				Quick:          true,
+			})
+		})
+	}
+}
+
+var previewSummaryRegex = regexp.MustCompile(
+	`{\s+"steps": \[[\s\S]+],\s+"duration": \d+,\s+"changeSummary": {[\s\S]+}\s+}`)
+
+func assertOutputContainsEvent(t *testing.T, evt apitype.EngineEvent, output string) {
+	evtJSON := bytes.Buffer{}
+	encoder := json.NewEncoder(&evtJSON)
+	encoder.SetEscapeHTML(false)
+	err := encoder.Encode(evt)
+	require.NoError(t, err)
+	assert.Contains(t, output, evtJSON.String())
+}
+
+// printfTestValidation is used by the TestPrintfXYZ test cases in the language-specific test
+// files. It validates that there are a precise count of expected stdout/stderr lines in the test output.
+func printfTestValidation(t *testing.T, stack integration.RuntimeValidationStackInfo) {
+	var foundStdout int
+	var foundStderr int
+	for _, ev := range stack.Events {
+		if de := ev.DiagnosticEvent; de != nil {
+			if strings.HasPrefix(de.Message, fmt.Sprintf("Line %d", foundStdout)) {
+				foundStdout++
+			} else if strings.HasPrefix(de.Message, fmt.Sprintf("Errln %d", foundStderr+10)) {
+				foundStderr++
+			}
+		}
+	}
+	assert.Equal(t, 11, foundStdout)
+	assert.Equal(t, 11, foundStderr)
+}
+
+func testConstructProviderExplicit(t *testing.T, lang string, dependencies []string) {
+	const testDir = "construct_component_provider_explicit"
+
+	localProvider := integration.LocalDependency{
+		Package: "testcomponent", Path: filepath.Join(testDir, "testcomponent-go"),
+	}
+	integration.ProgramTest(t, &integration.ProgramTestOptions{
+		Dir:            filepath.Join(testDir, lang),
+		Dependencies:   dependencies,
+		LocalProviders: []integration.LocalDependency{localProvider},
+		Quick:          true,
+		NoParallel:     true, // already called by tests
+		ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+			assert.Equal(t, "hello world", stackInfo.Outputs["message"])
+			assert.Equal(t, "hello world", stackInfo.Outputs["nestedMessage"])
+		},
+	})
+}
+
+// Test failures returned from construct.
+func testConstructFailures(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "construct_component_failures"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			stderr := &bytes.Buffer{}
+			expectedError := `error: testcomponent:index:Component resource 'component' has a problem: failing for a reason
+    		- property foo with value '{bar}' has a problem: the failure reason`
+
+			localProvider := integration.LocalDependency{
+				Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir),
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:            filepath.Join(testDir, lang),
+				Dependencies:   dependencies,
+				LocalProviders: []integration.LocalDependency{localProvider},
+				Quick:          true,
+				Stderr:         stderr,
+				ExpectFailure:  true,
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					output := stderr.String()
+					assert.Contains(t, output, expectedError)
+				},
+			})
+		})
+	}
+}
+
+// Test failures returned from call.
+func testCallFailures(t *testing.T, lang string, dependencies ...string) {
+	const testDir = "call_component_failures"
+	integration.RunComponentSetup(t, testDir)
+
+	tests := []struct {
+		componentDir string
+	}{
+		{
+			componentDir: "testcomponent",
+		},
+		{
+			componentDir: "testcomponent-go",
+		},
+		{
+			componentDir: "testcomponent-python",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.componentDir, func(t *testing.T) {
+			stderr := &bytes.Buffer{}
+			expectedError := `error: call to function 'testcomponent:index:Component/getMessage' failed:
+    		- property foo has a problem: the failure reason`
+
+			localProvider := integration.LocalDependency{
+				Package: "testcomponent", Path: filepath.Join(testDir, test.componentDir),
+			}
+			integration.ProgramTest(t, &integration.ProgramTestOptions{
+				Dir:            filepath.Join(testDir, lang),
+				Dependencies:   dependencies,
+				LocalProviders: []integration.LocalDependency{localProvider},
+				Quick:          true,
+				Stderr:         stderr,
+				ExpectFailure:  true,
+				ExtraRuntimeValidation: func(t *testing.T, stackInfo integration.RuntimeValidationStackInfo) {
+					output := stderr.String()
+					assert.Contains(t, output, expectedError)
+				},
+			})
+		})
+	}
+}

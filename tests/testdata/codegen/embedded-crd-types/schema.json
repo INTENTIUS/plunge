@@ -1,0 +1,96 @@
+{
+    "name": "foo",
+    "allowedPackageNames": [
+        "tls"
+    ],
+    "types": {
+        "tls:crd.k8s.amazonaws.com/v1alpha1:ENIConfig": {
+            "properties": {
+                "apiVersion": {
+                    "type": "string",
+                    "const": "crd.k8s.amazonaws.com/v1alpha1"
+                },
+                "kind": {
+                    "type": "string",
+                    "const": "ENIConfig"
+                },
+                "spec": {
+                    "type": "object",
+                    "$ref": "#/types/tls:crd.k8s.amazonaws.com/v1alpha1:ENIConfigSpec"
+                }
+            },
+            "type": "object"
+        },
+        "tls:crd.k8s.amazonaws.com/v1alpha1:ENIConfigSpec": {
+            "properties": {
+                "securityGroups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "subnet": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "resources": {
+        "foo:index:Component": {
+            "isComponent": true,
+            "inputProperties": {
+                "eniConfig": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/types/tls:crd.k8s.amazonaws.com/v1alpha1:ENIConfigSpec"
+                    }
+                },
+                "pod": {
+                    "type": "object",
+                    "$ref": "/tls/v4.10.0/schema.json#/types/tls:index%2FCertRequestSubject:CertRequestSubject"
+                }
+            },
+            "properties": {
+                "eniConfig": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/types/tls:crd.k8s.amazonaws.com/v1alpha1:ENIConfigSpec"
+                    }
+                },
+                "pod": {
+                    "type": "object",
+                    "$ref": "/tls/v4.10.0/schema.json#/types/tls:index%2FCertRequestSubject:CertRequestSubject"
+                }
+            }
+        }
+    },
+    "language": {
+        "csharp": {
+            "packageReferences": {
+                "Pulumi": "3.*",
+                "Pulumi.Tls": "4.*"
+            },
+            "namespaces": {
+                "foo": "Foo"
+            }
+        },
+        "go": {
+            "importBasePath": "embedded-crd-types/foo"
+        },
+        "nodejs": {
+            "dependencies": {
+                "@pulumi/tls": "^4.10.0"
+            },
+            "devDependencies": {
+                "typescript": "^4.3.5"
+            }
+        },
+        "python": {
+            "requires": {
+                "pulumi": ">=3.0.0,<4.0.0",
+                "pulumi-tls": ">=4.0.0,<5.0.0"
+            }
+        }
+    }
+}

@@ -1,0 +1,165 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schema
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
+	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
+	cmdCmd "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/cmd"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/constrictor"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/packages"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/packageworkspace"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/convert"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/schema"
+	pkghost "github.com/pulumi/pulumi/pkg/v3/host"
+	"github.com/pulumi/pulumi/pkg/v3/registry"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+)
+
+type checkArgs struct {
+	allowDanglingReferences bool
+}
+
+func newSchemaCheckCommand() *cobra.Command {
+	schemaCheckArgs := checkArgs{}
+	var parameterArgs []string
+	var asExtension bool
+	var serverURL string
+
+	cmd := &cobra.Command{
+		Use:   "check",
+		Short: "Check a Pulumi package schema for errors",
+		Long: `Check a Pulumi package schema for errors.
+
+Ensure that a Pulumi package schema meets the requirements imposed by the
+schema spec as well as additional requirements imposed by the supported
+target languages.
+
+<schema_source> can be a package name, the path to a plugin binary or folder,
+or a JSON/YAML schema file. Pass "-" to read a JSON schema from stdin.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			source := args[0]
+
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			sink := cmdutil.Diag()
+			reg := cmdCmd.NewDefaultRegistry(
+				cmd.Context(), cmdBackend.DefaultLoginManager, pkgWorkspace.Instance, nil, sink, env.Global())
+			pluginHost, err := pkghost.New(context.WithoutCancel(cmd.Context()), sink, sink, nil,
+				pkgWorkspace.EnsureLanguageInstalled, schema.NewLoaderServerFromContext,
+				convert.NewMapperServerFromContext, packageworkspace.NewResolverServer(reg))
+			if err != nil {
+				return err
+			}
+			// host is owned here, closed after the context
+			defer contract.IgnoreClose(pluginHost)
+			pctx, err := plugin.NewContext(cmd.Context(), sink, sink, pluginHost, nil, wd, nil, false, nil)
+			if err != nil {
+				return err
+			}
+			defer contract.IgnoreClose(pctx)
+
+			spec, err := schemaFromSourceOrStdin(cmd, pctx, reg, source, parameterArgs, asExtension, serverURL)
+			if err != nil {
+				return err
+			}
+
+			_, diags, err := schema.BindSpec(*spec, schema.NewPluginLoader(pctx), schema.ValidationOptions{
+				AllowDanglingReferences: schemaCheckArgs.allowDanglingReferences,
+			})
+			diagWriter := hcl.NewDiagnosticTextWriter(cmd.ErrOrStderr(), nil, 0, true)
+			wrErr := diagWriter.WriteDiagnostics(diags)
+			contract.IgnoreError(wrErr)
+			if err == nil && diags.HasErrors() {
+				return errors.New("schema validation failed")
+			}
+			return err
+		},
+	}
+
+	constrictor.AttachArguments(cmd, &constrictor.Arguments{
+		Arguments: []constrictor.Argument{
+			{Name: "schema-source"},
+			{Name: "provider-parameter"},
+		},
+		Required: 1,
+		Variadic: true,
+	})
+
+	// It's worth mentioning the `--`, as it means that Cobra will stop parsing flags.
+	// In other words, a provider parameter can be `--foo` as long as it's after `--`.
+	cmd.Use = "check <schema-source> [flags] [--] [provider-parameter]..."
+
+	cmd.PersistentFlags().BoolVar(&schemaCheckArgs.allowDanglingReferences, "allow-dangling-references", false,
+		"Whether references to nonexistent types should be considered errors")
+	cmd.Flags().StringVar(&serverURL, "server", "",
+		"A URL to download the plugin from. When set, the schema source is used as the plugin name "+
+			"directly and no package resolution is performed.")
+	packages.AddExtensionFlag(cmd, &parameterArgs, &asExtension)
+
+	return cmd
+}
+
+// schemaFromSourceOrStdin loads a PackageSpec from the given source. If source is "-",
+// the schema is read as JSON from stdin. Otherwise it delegates to SchemaFromSchemaSource
+// which supports files, plugin names, and plugin paths.
+func schemaFromSourceOrStdin(
+	cmd *cobra.Command, pctx *plugin.Context, reg registry.Registry, source string, extraArgs []string,
+	asExtension bool, pluginDownloadURL string,
+) (*schema.PackageSpec, error) {
+	if source == "-" {
+		return schemaFromStdin(cmd)
+	}
+
+	parameters := &plugin.ParameterizeArgs{Args: extraArgs}
+	spec, _, err := packages.SchemaFromSchemaSource(pkgWorkspace.Instance, pctx, source, parameters,
+		reg, env.Global(), 0 /* unbounded concurrency */, asExtension, pluginDownloadURL)
+	if err != nil {
+		return nil, err
+	}
+	return spec, nil
+}
+
+func schemaFromStdin(cmd *cobra.Command) (*schema.PackageSpec, error) {
+	b, err := io.ReadAll(cmd.InOrStdin())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read schema from stdin: %w", err)
+	}
+
+	var spec schema.PackageSpec
+	if err := json.Unmarshal(b, &spec); err != nil {
+		// Fall back to YAML if JSON parsing fails.
+		if yamlErr := yaml.Unmarshal(b, &spec); yamlErr != nil {
+			return nil, fmt.Errorf("failed to unmarshal schema: %w", err)
+		}
+	}
+	return &spec, nil
+}

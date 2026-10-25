@@ -1,0 +1,11 @@
+{
+    "name": "pulumi-resource-testcomponent",
+    "main": "index.js",
+    "devDependencies": {
+        "typescript": "3.9.10",
+        "@types/node": "ts3.9"
+    },
+    "peerDependencies": {
+        "@pulumi/pulumi": "latest"
+    }
+}

@@ -1,0 +1,153 @@
+// Copyright 2022, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package test
+
+import (
+	"encoding/json"
+	"maps"
+	"os"
+	"path/filepath"
+	"testing"
+
+	mapset "github.com/deckarep/golang-set/v2"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/pulumi/pulumi/pkg/v3/testing/integration"
+	ptesting "github.com/pulumi/pulumi/sdk/v3/go/common/testing"
+)
+
+func GenerateNodeJSBatchTest(t *testing.T, rootDir string, genProgram GenProgram, testCases []ProgramTest) {
+	TestProgramCodegen(t,
+		ProgramCodegenOptions{
+			Language:   "nodejs",
+			Extension:  "ts",
+			OutputFile: "index.ts",
+			Check: func(t *testing.T, path string, dependencies mapset.Set[string]) {
+				checkNodeJS(t, path, dependencies, true)
+			},
+			GenProgram: genProgram,
+			TestCases:  testCases,
+		})
+}
+
+func GenerateNodeJSYAMLBatchTest(t *testing.T, rootDir string, genProgram GenProgram) {
+	t.Chdir(filepath.Join(rootDir, "pkg", "codegen", "nodejs"))
+
+	TestProgramCodegen(t,
+		ProgramCodegenOptions{
+			Language:   "nodejs",
+			Extension:  "ts",
+			OutputFile: "index.ts",
+			Check: func(t *testing.T, path string, dependencies mapset.Set[string]) {
+				checkNodeJS(t, path, dependencies, true)
+			},
+			GenProgram: genProgram,
+			TestCases:  PulumiPulumiYAMLProgramTests,
+		})
+}
+
+func checkNodeJS(t *testing.T, path string, dependencies mapset.Set[string], linkLocal bool) {
+	dir := filepath.Dir(path)
+
+	removeFile := func(name string) {
+		path := filepath.Join(dir, name)
+		if err := os.Remove(path); !os.IsNotExist(err) {
+			require.NoError(t, err, "Failed to delete '%s'", path)
+		}
+	}
+
+	// We delete and regenerate package files for each run.
+	removeFile("package-lock.json")
+	removeFile("package.json")
+	removeFile("tsconfig.json")
+
+	// Write out package.json
+	pkgs := nodejsPackages(t, dependencies)
+	pkgInfo := npmPackage{
+		Dependencies: map[string]string{
+			"@pulumi/pulumi": "latest",
+		},
+		DevDependencies: map[string]string{
+			"@types/node": "^17.0.14",
+			"typescript":  "^4.5.5",
+		},
+	}
+	maps.Copy(pkgInfo.Dependencies, pkgs)
+	pkgJSON, err := json.MarshalIndent(pkgInfo, "", "    ")
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(dir, "package.json"), pkgJSON, 0o600)
+	require.NoError(t, err)
+
+	tsConfig := map[string]string{}
+	tsConfigJSON, err := json.MarshalIndent(tsConfig, "", "    ")
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(dir, "tsconfig.json"), tsConfigJSON, 0o600)
+	require.NoError(t, err)
+
+	typeCheckNodeJS(t, path, dependencies, linkLocal)
+}
+
+func typeCheckNodeJS(t *testing.T, path string, _ mapset.Set[string], linkLocal bool) {
+	dir := filepath.Dir(path)
+
+	TypeCheckNodeJSPackage(t, dir, linkLocal)
+}
+
+func TypeCheckNodeJSPackage(t *testing.T, pwd string, linkLocal bool) {
+	if linkLocal {
+		pkgPath := filepath.Join(pwd, "package.json")
+		original, err := os.ReadFile(pkgPath)
+		existed := err == nil
+		t.Cleanup(func() {
+			if existed {
+				require.NoError(t, os.WriteFile(pkgPath, original, 0o600))
+			} else {
+				require.NoError(t, os.RemoveAll(pkgPath))
+			}
+		})
+		ptesting.ConfigureNodejsCoreSDK(t, pwd)
+	}
+	RunCommandWithRetries(t, "npm_install", pwd, 3, "npm", "install")
+	tscOptions := &integration.ProgramTestOptions{
+		// Avoid Out of Memory error on CI:
+		Env: []string{"NODE_OPTIONS=--max_old_space_size=4096"},
+	}
+	RunCommandWithOptions(t, tscOptions, "tsc", pwd, filepath.Join(pwd, "node_modules", ".bin", "tsc"),
+		"--noEmit", "--skipLibCheck", "true", "--skipDefaultLibCheck", "true")
+}
+
+// Returns the nodejs equivalent to the hcl2 package names provided.
+func nodejsPackages(t *testing.T, deps mapset.Set[string]) map[string]string {
+	result := make(map[string]string, deps.Cardinality())
+	for _, d := range mapset.Sorted(deps) {
+		pkgName := "@pulumi/" + d
+		set := func(pkgVersion string) {
+			result[pkgName] = "^" + pkgVersion
+		}
+		switch d {
+		case "random":
+			set(RandomSchema)
+		default:
+			t.Logf("Unknown package requested: %s", d)
+		}
+	}
+	return result
+}
+
+type npmPackage struct {
+	Dependencies    map[string]string `json:"dependencies,omitempty"`
+	DevDependencies map[string]string `json:"devDependencies,omitempty"`
+}

@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "name": "example",
+  "resources": {
+    "example::Foo": {
+      "inputProperties": {
+        "auditConfig": {
+          "$ref": "/nodecompat/v1.0.0/schema.json#/types/nodecompat:index:MyConfig"
+        }
+      },
+      "requiredInputs": [
+        "auditConfig"
+      ]
+    }
+  },
+  "language": {
+    "nodejs": {
+      "compatibility": "kubernetes20",
+      "dependencies": {
+        "@pulumi/nodecompat": "^1.0.0"
+      }
+    }
+  }
+}

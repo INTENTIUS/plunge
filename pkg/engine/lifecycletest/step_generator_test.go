@@ -1,0 +1,666 @@
+// Copyright 2022, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package lifecycletest
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+
+	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+
+	"github.com/blang/semver"
+	. "github.com/pulumi/pulumi/pkg/v3/engine"
+	lt "github.com/pulumi/pulumi/pkg/v3/engine/lifecycletest/framework"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy/deploytest"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/property"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestDuplicateURN tests that duplicate URNs are disallowed.
+func TestDuplicateURN(t *testing.T) {
+	t.Parallel()
+
+	loaders := []*deploytest.ProviderLoader{
+		deploytest.NewProviderLoader("pkgA", semver.MustParse("1.0.0"), func() (plugin.Provider, error) {
+			return &deploytest.Provider{}, nil
+		}),
+	}
+
+	programF := deploytest.NewLanguageRuntimeF(func(_ plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+		_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true)
+		require.NoError(t, err)
+
+		_, err = monitor.RegisterResource("pkgA:m:typA", "resA", true)
+		assert.Error(t, err)
+
+		// Reads use the same URN namespace as register so make sure this also errors
+		_, _, err = monitor.ReadResource("pkgA:m:typA", "resA", "id", "", resource.PropertyMap{}, "", "", "", nil, "", "")
+		assert.Error(t, err)
+
+		return nil
+	})
+	hostF := deploytest.NewPluginHostF(nil, nil, programF, nil, nil, loaders...)
+
+	p := &lt.TestPlan{
+		Options: lt.TestUpdateOptions{T: t, HostF: hostF},
+	}
+
+	project := p.GetProject()
+	_, err := lt.TestOp(Update).Run(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient, nil)
+	assert.Error(t, err)
+}
+
+// TestDuplicateAlias tests that multiple new resources may not claim to be aliases for the same old resource.
+func TestDuplicateAlias(t *testing.T) {
+	t.Parallel()
+
+	loaders := []*deploytest.ProviderLoader{
+		deploytest.NewProviderLoader("pkgA", semver.MustParse("1.0.0"), func() (plugin.Provider, error) {
+			return &deploytest.Provider{}, nil
+		}),
+	}
+
+	program := func(monitor *deploytest.ResourceMonitor) error {
+		_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true)
+		require.NoError(t, err)
+		return nil
+	}
+
+	runtimeF := deploytest.NewLanguageRuntimeF(func(_ plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+		return program(monitor)
+	})
+	hostF := deploytest.NewPluginHostF(nil, nil, runtimeF, nil, nil, loaders...)
+
+	p := &lt.TestPlan{
+		Options: lt.TestUpdateOptions{T: t, HostF: hostF},
+	}
+	resURN := p.NewURN("pkgA:m:typA", "resA", "")
+
+	project := p.GetProject()
+	snap, err := lt.TestOp(Update).RunStep(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient, nil, "0")
+	require.NoError(t, err)
+
+	program = func(monitor *deploytest.ResourceMonitor) error {
+		_, err := monitor.RegisterResource("pkgA:m:typA", "resB", true, deploytest.ResourceOptions{
+			AliasURNs: []resource.URN{resURN},
+		})
+		require.NoError(t, err)
+
+		_, err = monitor.RegisterResource("pkgA:m:typA", "resC", true, deploytest.ResourceOptions{
+			AliasURNs: []resource.URN{resURN},
+		})
+		assert.Error(t, err)
+		return nil
+	}
+
+	_, err = lt.TestOp(Update).RunStep(project, p.GetTarget(t, snap), p.Options, false, p.BackendClient, nil, "1")
+	assert.Error(t, err)
+}
+
+func TestSecretMasked(t *testing.T) {
+	t.Parallel()
+
+	loaders := []*deploytest.ProviderLoader{
+		deploytest.NewProviderLoader("pkgA", semver.MustParse("1.0.0"), func() (plugin.Provider, error) {
+			return &deploytest.Provider{
+				CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+					// Return the secret value as an unmasked output. This should get masked by the engine.
+					return plugin.CreateResponse{
+						ID: "id",
+						Properties: property.NewMap(map[string]property.Value{
+							"shouldBeSecret": property.New("bar"),
+						}),
+						Status: resource.StatusOK,
+					}, nil
+				},
+			}, nil
+		}),
+	}
+
+	programF := deploytest.NewLanguageRuntimeF(func(_ plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+		_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true, deploytest.ResourceOptions{
+			Inputs: resource.PropertyMap{
+				"shouldBeSecret": resource.MakeSecret(resource.NewProperty("bar")),
+			},
+		})
+		require.NoError(t, err)
+
+		return nil
+	})
+	hostF := deploytest.NewPluginHostF(nil, nil, programF, nil, nil, loaders...)
+
+	p := &lt.TestPlan{
+		// Skip display tests because secrets are serialized with the blinding crypter and can't be restored
+		Options: lt.TestUpdateOptions{T: t, HostF: hostF, SkipDisplayTests: true},
+	}
+
+	project := p.GetProject()
+	snap, err := lt.TestOp(Update).Run(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient, nil)
+	require.NoError(t, err)
+
+	require.NotNil(t, snap)
+	if snap != nil {
+		assert.True(t, snap.Resources[1].Outputs["shouldBeSecret"].IsSecret())
+	}
+}
+
+// TestReadReplaceStep creates a resource and then replaces it with a read resource.
+func TestReadReplaceStep(t *testing.T) {
+	t.Parallel()
+
+	// Create resource.
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+				return plugin.CreateResponse{
+					ID:         "created-id",
+					Properties: req.Properties,
+					Status:     resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true)
+			require.NoError(t, err)
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+			require.NotNil(t, snap)
+
+			assert.Nil(t, snap.VerifyIntegrity())
+			require.Len(t, snap.Resources, 2)
+			assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+			assert.False(t, snap.Resources[1].External)
+
+			// ReadReplace resource.
+			lt.NewTestBuilder(t, snap).
+				WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+					ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+						return plugin.ReadResponse{
+							ReadResult: plugin.ReadResult{Outputs: new(property.Map{})},
+							Status:     resource.StatusOK,
+						}, nil
+					},
+				}).
+				RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+					_, _, err := monitor.ReadResource("pkgA:m:typA", "resA", "read-id", "", nil, "", "", "", nil, "", "")
+					require.NoError(t, err)
+					return nil
+				}, false).
+				Then(func(snap *deploy.Snapshot, err error) {
+					require.NoError(t, err)
+
+					require.NotNil(t, snap)
+					assert.Nil(t, snap.VerifyIntegrity())
+					require.Len(t, snap.Resources, 2)
+					assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+					assert.True(t, snap.Resources[1].External)
+				})
+		})
+}
+
+func TestRelinquishStep(t *testing.T) {
+	t.Parallel()
+
+	const resourceID = "my-resource-id"
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+				// Should match the ReadResource resource ID.
+				return plugin.CreateResponse{
+					ID:         resourceID,
+					Properties: req.Properties,
+					Status:     resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true)
+			require.NoError(t, err)
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NotNil(t, snap)
+			assert.Nil(t, snap.VerifyIntegrity())
+			require.Len(t, snap.Resources, 2)
+			assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+			assert.False(t, snap.Resources[1].External)
+
+			lt.NewTestBuilder(t, snap).
+				WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+					ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+						return plugin.ReadResponse{
+							ReadResult: plugin.ReadResult{Outputs: new(property.Map{})},
+							Status:     resource.StatusOK,
+						}, nil
+					},
+				}).
+				RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+					_, _, err := monitor.ReadResource("pkgA:m:typA", "resA", resourceID, "", nil, "", "", "", nil, "", "")
+					require.NoError(t, err)
+					return nil
+				}, true).
+				Then(func(snap *deploy.Snapshot, err error) {
+					require.NoError(t, err)
+
+					require.NotNil(t, snap)
+					assert.Nil(t, snap.VerifyIntegrity())
+					require.Len(t, snap.Resources, 2)
+					assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+					assert.True(t, snap.Resources[1].External)
+				})
+		})
+}
+
+func TestTakeOwnershipStep(t *testing.T) {
+	t.Parallel()
+
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+				return plugin.ReadResponse{
+					ReadResult: plugin.ReadResult{Outputs: new(property.Map{})},
+					Status:     resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, _, err := monitor.ReadResource("pkgA:m:typA", "resA", "my-resource-id", "", nil, "", "", "", nil, "", "")
+			require.NoError(t, err)
+			return nil
+		}, false).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+
+			require.NotNil(t, snap)
+			assert.Nil(t, snap.VerifyIntegrity())
+			require.Len(t, snap.Resources, 2)
+			assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+			assert.True(t, snap.Resources[1].External)
+
+			// Create new resource for this snapshot.
+			lt.NewTestBuilder(t, snap).
+				WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+					CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+						// Should match the ReadF resource ID.
+						return plugin.CreateResponse{
+							ID:         "my-resource-id",
+							Properties: req.Properties,
+							Status:     resource.StatusOK,
+						}, nil
+					},
+				}).
+				RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+					_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true)
+					require.NoError(t, err)
+					return nil
+				}, true).
+				Then(func(snap *deploy.Snapshot, err error) {
+					require.NoError(t, err)
+
+					require.NotNil(t, snap)
+					assert.Nil(t, snap.VerifyIntegrity())
+					require.Len(t, snap.Resources, 2)
+					assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+					assert.False(t, snap.Resources[1].External)
+				})
+		})
+}
+
+func TestInitErrorsStep(t *testing.T) {
+	t.Parallel()
+
+	// Create new resource for this snapshot.
+	lt.NewTestBuilder(t, &deploy.Snapshot{
+		Resources: []*pkgresource.State{
+			{
+				Type:    "pulumi:providers:pkgA",
+				URN:     "urn:pulumi:test::test::pulumi:providers:pkgA::default",
+				Custom:  true,
+				Delete:  false,
+				ID:      "935b2216-aec5-4810-96fd-5f6eae57ac88",
+				Outputs: resource.PropertyMap{},
+				Inputs:  resource.PropertyMap{},
+			},
+			{
+				Type:     "pkgA:m:typA",
+				URN:      "urn:pulumi:test::test::pkgA:m:typA::resA",
+				Custom:   true,
+				ID:       "my-resource-id",
+				Provider: "urn:pulumi:test::test::pulumi:providers:pkgA::default::935b2216-aec5-4810-96fd-5f6eae57ac88",
+				InitErrors: []string{
+					`errors should yield an empty update to "continue" awaiting initialization.`,
+				},
+				Outputs: resource.PropertyMap{},
+				Inputs:  resource.PropertyMap{},
+			},
+		},
+	}).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+				return plugin.CreateResponse{
+					ID:         "my-resource-id",
+					Properties: req.Properties,
+					Status:     resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true)
+			require.NoError(t, err)
+			return nil
+		}, false).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+
+			require.NotNil(t, snap)
+			assert.Nil(t, snap.VerifyIntegrity())
+			require.Len(t, snap.Resources, 2)
+			assert.Equal(t, resource.URN("urn:pulumi:test::test::pkgA:m:typA::resA"), snap.Resources[1].URN)
+			assert.Empty(t, snap.Resources[1].InitErrors)
+		})
+}
+
+func TestInitErrorsIgnoreChanges(t *testing.T) {
+	t.Parallel()
+
+	// Create new resource for this snapshot.
+	lt.NewTestBuilder(t, &deploy.Snapshot{
+		Resources: []*pkgresource.State{
+			{
+				Type:    "pulumi:providers:pkgA",
+				URN:     "urn:pulumi:test::test::pulumi:providers:pkgA::default",
+				Custom:  true,
+				Delete:  false,
+				ID:      "935b2216-aec5-4810-96fd-5f6eae57ac88",
+				Outputs: resource.PropertyMap{},
+				Inputs:  resource.PropertyMap{},
+			},
+			{
+				Type:     "pkgA:m:typA",
+				URN:      "urn:pulumi:test::test::pkgA:m:typA::resA",
+				Custom:   true,
+				ID:       "my-resource-id",
+				Provider: "urn:pulumi:test::test::pulumi:providers:pkgA::default::935b2216-aec5-4810-96fd-5f6eae57ac88",
+				InitErrors: []string{
+					`errors should yield an empty update to "continue" awaiting initialization.`,
+				},
+				Outputs: resource.PropertyMap{},
+				Inputs:  resource.PropertyMap{},
+			},
+		},
+	}).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+				return plugin.CreateResponse{
+					ID:         "my-resource-id",
+					Properties: req.Properties,
+					Status:     resource.StatusOK,
+				}, nil
+			},
+			UpdateF: func(_ context.Context, req plugin.UpdateRequest) (plugin.UpdateResponse, error) {
+				if len(req.IgnoreChanges) == 0 {
+					return plugin.UpdateResponse{}, errors.New("expected ignoreChanges")
+				}
+				return plugin.UpdateResponse{Properties: req.OldOutputs}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, err := monitor.RegisterResource("pkgA:m:typA", "resA", true, deploytest.ResourceOptions{
+				IgnoreChanges: []string{"property"},
+			})
+			require.NoError(t, err)
+			return nil
+		}, false)
+}
+
+func TestReadNilOutputs(t *testing.T) {
+	t.Parallel()
+
+	const resourceID = "my-resource-id"
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+				return plugin.ReadResponse{}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, _, _ = monitor.ReadResource("pkgA:m:typA", "resA", resourceID, "", nil, "", "", "", nil, "", "")
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			assert.ErrorContains(t, err,
+				"BAIL: step executor errored: step application failed: resource 'my-resource-id' does not exist")
+		})
+}
+
+// TestExternalEventMetadata tests that the External field on StepEventStateMetadata is set correctly
+// for external (read) resources and non-external (managed) resources.
+func TestExternalEventMetadata(t *testing.T) {
+	t.Parallel()
+
+	loaders := []*deploytest.ProviderLoader{
+		deploytest.NewProviderLoader("pkgA", semver.MustParse("1.0.0"), func() (plugin.Provider, error) {
+			return &deploytest.Provider{
+				CreateF: func(_ context.Context, req plugin.CreateRequest) (plugin.CreateResponse, error) {
+					return plugin.CreateResponse{
+						ID:         "created-id",
+						Properties: req.Properties,
+						Status:     resource.StatusOK,
+					}, nil
+				},
+				ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+					return plugin.ReadResponse{
+						ReadResult: plugin.ReadResult{Outputs: new(property.Map{})},
+						Status:     resource.StatusOK,
+					}, nil
+				},
+			}, nil
+		}),
+	}
+
+	programF := deploytest.NewLanguageRuntimeF(func(_ plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+		// Register a normal (non-external) resource.
+		_, err := monitor.RegisterResource("pkgA:m:typA", "managedRes", true)
+		require.NoError(t, err)
+
+		// Register an external (read) resource.
+		_, _, err = monitor.ReadResource("pkgA:m:typA", "externalRes", "read-id", "", nil, "", "", "", nil, "", "")
+		require.NoError(t, err)
+
+		return nil
+	})
+	hostF := deploytest.NewPluginHostF(nil, nil, programF, nil, nil, loaders...)
+
+	p := &lt.TestPlan{
+		Options: lt.TestUpdateOptions{T: t, HostF: hostF, SkipDisplayTests: true},
+	}
+
+	project := p.GetProject()
+	snap, err := lt.TestOp(Update).Run(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient,
+		func(_ workspace.Project, _ deploy.Target, _ JournalEntries, events []Event, err error) error {
+			foundManaged := false
+			foundExternal := false
+			for _, e := range events {
+				var step StepEventMetadata
+				//nolint:exhaustive // We only care about a subset of events here
+				switch e.Type {
+				case ResourcePreEvent:
+					step = e.Payload().(ResourcePreEventPayload).Metadata
+				case ResourceOutputsEvent:
+					step = e.Payload().(ResourceOutputsEventPayload).Metadata
+				default:
+					continue
+				}
+
+				if step.URN.Name() == "managedRes" && step.New != nil {
+					assert.False(t, step.New.External, "managed resource should not be external")
+					foundManaged = true
+				}
+				if step.URN.Name() == "externalRes" && step.New != nil {
+					assert.True(t, step.New.External, "read resource should be external")
+					foundExternal = true
+				}
+			}
+			assert.True(t, foundManaged, "should have found managed resource event")
+			assert.True(t, foundExternal, "should have found external resource event")
+			return err
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, snap)
+}
+
+// TestExistsResourceTrue tests that ExistsResource returns true for a resource that exists.
+func TestExistsResourceTrue(t *testing.T) {
+	t.Parallel()
+
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+				outputs := property.NewMap(map[string]property.Value{
+					"value": property.New(true),
+				})
+				return plugin.ReadResponse{
+					ReadResult: plugin.ReadResult{
+						Outputs: &outputs,
+					},
+					Status: resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			exists, err := monitor.ExistsResource("pkgA:m:typA", "existing-id", "", nil, "", "", "")
+			if err != nil {
+				return fmt.Errorf("ExistsResource failed: %w", err)
+			}
+			if !exists {
+				return errors.New("expected resource to exist, got false")
+			}
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+			require.NotNil(t, snap)
+			// ExistsResource triggers default provider registration but doesn't register
+			// the checked resource itself. Only the default provider should be present.
+			require.Len(t, snap.Resources, 1)
+			assert.Equal(t, "pulumi:providers:pkgA", string(snap.Resources[0].Type))
+		})
+}
+
+// TestExistsResourceFalse tests that ExistsResource returns false for a resource that does not exist.
+func TestExistsResourceFalse(t *testing.T) {
+	t.Parallel()
+
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+				// Return nil outputs to indicate the resource does not exist.
+				return plugin.ReadResponse{
+					Status: resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			exists, err := monitor.ExistsResource("pkgA:m:typA", "nonexistent-id", "", nil, "", "", "")
+			if err != nil {
+				return fmt.Errorf("ExistsResource failed: %w", err)
+			}
+			if exists {
+				return errors.New("expected resource to not exist, got true")
+			}
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+			require.NotNil(t, snap)
+			require.Len(t, snap.Resources, 1)
+		})
+}
+
+// TestExistsResourceProviderError tests that ExistsResource returns an error when the provider Read errors.
+func TestExistsResourceProviderError(t *testing.T) {
+	t.Parallel()
+
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+				return plugin.ReadResponse{}, errors.New("provider error")
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			_, err := monitor.ExistsResource("pkgA:m:typA", "error-id", "", nil, "", "", "")
+			if err == nil {
+				return errors.New("expected ExistsResource to return an error")
+			}
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+			require.NotNil(t, snap)
+		})
+}
+
+// TestExistsResourceWithProperties tests ExistsResource with state properties passed through.
+func TestExistsResourceWithProperties(t *testing.T) {
+	t.Parallel()
+
+	var readCalled bool
+	lt.NewTestBuilder(t, nil).
+		WithProvider("pkgA", "1.0.0", &deploytest.Provider{
+			ReadF: func(_ context.Context, req plugin.ReadRequest) (plugin.ReadResponse, error) {
+				readCalled = true
+				// Verify that properties were passed through as inputs, with no state.
+				if foo := req.Inputs.Get("foo"); !foo.IsString() || foo.AsString() != "bar" {
+					return plugin.ReadResponse{}, fmt.Errorf("expected foo=bar, got %v", foo)
+				}
+				if req.State.Len() != 0 {
+					return plugin.ReadResponse{}, fmt.Errorf("expected no state, got %v", req.State)
+				}
+				return plugin.ReadResponse{
+					ReadResult: plugin.ReadResult{
+						Outputs: &req.Inputs,
+					},
+					Status: resource.StatusOK,
+				}, nil
+			},
+		}).
+		RunUpdate(func(info plugin.RunInfo, monitor *deploytest.ResourceMonitor) error {
+			props := resource.PropertyMap{
+				"foo": resource.NewProperty("bar"),
+			}
+			exists, err := monitor.ExistsResource("pkgA:m:typA", "prop-id", "", props, "", "", "")
+			if err != nil {
+				return fmt.Errorf("ExistsResource failed: %w", err)
+			}
+			if !exists {
+				return errors.New("expected resource to exist, got false")
+			}
+			return nil
+		}, true).
+		Then(func(snap *deploy.Snapshot, err error) {
+			require.NoError(t, err)
+			assert.True(t, readCalled, "provider Read should have been called")
+		})
+}

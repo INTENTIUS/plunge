@@ -1,0 +1,113 @@
+name: Info
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        description: "GitHub ref to use"
+        type: string
+      is-snapshot:
+        required: false
+        default: true
+        description: "Is this a snapshot release?"
+        type: boolean
+    outputs:
+      version:
+        description: "Version to produce"
+        value: ${{ jobs.info.outputs.version }}
+      release-notes:
+        description: "Release notes for CHANGELOG"
+        value: ${{ jobs.info.outputs.release-notes }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  info:
+    name: gather
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: "${{ fromJSON(steps.version.outputs.version) }}"
+      release-notes: "${{ fromJSON(steps.notes.outputs.release-notes) }}"
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Print rate limits
+        continue-on-error: true
+        run: gh api -i repos/${{ github.repository }}/releases/latest
+      - name: Compute version
+        id: version
+        env:
+          IS_SNAPSHOT: ${{ inputs.is-snapshot }}
+        run: |
+          PLAIN_VERSION="$(./.github/scripts/get-version)"
+          PULUMI_VERSION="${PLAIN_VERSION}"
+
+          if [ "$IS_SNAPSHOT" = "true" ]; then
+            TIMESTAMP=$(date +%s)
+            PULUMI_VERSION="${PULUMI_VERSION%-*}-alpha.$TIMESTAMP"
+          fi
+
+          ./.github/scripts/set-output version "${PULUMI_VERSION}"
+      - uses: ./.github/actions/retry
+        with:
+          action: jdx/mise-action@v2
+          with: |
+            version: 2026.10.3
+            experimental: true
+      - name: Backfill PR numbers in pending changelog entries
+        run: |
+          python3 scripts/changie-pr-lookup.py
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add changelog/pending
+          # Commit changes made so `git status` in "Check version" doesn't always fire.
+          # Allow an empty commit so the step succeeds even when there is nothing to backfill.
+          git commit --allow-empty -m "Backfill PR numbers in pending changelog entries"
+      - name: Extract release notes
+        id: notes
+        run: |
+          CHANGELOG="$(changie batch "${{ fromJSON(steps.version.outputs.version) }}" --dry-run)"
+          ./.github/scripts/set-output release-notes "${CHANGELOG}"
+      - name: Check version
+        if: ${{ !inputs.is-snapshot }}
+        run: |
+          PULUMI_VERSION="${{ fromJSON(steps.version.outputs.version) }}"
+
+          ./.github/scripts/update-versions "${PULUMI_VERSION}"
+
+          ERROR=false
+          if [ -n "$(git status --porcelain)" ]; then
+            ERROR=true
+            echo "::error::Versions in files do not match expected version ${PULUMI_VERSION}."
+            echo "::group::git diff"
+            git diff
+            echo "::endgroup::"
+          fi
+
+          if EXISTING_RELEASE_DRAFT="$(gh release view "v${PULUMI_VERSION}" --json isDraft --jq '.isDraft')"; then
+            if [ "$EXISTING_RELEASE_DRAFT" != "true" ]; then
+              echo "::error::This version has already been released!"
+              echo "::group::Release ${PULUMI_VERSION}"
+              echo "$EXISTING_RELEASE"
+              echo "::endgroup::"
+            else
+              echo "::info Preparing to update draft release ${PULUMI_VERSION}"
+            fi
+          fi
+
+          if $ERROR; then
+            exit 1;
+          fi

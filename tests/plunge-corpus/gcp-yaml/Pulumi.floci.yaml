@@ -1,0 +1,25 @@
+# Stack "floci": every GCP call goes to floci-gcp, never to Google. The token
+# is a fake (floci-gcp doesn't validate credentials unless IAM enforcement is
+# on), and it overrides any application-default credentials on the machine.
+# The endpoint paths are the ones choudoufu's live/e2e/lib/gcp.sh uses for
+# hashicorp/google against the same emulator. A service account's client is
+# the iambeta product, so it reads iamBetaCustomEndpoint, not iamCustomEndpoint
+# (gcp.sh's own note). Services this program doesn't call keep their default
+# endpoints; the fake token fails against googleapis.com. Change the port in
+# both places if floci-gcp listens somewhere other than localhost:4588.
+# encryptionsalt is added by `pulumi stack init floci --secrets-provider
+# passphrase`.
+config:
+  gcp:project: plc-corpus
+  gcp:region: us-central1
+  gcp:zone: us-central1-a
+  gcp:accessToken: chdf-corpus-fake-token
+  gcp:storageCustomEndpoint: http://localhost:4588/storage/v1/
+  gcp:pubsubCustomEndpoint: http://localhost:4588/v1/
+  gcp:iamBetaCustomEndpoint: http://localhost:4588/v1/
+  gcp:cloudBillingCustomEndpoint: http://localhost:4588/v1/
+  gcp:resourceManagerCustomEndpoint: http://localhost:4588/v1/
+  gcp:serviceUsageCustomEndpoint: http://localhost:4588/v1/
+  corpus-gcp-yaml:flociGcpEndpoint: http://localhost:4588
+  corpus-gcp-yaml:prefix: plc-gcp
+encryptionsalt: v1:d9UJOOSVfVM=:v1:fhS3KMtiN225lpBz:FNOqTB6P7IIATKm7ah+M/tvI2wflkQ==

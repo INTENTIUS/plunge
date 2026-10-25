@@ -1,0 +1,6 @@
+name: types_python
+description: A program that uses input/output types.
+runtime:
+  name: python
+  options:
+    toolchain: uv

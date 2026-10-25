@@ -1,0 +1,166 @@
+{
+  "version": "0.0.1",
+  "name": "example",
+  "types": {
+    "example::Pet": {
+      "properties": {
+        "name": {
+          "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+        },
+        "requiredName": {
+          "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+        },
+        "nameArray": {
+          "type": "array",
+          "items": {
+            "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+          }
+        },
+        "requiredNameArray": {
+          "type": "array",
+          "items": {
+            "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+          }
+        },
+        "nameMap": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+          }
+        },
+        "requiredNameMap": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+          }
+        },
+        "age": {
+          "type": "integer"
+        }
+      },
+      "required": ["requiredName", "requiredNameArray", "requiredNameMap"],
+      "type": "object"
+    }
+  },
+  "resources": {
+    "example::Cat": {
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "inputProperties": {
+        "age": {
+          "type": "integer"
+        },
+        "pet": {
+          "$ref": "#/types/example::Pet"
+        }
+      },
+      "type": "object"
+    },
+    "example::Workload": {
+      "properties": {
+        "pod": {
+          "$ref": "/other/v0.1.0/schema.json#/types/other:module:Config"
+        }
+      },
+      "type": "object"
+    },
+    "example::Component": {
+      "properties": {
+        "provider": {
+          "$ref": "/other/v0.1.0/schema.json#/provider"
+        },
+        "res": {
+          "$ref": "/goalias/v1.0.0/schema.json#/resources/goalias:mod1%2Fv1:Res"
+        },
+        "storageClasses": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "/other/v0.1.0/schema.json#/resources/other:index:Thing"
+          }
+        }
+      },
+      "inputProperties": {
+        "metadata": {
+          "$ref": "/other/v0.1.0/schema.json#/types/other:module%2Fsub:Config"
+        },
+        "requiredMetadata": {
+          "$ref": "/other/v0.1.0/schema.json#/types/other:module%2Fsub:Config"
+        },
+        "metadataArray": {
+          "type": "array",
+          "items": {
+            "$ref": "/other/v0.1.0/schema.json#/types/other:module%2Fsub:Config"
+          }
+        },
+        "requiredMetadataArray": {
+          "type": "array",
+          "items": {
+            "$ref": "/other/v0.1.0/schema.json#/types/other:module%2Fsub:Config"
+          }
+        },
+        "metadataMap": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "/other/v0.1.0/schema.json#/types/other:module%2Fsub:Config"
+          }
+        },
+        "requiredMetadataMap": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "/other/v0.1.0/schema.json#/types/other:module%2Fsub:Config"
+          }
+        }
+      },
+      "required": ["res"],
+      "requiredInputs": [
+        "requiredMetadata",
+        "requiredMetadataArray",
+        "requiredMetadataMap"
+      ]
+    }
+  },
+  "functions": {
+    "example::argFunction": {
+      "inputs": {
+        "properties": {
+          "name": {
+            "$ref": "/random/v4.11.2/schema.json#/resources/random:index%2FrandomPet:RandomPet"
+          }
+        }
+      },
+      "outputs": {
+        "properties": {
+          "age": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  },
+  "language": {
+    "csharp": {
+      "packageReferences": {
+        "Pulumi": "3.71",
+        "Pulumi.Goalias": "1.0.0",
+        "ThirdParty.Other": "0.1.0",
+        "Pulumi.Random": "4.11.2"
+      }
+    },
+    "go": {
+      "generateResourceContainerTypes": true,
+      "generateExtraInputTypes": true,
+      "importBasePath": "external-resource-schema/example"
+    },
+    "nodejs": {
+      "dependencies": {
+        "@pulumi/random": "^4.11.2",
+        "@pulumi/goalias": "^1.0.0",
+        "@third-party/pulumi-other": "^0.1.0"
+      }
+    },
+    "python": {}
+  }
+}

@@ -1,0 +1,203 @@
+// Copyright 2025, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package display
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"testing"
+
+	"github.com/pulumi/pulumi/pkg/v3/backend/httpstate/client"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestRenderCopilotErrorSummary(t *testing.T) {
+	t.Parallel()
+
+	summary := "This is a test summary"
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stdout:        buf,
+		Color:         colors.Never,
+		ShowLinkToNeo: true,
+	}
+
+	// isPreview=false, so the suggestion targets a failed update.
+	RenderNeoErrorSummary(&NeoErrorSummaryMetadata{
+		Summary: summary,
+	}, nil, opts, "http://foo.bar/baz", false)
+
+	expectedCopilotSummary := fmt.Sprintf(`Neo Diagnostics%s
+  This is a test summary
+
+  Would you like additional help with this update?
+  http://foo.bar/baz?explainFailure
+  Or run `+"`pulumi neo --debug-update`"+` in your terminal.
+
+`, neoDelimiterEmoji())
+	assert.Equal(t, expectedCopilotSummary, buf.String())
+}
+
+func TestRenderCopilotErrorSummaryPreview(t *testing.T) {
+	t.Parallel()
+
+	// For a failed preview the suggestion targets --debug-preview instead of --debug-update.
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stdout:        buf,
+		Color:         colors.Never,
+		ShowLinkToNeo: true,
+	}
+
+	RenderNeoErrorSummary(&NeoErrorSummaryMetadata{
+		Summary: "This is a test summary",
+	}, nil, opts, "http://foo.bar/baz", true)
+
+	assert.Contains(t, buf.String(), "Or run `pulumi neo --debug-preview` in your terminal.")
+}
+
+func TestRenderCopilotErrorSummaryError(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stdout: buf,
+		Color:  colors.Never,
+	}
+
+	RenderNeoErrorSummary(nil, errors.New("test error"), opts, "http://foo.bar/baz", false)
+
+	expectedCopilotSummaryWithError := fmt.Sprintf(`Neo Diagnostics%s
+  error summarizing update output: test error
+
+`, neoDelimiterEmoji())
+	assert.Equal(t, expectedCopilotSummaryWithError, buf.String())
+}
+
+func TestRenderCopilotErrorSummaryNoSummaryOrError(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stdout: buf,
+		Color:  colors.Never,
+	}
+
+	RenderNeoErrorSummary(nil, nil, opts, "http://foo.bar/baz", false)
+
+	assert.Equal(t, "", buf.String())
+}
+
+// Edge case, just make sure we're handling this gracefully.
+func TestRenderCopilotErrorSummaryWithError(t *testing.T) {
+	t.Parallel()
+
+	summary := "This is a test summary"
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stdout: buf,
+		Color:  colors.Never,
+	}
+
+	RenderNeoErrorSummary(&NeoErrorSummaryMetadata{
+		Summary: summary,
+	}, errors.New("test error"), opts, "http://foo.bar/baz", false)
+
+	expectedCopilotSummaryWithErrorAndSummary := fmt.Sprintf(`Neo Diagnostics%s
+  error summarizing update output: test error
+
+`, neoDelimiterEmoji())
+	assert.Equal(t, expectedCopilotSummaryWithErrorAndSummary, buf.String())
+}
+
+func TestRenderBoldMarkdown(t *testing.T) {
+	t.Parallel()
+
+	summary := `**This** is a test **summary**
+**Resource** has been **created**`
+
+	highlightColor := colors.BrightBlue
+
+	expectedSummary := highlightColor + "This" + colors.Reset + " is a test " + highlightColor + "summary" + colors.Reset +
+		"\n" +
+		highlightColor + "Resource" + colors.Reset + " has been " + highlightColor + "created" + colors.Reset
+	formattedSummary := renderBoldMarkdown(summary, Options{Color: colors.Always})
+	assert.Equal(t, expectedSummary, formattedSummary)
+}
+
+func TestRenderBoldMarkdownNever(t *testing.T) {
+	t.Parallel()
+
+	summary := `This is a test summary
+Resource has been created`
+
+	expectedSummary := "This is a test summary\nResource has been created"
+	formattedSummary := renderBoldMarkdown(summary, Options{Color: colors.Never})
+	assert.Equal(t, expectedSummary, formattedSummary)
+}
+
+func TestRenderNeoTaskCreated(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stderr: buf,
+		Color:  colors.Never,
+	}
+
+	RenderNeoTaskCreated(&client.NeoTaskResponse{TaskID: "task_abc123"}, nil, "https://app.pulumi.com", "test-org", opts)
+
+	expected := fmt.Sprintf(`
+Neo Task Created%s
+  A Neo task has been started to help debug this error.
+  https://app.pulumi.com/test-org/neo/tasks/task_abc123
+
+`, neoDelimiterEmoji())
+	assert.Equal(t, expected, buf.String())
+}
+
+func TestRenderNeoTaskCreatedError(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stderr: buf,
+		Color:  colors.Never,
+	}
+
+	RenderNeoTaskCreated(nil, errors.New("failed to create task"), "https://app.pulumi.com", "test-org", opts)
+
+	expected := fmt.Sprintf(`
+Neo Task%s
+  error creating Neo task: failed to create task
+
+`, neoDelimiterEmoji())
+	assert.Equal(t, expected, buf.String())
+}
+
+func TestRenderNeoTaskCreatedNilResult(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	opts := Options{
+		Stderr: buf,
+		Color:  colors.Never,
+	}
+
+	RenderNeoTaskCreated(nil, nil, "https://app.pulumi.com", "test-org", opts)
+	assert.Equal(t, "", buf.String())
+}

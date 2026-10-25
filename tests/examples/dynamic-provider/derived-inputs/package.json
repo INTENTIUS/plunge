@@ -1,0 +1,16 @@
+{
+    "name": "minimal",
+    "license": "Apache-2.0",
+    "devDependencies": {
+        "@types/minimist": "1.2.5",
+        "@types/node": "8.10.66",
+        "typescript": "3.9.10"
+    },
+    "dependencies": {
+        "assert": "1.5.1",
+        "sleep-promise": "2.0.0"
+    },
+    "peerDependencies": {
+        "@pulumi/pulumi": "latest"
+    }
+}

@@ -1,0 +1,992 @@
+{
+    "config": {
+        "aws:accessKey": "test",
+        "aws:endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sns\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"ssm\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+        "aws:region": "us-east-1",
+        "aws:s3UsePathStyle": "true",
+        "aws:secretKey": "test",
+        "aws:skipCredentialsValidation": "true",
+        "aws:skipMetadataApiCheck": "true",
+        "aws:skipRegionValidation": "true",
+        "aws:skipRequestingAccountId": "true",
+        "corpus:flociEndpoint": "http://localhost:4566",
+        "corpus:prefix": "plc-ts",
+        "corpus:workerCount": "3"
+    },
+    "steps": [
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#38,19",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#38,19"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#601,38"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+                "custom": false,
+                "type": "corpus:index:Site",
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#107,14",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#107,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::west",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::west",
+                "custom": true,
+                "type": "pulumi:providers:aws",
+                "inputs": {
+                    "__internal": {},
+                    "accessKey": "[secret]",
+                    "endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sns\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"ssm\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+                    "region": "us-west-2",
+                    "s3UsePathStyle": "true",
+                    "secretKey": "[secret]",
+                    "skipCredentialsValidation": "true",
+                    "skipMetadataApiCheck": "true",
+                    "skipRegionValidation": "true",
+                    "skipRequestingAccountId": "true",
+                    "version": "7.51.1"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "propertyDependencies": {
+                    "accessKey": [],
+                    "endpoints": [],
+                    "region": [],
+                    "s3UsePathStyle": [],
+                    "secretKey": [],
+                    "skipCredentialsValidation": [],
+                    "skipMetadataApiCheck": [],
+                    "skipRegionValidation": [],
+                    "skipRequestingAccountId": []
+                },
+                "additionalSecretOutputs": [
+                    "accessKey",
+                    "secretKey",
+                    "token"
+                ],
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/provider.ts#148,9",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/provider.ts#148,9"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#112,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sns/topic:Topic::alerts-west",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::west::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sns/topic:Topic::alerts-west",
+                "custom": true,
+                "type": "aws:sns/topic:Topic",
+                "inputs": {
+                    "__defaults": [],
+                    "name": "plc-ts-alerts-west",
+                    "region": "us-west-2",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::west::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "name": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#132,20",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#132,20"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::events",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::events",
+                "custom": true,
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 3600,
+                    "name": "events-73749e9",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "messageRetentionSeconds": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#68,21",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#68,21"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-0",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-0",
+                "custom": true,
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "messageRetentionSeconds",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-0-6020abb",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-index": "0",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "0",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#76,18",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#76,18"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role",
+                "custom": true,
+                "type": "aws:iam/role:Role",
+                "inputs": {
+                    "__defaults": [
+                        "maxSessionDuration",
+                        "path"
+                    ],
+                    "assumeRolePolicy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"}}]}",
+                    "maxSessionDuration": 3600,
+                    "name": "plc-ts-app",
+                    "path": "/",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "assumeRolePolicy": [],
+                    "name": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#29,17",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#29,17"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ssm/parameter:Parameter::db-password",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ssm/parameter:Parameter::db-password",
+                "custom": true,
+                "type": "aws:ssm/parameter:Parameter",
+                "inputs": {
+                    "__defaults": [],
+                    "name": "/plc-ts/db-password",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "type": "SecureString",
+                    "value": "[secret]"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "name": [],
+                    "tags": [],
+                    "type": [],
+                    "value": []
+                },
+                "additionalSecretOutputs": [
+                    "value",
+                    "valueWo"
+                ],
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#139,17",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#139,17"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket",
+                "custom": true,
+                "type": "aws:s3/bucket:Bucket",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "plc-ts-site",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "bucket": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#24,20",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#24,20"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-1",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-1",
+                "custom": true,
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "messageRetentionSeconds",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-1-10da6e5",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-index": "1",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "1",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#76,18",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#76,18"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main",
+                "custom": true,
+                "type": "aws:ec2/vpc:Vpc",
+                "inputs": {
+                    "__defaults": [
+                        "enableDnsSupport"
+                    ],
+                    "cidrBlock": "10.42.0.0/16",
+                    "enableDnsSupport": true,
+                    "region": "us-east-1",
+                    "tags": {
+                        "Name": "plc-ts-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "Name": "plc-ts-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "cidrBlock": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#55,13",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#55,13"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site$aws:s3/bucket:Bucket::docs-assets",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site$aws:s3/bucket:Bucket::docs-assets",
+                "custom": true,
+                "type": "aws:s3/bucket:Bucket",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "plc-ts-docs-assets",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "bucket": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#94,24",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#94,24"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#107,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-2",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-2",
+                "custom": true,
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "messageRetentionSeconds",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-2-166626c",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-index": "2",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "2",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#76,18",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#76,18"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site$aws:sns/topic:Topic::docs-notify",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site$aws:sns/topic:Topic::docs-notify",
+                "custom": true,
+                "type": "aws:sns/topic:Topic",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "name": "docs-notify-0ed971f",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#98,24",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#98,24"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#107,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ec2/securityGroup:SecurityGroup::app-sg",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ec2/securityGroup:SecurityGroup::app-sg",
+                "custom": true,
+                "type": "aws:ec2/securityGroup:SecurityGroup",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "description": "plunge corpus app security group",
+                    "name": "app-sg-a79113d",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts"
+                    },
+                    "vpcId": "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "description": [],
+                    "tags": [],
+                    "vpcId": [
+                        "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main"
+                    ]
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#60,15",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#60,15"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
+            "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
+                "custom": true,
+                "type": "aws:s3/bucketPolicy:BucketPolicy",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                    "policy": "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                    "region": "us-east-1"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket",
+                    "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "bucket": [
+                        "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket"
+                    ],
+                    "policy": [
+                        "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role",
+                        "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket"
+                    ]
+                },
+                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#40,20",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/index.ts#40,20"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-ts/node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        }
+    ],
+    "duration": 4316549625,
+    "changeSummary": {
+        "create": 16
+    }
+}

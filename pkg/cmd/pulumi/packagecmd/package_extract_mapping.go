@@ -1,0 +1,158 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package packagecmd
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
+	cmdCmd "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/cmd"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/constrictor"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/packages"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/packageworkspace"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/convert"
+	"github.com/pulumi/pulumi/pkg/v3/codegen/schema"
+	pkghost "github.com/pulumi/pulumi/pkg/v3/host"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
+	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/spf13/cobra"
+)
+
+func newExtractMappingCommand() *cobra.Command {
+	var out string
+	var serverURL string
+
+	cmd := &cobra.Command{
+		Use:   "get-mapping",
+		Short: "Get the mapping information for a given key from a package",
+		Long: `Get the mapping information for a given key from a package.
+
+<schema_source> can be a package name or the path to a plugin binary. [provider key]
+is the name of the source provider (e.g. "terraform", if a mapping was being requested
+from Terraform to Pulumi). If you need to pass parameters, you must provide a provider
+key. In the event that you wish to pass none, you must therefore explicitly pass an
+empty string.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			key := args[0]
+			source := args[1]
+			var provider string
+			if len(args) > 2 {
+				provider = args[2]
+			}
+
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			sink := cmdutil.Diag()
+			registry := cmdCmd.NewDefaultRegistry(
+				ctx, cmdBackend.DefaultLoginManager, pkgWorkspace.Instance, nil, sink, env.Global())
+			pluginHost, err := pkghost.New(context.WithoutCancel(ctx), sink, sink, nil,
+				pkgWorkspace.EnsureLanguageInstalled, schema.NewLoaderServerFromContext, convert.NewMapperServerFromContext,
+				packageworkspace.NewResolverServer(registry))
+			if err != nil {
+				return err
+			}
+			// host is owned here, closed after the context
+			defer contract.IgnoreClose(pluginHost)
+			pctx, err := plugin.NewContext(
+				ctx, sink, sink, pluginHost, nil, wd, nil, false,
+				nil)
+			if err != nil {
+				return err
+			}
+			defer contract.IgnoreClose(pctx)
+
+			p, _, err := packages.ProviderFromSource(
+				pkgWorkspace.Instance, pctx, source, registry, env.Global(),
+				0 /* unbounded concurrency */, serverURL)
+			if err != nil {
+				return fmt.Errorf("load provider: %w", err)
+			}
+			defer contract.IgnoreClose(p)
+
+			// If provider parameters have been provided, parameterize the provider with them before requesting a mapping.
+			if len(args) > 3 {
+				parameters := args[3:]
+				_, err := p.Parameterize(pctx.Request(), plugin.ParameterizeRequest{
+					Parameters: &plugin.ParameterizeArgs{Args: parameters},
+				})
+				if err != nil {
+					return fmt.Errorf("parameterize: %w", err)
+				}
+			}
+
+			mapping, err := p.GetMapping(ctx, plugin.GetMappingRequest{
+				Key:      key,
+				Provider: provider,
+			})
+			if err != nil {
+				return fmt.Errorf("get mapping: %w", err)
+			}
+
+			if mapping.Provider == "" {
+				return fmt.Errorf("no mapping found for key %q", key)
+			}
+
+			fmt.Fprintf(cmd.ErrOrStderr(), "%s maps to provider %s\n", source, mapping.Provider)
+
+			// If the user has specified out, then write out the mapping data
+			// to a file.
+			if out != "" {
+				err := os.WriteFile(out, mapping.Data, 0o600)
+				if err != nil {
+					return fmt.Errorf("write mapping data file: %w", err)
+				}
+			} else {
+				// Otherwise, just write it to stdout
+				_, err := cmd.OutOrStdout().Write(mapping.Data)
+				if err != nil {
+					return fmt.Errorf("failed to write mapping data to stdout: %w", err)
+				}
+			}
+
+			return nil
+		},
+	}
+
+	constrictor.AttachArguments(cmd, &constrictor.Arguments{
+		Arguments: []constrictor.Argument{
+			{Name: "key"},
+			{Name: "schema-source"},
+			{Name: "provider-key"},
+			{Name: "provider-parameter"},
+		},
+		Required: 2,
+		Variadic: true,
+	})
+
+	// It's worth mentioning the `--`, as it means that Cobra will stop parsing flags.
+	// In other words, a provider parameter can be `--foo` as long as it's after `--`.
+	cmd.Use = "get-mapping <key> <schema-source> [provider-key] [flags] [--] [provider-parameter]..."
+
+	cmd.Flags().StringVarP(&out, "out", "o", "", "The file to write the mapping data to")
+	cmd.Flags().StringVar(&serverURL, "server", "",
+		"A URL to download the plugin from. When set, the provider argument is used as the plugin name "+
+			"directly and no package resolution is performed.")
+
+	return cmd
+}

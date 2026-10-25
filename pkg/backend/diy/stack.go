@@ -1,0 +1,155 @@
+// Copyright 2016, Pulumi Corporation.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package diy
+
+import (
+	"context"
+	"fmt"
+	"sync/atomic"
+	"time"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
+	"github.com/pulumi/pulumi/sdk/v3/go/property"
+
+	"github.com/pulumi/pulumi/pkg/v3/backend"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/pkg/v3/secrets"
+	"github.com/pulumi/pulumi/pkg/v3/secrets/passphrase"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/logging"
+)
+
+// diyStack is a diy stack descriptor.
+type diyStack struct {
+	// the stack's reference (qualified name).
+	ref *diyBackendReference
+	// a snapshot representing the latest deployment state, allocated on first use. It's valid for the
+	// snapshot itself to be nil.
+	snapshot atomic.Pointer[*deploy.Snapshot]
+	// snapshotStackOutputs contains the stack outputs of the latest deployment snapshot, allocated on first use.
+	// It's valid for the outputs property map itself to be nil.
+	snapshotStackOutputs atomic.Pointer[property.Map]
+	// tags contains metadata tags describing additional, extensible properties about this stack.
+	// Loaded on first access and cached.
+	tags atomic.Pointer[map[apitype.StackTagName]string]
+	// a pointer to the backend this stack belongs to.
+	b *diyBackend
+}
+
+func newStack(ref *diyBackendReference, b *diyBackend) backend.Stack {
+	contract.Requiref(ref != nil, "ref", "ref was nil")
+
+	return &diyStack{
+		ref: ref,
+		b:   b,
+	}
+}
+
+func (s *diyStack) Ref() backend.StackReference                 { return s.ref }
+func (s *diyStack) ConfigLocation() backend.StackConfigLocation { return backend.StackConfigLocation{} }
+
+func (s *diyStack) LoadRemoteConfig(ctx context.Context, project *workspace.Project) (*workspace.ProjectStack, error) {
+	return nil, fmt.Errorf("%w for the DIY backend", backend.ErrConfigNotSupported)
+}
+
+func (s *diyStack) SaveRemoteConfig(ctx context.Context, projectStack *workspace.ProjectStack) error {
+	// TODO: https://github.com/pulumi/pulumi/issues/19557
+	return fmt.Errorf("%w for the DIY backend", backend.ErrConfigNotSupported)
+}
+
+func (s *diyStack) Snapshot(ctx context.Context, secretsProvider secrets.Provider) (*deploy.Snapshot, error) {
+	if v := s.snapshot.Load(); v != nil {
+		return *v, nil
+	}
+
+	snap, err := s.b.getSnapshot(ctx, secretsProvider, s.ref)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.snapshot.CompareAndSwap(nil, &snap) {
+		return snap, nil
+	}
+	return *s.snapshot.Load(), nil
+}
+
+func (s *diyStack) SnapshotStackOutputs(
+	ctx context.Context, secretsProvider secrets.Provider,
+) (property.Map, error) {
+	if v := s.snapshotStackOutputs.Load(); v != nil {
+		return *v, nil
+	}
+
+	outputs, err := s.b.getSnapshotStackOutputs(ctx, secretsProvider, s.ref)
+	if err != nil {
+		return property.Map{}, err
+	}
+
+	if s.snapshotStackOutputs.CompareAndSwap(nil, &outputs) {
+		return outputs, nil
+	}
+	return *s.snapshotStackOutputs.Load(), nil
+}
+
+func (s *diyStack) Backend() backend.Backend { return s.b }
+
+func (s *diyStack) Tags() map[apitype.StackTagName]string {
+	if v := s.tags.Load(); v != nil {
+		return *v
+	}
+
+	tags, err := s.b.loadStackTags(context.Background(), s.ref)
+	if err != nil {
+		logging.Errorf("failed to load stack tags: %v", err)
+		return nil
+	}
+
+	s.tags.Store(&tags)
+	return tags
+}
+
+func (s *diyStack) DefaultSecretManager(_ context.Context, info *workspace.ProjectStack) (secrets.Manager, error) {
+	return passphrase.NewPromptingPassphraseSecretsManager(info, false /* rotatePassphraseSecretsProvider */)
+}
+
+type diyStackSummary struct {
+	name backend.StackReference
+	chk  *apitype.CheckpointV3
+}
+
+func newDIYStackSummary(name backend.StackReference, chk *apitype.CheckpointV3) diyStackSummary {
+	return diyStackSummary{name: name, chk: chk}
+}
+
+func (lss diyStackSummary) Name() backend.StackReference {
+	return lss.name
+}
+
+func (lss diyStackSummary) LastUpdate() *time.Time {
+	if lss.chk != nil && lss.chk.Latest != nil {
+		if t := lss.chk.Latest.Manifest.Time; !t.IsZero() {
+			return &t
+		}
+	}
+	return nil
+}
+
+func (lss diyStackSummary) ResourceCount() *int {
+	if lss.chk != nil && lss.chk.Latest != nil {
+		return new(len(lss.chk.Latest.Resources))
+	}
+	return nil
+}

@@ -1,0 +1,6 @@
+name: dynamic-provider-config-main-py
+description: test for dynamic provider configuration within __main__
+runtime:
+  name: python
+  options:
+    toolchain: uv
