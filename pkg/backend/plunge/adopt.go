@@ -44,7 +44,8 @@ package plunge
 // holds the markers in each resource's inputs and on the live objects; stock `pulumi preview --refresh` shows one
 // kind of change, the removal of the plunge-* tags, and `pulumi up` removes them.
 //
-// Identity: pkg/identity (vendored from choudoufu, ./identity) is read for bridged types once their Terraform type
+// Identity: choudoufu's pkg/identity (required at the integration/choudoufu-engine commit 9807fdc1fa, as a
+// pseudo-version in pkg/go.mod) is read for bridged types once their Terraform type
 // is known, at the first run, and its claim is kept on each record (ownershipEntry.Identity), so an operator who backs
 // out and re-imports has the import identity at hand. The checkpoint's provider ID is used as the ID throughout.
 

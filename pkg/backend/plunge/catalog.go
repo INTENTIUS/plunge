@@ -38,8 +38,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/intentius/choudoufu/pkg/identity"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/awsnative"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/identity"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/registry"
 	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
