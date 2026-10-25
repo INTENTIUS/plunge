@@ -123,6 +123,8 @@ require (
 	mvdan.cc/sh/v3 v3.13.1
 )
 
+require github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.8.1 // indirect
+
 require (
 	cel.dev/expr v0.25.2 // indirect
 	cloud.google.com/go v0.123.0 // indirect
