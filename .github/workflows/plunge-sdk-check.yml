@@ -1,0 +1,80 @@
+# Per-language SDK check (INTENTIUS/plunge#5, P-L2).
+#
+# Takes the latest release of each language SDK (nodejs, python, go, dotnet, java, yaml) and checks it
+# against plunge's resource monitor with pkg/cmd/plunge-sdk-check: the minimum CLI version against
+# plunge's Pulumi-compatible version, and every feature the SDK asks about through SupportsFeature or
+# GetDeploymentInfo. A feature plunge lacks is a `FEATURE-MISSING <lang> <sdk-version> <feature>` line,
+# and any such line opens an issue in this repo. It downloads from package registries only; it runs no
+# program, starts no engine and touches no cloud.
+#
+# GitHub runs scheduled workflows from the default branch, so the schedule takes effect once this file is
+# on main. workflow_dispatch runs it from any branch.
+name: plunge-sdk-check
+
+on:
+  schedule:
+    - cron: "41 6 * * *" # daily 06:41 UTC
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch of plunge to check
+        default: integration/pulumi-engine
+
+permissions:
+  contents: read
+  issues: write # open the report issue in this repo
+
+jobs:
+  check:
+    if: github.repository == 'INTENTIUS/plunge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'integration/pulumi-engine' }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: pkg/go.mod
+          cache-dependency-path: pkg/go.sum
+      - name: Check each SDK's latest release
+        working-directory: pkg
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          go run ./cmd/plunge-sdk-check \
+            -pulumi-version "$(../scripts/plunge-version.sh pulumi)" \
+            -out ../sdk-check-verdicts.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: plunge-sdk-check
+          path: sdk-check-verdicts.txt
+      - name: Open or update the issue for missing features
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flagged=$(grep -E '^(FEATURE-MISSING|VERSION-TOO-OLD|SDK-ERROR) ' sdk-check-verdicts.txt || true)
+          if [ -z "$flagged" ]; then
+            echo "ok: no FEATURE-MISSING, VERSION-TOO-OLD or SDK-ERROR lines"
+            exit 0
+          fi
+          {
+            echo "plunge-sdk-check on $(date -u +%Y-%m-%d) flagged these lines (run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}):"
+            echo
+            echo '```'
+            echo "$flagged"
+            grep -E '^SDK-AHEAD ' sdk-check-verdicts.txt || true
+            echo '```'
+            echo
+            echo "SDK-AHEAD means an SDK release is newer than the upstream release plunge is built from;"
+            echo "the next upstream merge (plunge-upstream-merge) usually clears the features it asks for."
+          } > issue.md
+          # One open issue collects the reports; later runs comment on it instead of opening another.
+          open=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search 'in:title "plunge sdk check: missing features"' \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" -R "$GITHUB_REPOSITORY" --body-file issue.md
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "plunge sdk check: missing features" --body-file issue.md
+          fi

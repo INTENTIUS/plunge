@@ -95,6 +95,56 @@ git merge upstream/master
 Then check that no new workflow landed in `.github/workflows` (the `plunge-upstream-guard` workflow
 fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG.md` on its own.
 
+### Scheduled upstream merge
+
+`scripts/plunge-upstream-merge.sh` does the same on a fresh branch. It fetches pulumi/pulumi master
+(fetch only; it never pushes there), cuts `upstream-merge/<date>-<upstream sha>` from
+`origin/integration/pulumi-engine` (`BASE` to change it), merges with a merge commit, moves any workflow
+upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg` and
+`bin/plunge`. On a conflict it lists the files, aborts the merge and stops: a human resolves it. With
+`--push` it pushes the branch to origin, and only `upstream-merge/*` branches. It never merges into the
+integration branch or main. Results go to `plunge-upstream-merge-out/`: `report.md`, and `verdict.txt`
+with one line, `UPSTREAM-MERGE UP-TO-DATE|MERGED|CONFLICT|BUILD-FAILED|ERROR ...`.
+
+The `plunge-upstream-merge` workflow runs it every Monday with `--push` and opens an issue with the
+report. It opens no PR. Pushing upstream's history needs a token with the `workflows` permission, so set
+the `PLUNGE_MERGE_TOKEN` secret; GITHUB_TOKEN can't push commits that touch `.github/workflows`.
+Scheduled workflows only run from the default branch, so the schedule starts once the file is on main.
+
+### SDK check
+
+SDKs ask the engine what it supports, either through GetDeploymentInfo's `SupportedFeatures` (current
+SDKs) or through `SupportsFeature("<id>")` (older ones, and the fallback). `pkg/cmd/plunge-sdk-check`
+takes the latest release of each SDK (nodejs and python from npm and PyPI, go from the Go proxy, dotnet
+from NuGet with the source at its pulumi-dotnet tag, java's sources jar from Maven Central, and yaml
+through the Go SDK version pulumi-yaml's `go.mod` pins), reads the features its code asks for, and asks
+plunge's resource monitor the same questions through its own handlers (`deploy.QueryMonitorFeatures`).
+It also compares the SDK's minimum CLI version with plunge's Pulumi-compatible version.
+
+```sh
+cd pkg
+go run ./cmd/plunge-sdk-check -pulumi-version "$(../scripts/plunge-version.sh pulumi)" -out verdicts.txt
+# a local tree instead of a download:
+go run ./cmd/plunge-sdk-check -lang nodejs -source nodejs=../sdk/nodejs -source-version nodejs=dev \
+  -pulumi-version "$(../scripts/plunge-version.sh pulumi)"
+```
+
+Verdict lines:
+
+```
+MONITOR-FALSE plunge - <feature> (...)        plunge's monitor answers false
+SDK <lang> <version> files=.. legacy=.. enum=.. missing=..
+VERSION-OK|VERSION-TOO-OLD|VERSION-UNKNOWN <lang> <version> min-cli=.. plunge-pulumi=..
+SDK-AHEAD <lang> <version> plunge-pulumi=..   a nodejs/python/go SDK newer than plunge's upstream base
+FEATURE-OK <lang> <version> <feature> (...)
+FEATURE-MISSING <lang> <version> <feature> (...)
+SDK-ERROR <lang> ...                          the release couldn't be fetched, or no feature checks were found
+```
+
+A feature named by an enum value plunge's proto doesn't have yet is `FEATURE-MISSING` with the note
+"unknown to plunge's proto; merge upstream". The `plunge-sdk-check` workflow runs the check daily and
+keeps one open issue for `FEATURE-MISSING`, `VERSION-TOO-OLD` and `SDK-ERROR` lines.
+
 Upstream's README follows.
 
 ---
