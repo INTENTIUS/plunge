@@ -21,11 +21,20 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/pkg/v3/resource/stack"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
 func Write(path string, plan *deploy.Plan, enc config.Encrypter, showSecrets bool) error {
+	return WriteStamped(path, plan, enc, showSecrets, nil)
+}
+
+// WriteStamped is Write with plunge's record-version stamp (INTENTIUS/plunge#7) carried in the plan file. A nil
+// stamp writes the same file Write does.
+func WriteStamped(
+	path string, plan *deploy.Plan, enc config.Encrypter, showSecrets bool, recordVersions map[resource.URN]string,
+) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -36,6 +45,7 @@ func Write(path string, plan *deploy.Plan, enc config.Encrypter, showSecrets boo
 	if err != nil {
 		return err
 	}
+	deploymentPlan.RecordVersions = recordVersions
 	encoder := json.NewEncoder(f)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "    ")
@@ -54,4 +64,19 @@ func Read(path string, dec config.Decrypter) (*deploy.Plan, error) {
 		return nil, err
 	}
 	return stack.DeserializePlan(deploymentPlan, dec)
+}
+
+// ReadStamp returns the plunge record-version stamp a plan file carries, nil when it carries none.
+func ReadStamp(path string) (map[resource.URN]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer contract.IgnoreClose(f)
+
+	var deploymentPlan apitype.DeploymentPlanV1
+	if err := json.NewDecoder(f).Decode(&deploymentPlan); err != nil {
+		return nil, err
+	}
+	return deploymentPlan.RecordVersions, nil
 }

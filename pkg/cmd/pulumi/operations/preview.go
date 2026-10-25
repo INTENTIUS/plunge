@@ -32,6 +32,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/backenderr"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	"github.com/pulumi/pulumi/pkg/v3/backend/secrets"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/autonaming"
 	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
@@ -641,7 +642,18 @@ func NewPreviewCmd() *cobra.Command {
 			default:
 				if planFilePath != "" {
 					encrypter := sm.Encrypter()
-					if err = pkgPlan.Write(planFilePath, plan, encrypter, showSecrets); err != nil {
+					// plunge (INTENTIUS/plunge#7): stamp the plan with the record versions it was computed against.
+					var stamp map[resource.URN]string
+					if stamper, ok := s.Backend().(plunge.PlanStamper); ok && plan != nil {
+						urns := make([]resource.URN, 0, len(plan.ResourcePlans))
+						for urn := range plan.ResourcePlans {
+							urns = append(urns, urn)
+						}
+						if stamp, err = stamper.StampPlan(ctx, s, urns); err != nil {
+							return err
+						}
+					}
+					if err = pkgPlan.WriteStamped(planFilePath, plan, encrypter, showSecrets, stamp); err != nil {
 						return err
 					}
 

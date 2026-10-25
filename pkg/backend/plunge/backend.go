@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
@@ -64,6 +65,18 @@ type plungeBackend struct {
 	store staterecord.Store
 	// newListers builds the bind phase's family listers; tests replace it to stand in for the clouds.
 	newListers func() map[Family]Lister
+
+	// previews is the records each stack's last preview in this process read, by stack reference, for the saved
+	// plan's stamp (planstamp.go).
+	previews sync.Map
+}
+
+func (b *plungeBackend) previewed(ref string) (*loaded, bool) {
+	v, ok := b.previews.Load(ref)
+	if !ok {
+		return nil, false
+	}
+	return v.(*loaded), true
 }
 
 func (b *plungeBackend) listers() map[Family]Lister {
@@ -404,6 +417,9 @@ func (b *plungeBackend) apply(
 	// against as if it were empty.
 	if err := b.requireAdopted(ctx, s, l, op.SecretsProvider); err != nil {
 		return nil, nil, err
+	}
+	if kind == apitype.PreviewUpdate || opts.DryRun {
+		b.previews.Store(ref.String(), l)
 	}
 
 	run, err := ProgramGeneration(ctx, op.Root, nil)

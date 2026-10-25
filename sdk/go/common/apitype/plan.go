@@ -100,4 +100,9 @@ type DeploymentPlanV1 struct {
 
 	// The set of resource plans.
 	ResourcePlans map[resource.URN]ResourcePlanV1 `json:"resourcePlans,omitempty"`
+
+	// RecordVersions is plunge's stamp (INTENTIUS/plunge#7): the version of each resource's record the plan was
+	// computed against on the plunge backend, "" for a resource that had no record. Applying the plan refuses when
+	// any of them has moved. Absent for plans saved against any other backend.
+	RecordVersions map[resource.URN]string `json:"plungeRecordVersions,omitempty"`
 }
