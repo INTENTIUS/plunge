@@ -61,6 +61,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/convert"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/deployment"
 	cmdDo "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/do"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/drift"
 	cmdEnv "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/env"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/events"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/insights"
@@ -494,6 +495,7 @@ func NewPulumiCmd() (*cobra.Command, func()) {
 				operations.NewImportCmd(),
 				operations.NewRefreshCmd(),
 				state.NewStateCmd(),
+				drift.NewDriftCmd(pkgWorkspace.Instance, cmdBackend.DefaultLoginManager),
 				install.NewInstallCmd(pkgWorkspace.Instance),
 			},
 		},
