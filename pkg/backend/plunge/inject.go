@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
@@ -508,16 +507,6 @@ func stringsOf(v any) []string {
 		return v
 	}
 	return nil
-}
-
-// markerSummary renders want for a message.
-func markerSummary(want map[string]string) string {
-	parts := make([]string, 0, len(want))
-	for k, v := range want {
-		parts = append(parts, k+"="+v)
-	}
-	sort.Strings(parts)
-	return strings.Join(parts, ", ")
 }
 
 // mergeOwnership is the ownership a resource record should hold after this run: the ledger's entry when the run
