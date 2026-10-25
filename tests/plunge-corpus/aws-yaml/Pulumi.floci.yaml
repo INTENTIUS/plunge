@@ -2,9 +2,11 @@
 # The fake key pair below overrides any real credentials in the environment
 # or ~/.aws, and the skip flags stop the provider calling STS for the
 # account id or validating the region and credentials. Change the port in
-# both places (aws:endpoints and corpus:flociEndpoint) if floci listens
+# both places (aws:endpoints and corpus-aws-yaml:flociEndpoint) if floci listens
 # somewhere other than localhost:4566. encryptionsalt is added by
-# `pulumi stack init floci --secrets-provider passphrase`.
+# `pulumi stack init floci --secrets-provider passphrase`. YAML programs read
+# their own project namespace, so the corpus keys here are corpus-aws-yaml:*
+# where the other programs use corpus:*.
 config:
   aws:region: us-east-1
   aws:accessKey: test
@@ -22,6 +24,5 @@ config:
       sqs: http://localhost:4566
       ssm: http://localhost:4566
       sts: http://localhost:4566
-  corpus:flociEndpoint: http://localhost:4566
-  corpus:prefix: plc-yaml
-  corpus:workerCount: "3"
+  corpus-aws-yaml:flociEndpoint: http://localhost:4566
+  corpus-aws-yaml:prefix: plc-yaml

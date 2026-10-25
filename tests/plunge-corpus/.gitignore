@@ -7,6 +7,9 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+# The repo root ignores package-lock.json; the corpus keeps it so a
+# baseline names the exact dependency tree it ran with.
+!package-lock.json
 # Local file backends and baseline scratch, if pointed inside the tree.
 .pulumi/
 state/
