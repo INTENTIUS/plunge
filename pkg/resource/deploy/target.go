@@ -42,6 +42,15 @@ type Target struct {
 	// backend sets it so a run from an older program version cannot delete what a newer run created
 	// (INTENTIUS/plunge#6). Nil keeps upstream's behaviour.
 	DeleteGuard func(res *pkgresource.State) string
+
+	// Markers, when set, injects ownership markers into every custom, non-provider resource's inputs after the
+	// stack transforms run, and vets every provider's configuration (plunge_markers.go, INTENTIUS/plunge#7). Nil
+	// keeps upstream's behaviour.
+	Markers MarkerPolicy
+
+	// Binder, when set, binds a planned create to the live object already carrying its markers, and refuses a
+	// collision naming both IDs (plunge_markers.go, INTENTIUS/plunge#7). Nil keeps upstream's behaviour.
+	Binder MarkerBinder
 }
 
 const (
