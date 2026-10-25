@@ -27,6 +27,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/providers"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/config"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/logging"
@@ -184,6 +185,13 @@ func (p *recordPersister) split(d apitype.TypedDeployment) map[string]*desired {
 		r.States = append(r.States, state)
 	}
 	for _, op := range dep.PendingOperations {
+		// Pending operations are kept for custom, non-provider resources only: those are the ones with a cloud
+		// object a crash can leave half made. A provider or a component has nothing outside the records, and
+		// keeping its pending create would stop two runs that both create the default provider or the root
+		// Stack from converging on one record.
+		if !op.Resource.Custom || providers.IsProviderType(op.Resource.Type) {
+			continue
+		}
 		r := rec(op.Resource.URN)
 		r.Pending = append(r.Pending, op)
 	}
@@ -290,9 +298,11 @@ func (p *recordPersister) write(key string, w *desired) error {
 		if !errors.As(err, &conflict) {
 			return fmt.Errorf("plunge: writing the record for %s at %q: %w", w.what, key, err)
 		}
-		if expected == "" {
-			// Two runs created the same record. If what is there says the same thing (the same default
-			// provider with the same deterministic ID, the same root Stack), adopt it and carry on.
+		// Another run wrote the record first. If what is there now says what this run would have written (two
+		// runs creating the same default provider with the same derived ID, or the same root Stack), adopt it
+		// and carry on. A record with a pending operation is never adopted: two runs both creating one custom
+		// resource is a collision, not agreement.
+		if w.resource == nil || len(w.resource.Pending) == 0 {
 			if adopted, aerr := p.adopt(key, w); aerr != nil {
 				return aerr
 			} else if adopted {
@@ -323,6 +333,9 @@ func (p *recordPersister) adopt(key string, w *desired) (bool, error) {
 		var r resourceRecord
 		if err := decodeRecord(key, payload, resourceFormat, &r); err != nil {
 			return false, err
+		}
+		if len(r.Pending) > 0 {
+			return false, nil
 		}
 		theirs.resource = &r
 	case w.output != nil:
