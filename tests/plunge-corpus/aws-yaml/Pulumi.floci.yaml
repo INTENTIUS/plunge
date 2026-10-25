@@ -26,3 +26,4 @@ config:
       sts: http://localhost:4566
   corpus-aws-yaml:flociEndpoint: http://localhost:4566
   corpus-aws-yaml:prefix: plc-yaml
+encryptionsalt: v1:2Re5ZmHObo0=:v1:ViwxFqs2jS8rxAH8:tdtJasPbqBtT/3vHPl8SxjGL1i4cpA==

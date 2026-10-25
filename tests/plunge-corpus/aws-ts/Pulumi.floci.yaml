@@ -25,3 +25,4 @@ config:
   corpus:flociEndpoint: http://localhost:4566
   corpus:prefix: plc-ts
   corpus:workerCount: "3"
+encryptionsalt: v1:DkzVblLtcrs=:v1:72cwv8Hwjf3jscjs:aL3qJr86KPSoEbUpfu+jQn7CT/KrvA==
