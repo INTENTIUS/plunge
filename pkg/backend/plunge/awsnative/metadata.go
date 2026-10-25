@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package awsnative reads pulumi-aws-native's per-type metadata: the CloudFormation type, the tags property and its
-// style, whether tags are create-only, and the primary identifier (INTENTIUS/plunge#2, "aws-native metadata").
+// style, whether tags are create-only, the primary identifier, and the autonamed property (INTENTIUS/plunge#2,
+// "aws-native metadata").
 //
 // aws-native serves none of this over the wire: GetSchema has no tag style or primary identifier and there is no
 // GetMapping. The provider embeds it in its binary and commits it at every release tag as
@@ -45,8 +46,8 @@ const EnvMetadata = "PLUNGE_AWS_NATIVE_METADATA"
 
 // EmbeddedVersion is the aws-native release whose metadata is compiled in, distilled to the fields plunge reads.
 // Regenerate metadata-<version>.json from that tag's provider/cmd/pulumi-resource-aws-native/metadata.json by
-// keeping, per resource, cf, tagsProperty, tagsStyle, primaryIdentifier, hasListHandler, and createOnly
-// restricted to the tags property.
+// keeping, per resource, cf, tagsProperty, tagsStyle, primaryIdentifier, hasListHandler, autoNamingSpec, and
+// createOnly restricted to the tags property.
 const EmbeddedVersion = "1.83.1"
 
 //go:embed metadata-1.83.1.json
@@ -68,6 +69,43 @@ type Resource struct {
 	CreateOnly        []string `json:"createOnly,omitempty"`
 	PrimaryIdentifier []string `json:"primaryIdentifier,omitempty"`
 	HasListHandler    bool     `json:"hasListHandler,omitempty"`
+	// AutoNamingSpec is the property the provider autonames and its length bounds; nil for a type with none.
+	AutoNamingSpec *AutoNamingSpec `json:"autoNamingSpec,omitempty"`
+}
+
+// AutoNamingSpec is metadata.json's autoNamingSpec: which input aws-native autonames, and the bounds it applies.
+type AutoNamingSpec struct {
+	SDKName   string `json:"sdkName"`
+	MinLength int    `json:"minLength,omitempty"`
+	MaxLength int    `json:"maxLength,omitempty"`
+	// NamingTriviaSpec is a suffix the provider appends under a condition (an SQS FIFO queue's ".fifo").
+	NamingTriviaSpec *struct {
+		Trivia struct {
+			Suffix string `json:"suffix,omitempty"`
+		} `json:"trivia"`
+	} `json:"namingTriviaSpec,omitempty"`
+}
+
+// Suffix is the longest suffix the provider may append to an autoname.
+func (s *AutoNamingSpec) Suffix() string {
+	if s == nil || s.NamingTriviaSpec == nil {
+		return ""
+	}
+	return s.NamingTriviaSpec.Trivia.Suffix
+}
+
+// NameIsIdentifier reports whether the type's autonamed property is part of its primary identifier, which is the
+// evidence plunge reads that the cloud refuses a second object with the same name in the same scope.
+func (r Resource) NameIsIdentifier() bool {
+	if r.AutoNamingSpec == nil || r.AutoNamingSpec.SDKName == "" {
+		return false
+	}
+	for _, p := range r.PrimaryIdentifier {
+		if p == r.AutoNamingSpec.SDKName {
+			return true
+		}
+	}
+	return false
 }
 
 // TagsCreateOnly reports whether the type's tags can only be set when it is created: adding a marker to an

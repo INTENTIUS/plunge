@@ -51,6 +51,11 @@ type Target struct {
 	// Binder, when set, binds a planned create to the live object already carrying its markers, and refuses a
 	// collision naming both IDs (plunge_markers.go, INTENTIUS/plunge#7). Nil keeps upstream's behaviour.
 	Binder MarkerBinder
+
+	// Autonames, when set, decides every custom, non-provider resource's autonaming options over the user's
+	// `pulumi:autonaming` config, and may force delete-before-replace (plunge_autonaming.go, INTENTIUS/plunge#7). Nil
+	// keeps upstream's behaviour.
+	Autonames AutonamePolicy
 }
 
 const (

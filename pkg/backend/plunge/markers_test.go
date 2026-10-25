@@ -176,6 +176,7 @@ func run(
 			listers = map[Family]Lister{}
 		}
 		target.Binder = newBinder(cat, marks, listers)
+		target.Autonames = newAutonamePolicy(cat, marks)
 	}
 
 	var manager *backend.SnapshotManager

@@ -451,6 +451,7 @@ func (b *plungeBackend) apply(
 		cat := newCatalog()
 		target.Markers = newMarkerPolicy(cat, snap, marks, b.d)
 		target.Binder = newBinder(cat, marks, b.listers())
+		target.Autonames = newAutonamePolicy(cat, marks)
 	}
 	update := engine.UpdateInfo{Root: op.Root, Project: op.Proj, Target: target}
 

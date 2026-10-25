@@ -101,6 +101,10 @@ type stepGenerator struct {
 	// can't create any new resources.
 	skippedCreates map[resource.URN]bool
 
+	// URNs whose delete-before-replace plunge's autonaming policy forced, warned about once at replacement
+	// (plunge_autonaming.go).
+	plungeDeleteFirst map[resource.URN]bool
+
 	// the set of resources that need to be destroyed in this deployment after running other steps on them.
 	toDelete []*pkgresource.State
 
@@ -1390,6 +1394,10 @@ func (sg *stepGenerator) continueStepsFromImport(
 			goal.DeleteBeforeReplace = &dbr
 		}
 	}
+	// plunge's autonaming policy (INTENTIUS/plunge#7): a deterministic name for a type whose names are unique.
+	if err := sg.plungeAutoname(ctx, urn, goal, inputs, prov, &autonaming); err != nil {
+		return nil, false, err
+	}
 
 	isImplicitlyTargetedResource := sdkproviders.IsProviderType(urn.Type()) ||
 		urn.QualifiedType() == resource.RootStackType
@@ -2156,6 +2164,7 @@ func (sg *stepGenerator) continueStepsFromDiff(diffEvent ContinueResourceDiffEve
 			}
 			if deleteBeforeReplace {
 				logging.V(7).Infof("Planner decided to delete-before-replacement for resource '%v'", urn)
+				sg.warnPlungeDeleteFirst(urn, diff.DeleteBeforeReplace)
 				contract.Assertf(sg.deployment.depGraph != nil,
 					"dependency graph must be available for delete-before-replace")
 

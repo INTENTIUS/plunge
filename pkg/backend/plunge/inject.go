@@ -34,21 +34,8 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 )
 
-// AutonamePolicy is the seam for plunge's autonaming policy, which is NOT decided (INTENTIUS/plunge#7, the
-// maintainer's question on decision 1 of the parity comment on #2): either a deterministic `pulumi:autonaming`
-// pattern with delete-before-replace, or autonamed types classed as server-assigned under C2. Until it is decided,
-// plunge keeps upstream's autonaming (a random suffix per run) and binds an autonamed resource only by its
-// markers, like any other create. UpstreamAutonaming is the only implementation, and nothing else may be built
-// here before the decision.
-type AutonamePolicy interface {
-	// ServerAssigned reports whether t's name is treated as server-assigned for binding and collision purposes.
-	ServerAssigned(t tokens.Type) bool
-}
-
-// UpstreamAutonaming keeps upstream's autonaming and classes no type as server-assigned on account of it.
-type UpstreamAutonaming struct{}
-
-func (UpstreamAutonaming) ServerAssigned(tokens.Type) bool { return false }
+// The autonaming policy, which used to sit here as an undecided seam, is autoname.go: deploy.AutonamePolicy,
+// implemented by autonamePolicy (option A of INTENTIUS/plunge#7, ruled 2026-10-25).
 
 // Ownership is how plunge knows a resource belongs to a stack.
 type Ownership string
@@ -87,6 +74,8 @@ type ownershipEntry struct {
 	Bound resource.ID `json:"bound,omitempty"`
 	// Unlisted says why the type had no consistent lister when it was created, so no bind or collision check ran.
 	Unlisted string `json:"unlisted,omitempty"`
+	// Autoname is where the resource's name came from and whether C1 covers it (autoname.go).
+	Autoname *autonameEntry `json:"autoname,omitempty"`
 }
 
 // ledger is one run's ownership entries, by URN. The persister writes them into the resource records.
@@ -158,11 +147,10 @@ func (e *HiddenMarkersError) Error() string {
 
 // markerPolicy is the plunge backend's deploy.MarkerPolicy.
 type markerPolicy struct {
-	catalog   *catalog
-	autonames AutonamePolicy
-	base      map[resource.URN]*pkgresource.State
-	ledger    *ledger
-	diag      diag.Sink
+	catalog *catalog
+	base    map[resource.URN]*pkgresource.State
+	ledger  *ledger
+	diag    diag.Sink
 }
 
 var _ deploy.MarkerPolicy = (*markerPolicy)(nil)
@@ -176,7 +164,7 @@ func newMarkerPolicy(c *catalog, snap *deploy.Snapshot, l *ledger, d diag.Sink) 
 			}
 		}
 	}
-	return &markerPolicy{catalog: c, autonames: UpstreamAutonaming{}, base: base, ledger: l, diag: d}
+	return &markerPolicy{catalog: c, base: base, ledger: l, diag: d}
 }
 
 func (p *markerPolicy) warn(urn resource.URN, format string, args ...any) {
@@ -523,6 +511,9 @@ func mergeOwnership(prior *ownershipEntry, l *ledger, urn resource.URN) *ownersh
 		}
 		if e.Unlisted == "" {
 			e.Unlisted = prior.Unlisted
+		}
+		if e.Autoname == nil {
+			e.Autoname = prior.Autoname
 		}
 	}
 	return &e
