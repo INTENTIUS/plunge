@@ -71,6 +71,10 @@ func main() {
 		if err != nil {
 			workerCount = 3
 		}
+		eventsRetentionSeconds, err := cfg.TryInt("eventsRetentionSeconds")
+		if err != nil {
+			eventsRetentionSeconds = 3600
+		}
 		// A secret from config when the maintainer set one, else a literal
 		// wrapped as a secret.
 		dbPassword, err := cfg.TrySecret("dbPassword")
@@ -161,7 +165,7 @@ func main() {
 
 		// Autonamed.
 		eventsQueue, err := sqs.NewQueue(ctx, "events", &sqs.QueueArgs{
-			MessageRetentionSeconds: pulumi.Int(3600),
+			MessageRetentionSeconds: pulumi.Int(eventsRetentionSeconds),
 			Tags:                    tags,
 		})
 		if err != nil {

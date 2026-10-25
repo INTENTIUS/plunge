@@ -12,6 +12,7 @@ const cfg = new pulumi.Config("corpus");
 const endpoint = cfg.get("flociEndpoint") ?? "http://localhost:4566";
 const prefix = cfg.get("prefix") ?? "plc-ts";
 const workerCount = cfg.getNumber("workerCount") ?? 3;
+const eventsRetentionSeconds = cfg.getNumber("eventsRetentionSeconds") ?? 3600;
 // A secret from config when the maintainer set one, else a literal wrapped
 // as a secret, so the baseline never depends on a ciphertext in the stack file.
 const dbPassword = cfg.getSecret("dbPassword") ?? pulumi.secret("corpus-placeholder-password");
@@ -65,7 +66,7 @@ const appSg = new aws.ec2.SecurityGroup("app-sg", {
 // Autonamed (C1 vs C2, the open autonaming decision): no name argument, so
 // the engine adds a random suffix in Check.
 const eventsQueue = new aws.sqs.Queue("events", {
-    messageRetentionSeconds: 3600,
+    messageRetentionSeconds: eventsRetentionSeconds,
     tags,
 });
 

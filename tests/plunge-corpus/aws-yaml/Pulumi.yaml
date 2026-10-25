@@ -14,6 +14,9 @@ config:
   prefix:
     type: string
     default: plc-yaml
+  eventsRetentionSeconds:
+    type: integer
+    default: 3600
 
 variables:
   dbPassword:
@@ -28,6 +31,8 @@ resources:
       tags:
         corpus-program: aws-yaml
         corpus-owner: plunge
+    options:
+      version: 7.51.1
 
   app-role:
     type: aws:iam:Role
@@ -44,6 +49,8 @@ resources:
       tags:
         corpus-program: aws-yaml
         corpus-owner: plunge
+    options:
+      version: 7.51.1
 
   # Untaggable (coverage-only).
   site-bucket-policy:
@@ -61,6 +68,8 @@ resources:
                 - s3:GetObject
               Resource:
                 - ${site-bucket.arn}/*
+    options:
+      version: 7.51.1
 
   # Server-assigned IDs (C2).
   main:
@@ -71,6 +80,8 @@ resources:
         corpus-program: aws-yaml
         corpus-owner: plunge
         Name: ${prefix}-main
+    options:
+      version: 7.51.1
 
   app-sg:
     type: aws:ec2:SecurityGroup
@@ -80,15 +91,19 @@ resources:
       tags:
         corpus-program: aws-yaml
         corpus-owner: plunge
+    options:
+      version: 7.51.1
 
   # Autonamed.
   events:
     type: aws:sqs:Queue
     properties:
-      messageRetentionSeconds: 3600
+      messageRetentionSeconds: ${eventsRetentionSeconds}
       tags:
         corpus-program: aws-yaml
         corpus-owner: plunge
+    options:
+      version: 7.51.1
 
   # The other programs' count-like loop, written out.
   worker-0:
@@ -98,6 +113,8 @@ resources:
         corpus-program: aws-yaml
         corpus-owner: plunge
         corpus-index: "0"
+    options:
+      version: 7.51.1
   worker-1:
     type: aws:sqs:Queue
     properties:
@@ -105,6 +122,8 @@ resources:
         corpus-program: aws-yaml
         corpus-owner: plunge
         corpus-index: "1"
+    options:
+      version: 7.51.1
   worker-2:
     type: aws:sqs:Queue
     properties:
@@ -112,6 +131,8 @@ resources:
         corpus-program: aws-yaml
         corpus-owner: plunge
         corpus-index: "2"
+    options:
+      version: 7.51.1
 
   # Explicit provider beside the default one.
   west:
@@ -133,6 +154,8 @@ resources:
           sqs: ${flociEndpoint}
           ssm: ${flociEndpoint}
           sts: ${flociEndpoint}
+    options:
+      version: 7.51.1
 
   alerts-west:
     type: aws:sns:Topic
@@ -142,6 +165,7 @@ resources:
         corpus-program: aws-yaml
         corpus-owner: plunge
     options:
+      version: 7.51.1
       provider: ${west}
 
   # A secret.
@@ -154,6 +178,8 @@ resources:
       tags:
         corpus-program: aws-yaml
         corpus-owner: plunge
+    options:
+      version: 7.51.1
 
 outputs:
   siteBucketName: ${site-bucket.bucket}

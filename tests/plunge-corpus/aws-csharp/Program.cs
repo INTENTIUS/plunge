@@ -13,6 +13,7 @@ return await Deployment.RunAsync(() =>
     var endpoint = cfg.Get("flociEndpoint") ?? "http://localhost:4566";
     var prefix = cfg.Get("prefix") ?? "plc-csharp";
     var workerCount = cfg.GetInt32("workerCount") ?? 3;
+    var eventsRetentionSeconds = cfg.GetInt32("eventsRetentionSeconds") ?? 3600;
     // A secret from config when the maintainer set one, else a literal
     // wrapped as a secret.
     var dbPassword = cfg.GetSecret("dbPassword") ?? Output.CreateSecret("corpus-placeholder-password");
@@ -93,7 +94,7 @@ return await Deployment.RunAsync(() =>
     // Autonamed.
     var eventsQueue = new Aws.Sqs.Queue("events", new()
     {
-        MessageRetentionSeconds = 3600,
+        MessageRetentionSeconds = eventsRetentionSeconds,
         Tags = WithTags(),
     });
 

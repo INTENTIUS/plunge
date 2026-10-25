@@ -14,6 +14,7 @@ cfg = pulumi.Config("corpus")
 endpoint = cfg.get("flociEndpoint") or "http://localhost:4566"
 prefix = cfg.get("prefix") or "plc-python"
 worker_count = cfg.get_int("workerCount") or 3
+events_retention_seconds = cfg.get_int("eventsRetentionSeconds") or 3600
 # A secret from config when the maintainer set one, else a literal wrapped as
 # a secret.
 db_password = cfg.get_secret("dbPassword") or pulumi.Output.secret("corpus-placeholder-password")
@@ -71,7 +72,7 @@ app_sg = aws.ec2.SecurityGroup(
 )
 
 # Autonamed.
-events_queue = aws.sqs.Queue("events", message_retention_seconds=3600, tags=tags)
+events_queue = aws.sqs.Queue("events", message_retention_seconds=events_retention_seconds, tags=tags)
 
 # Count-like loop.
 workers = [
