@@ -48,7 +48,6 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 )
 
 // LiveObject is one live object a lister found carrying the markers asked for.
@@ -215,6 +214,3 @@ func (c *listerCache[T]) get(key string, build func() (*T, error)) (*T, error) {
 	c.items[key] = v
 	return v, nil
 }
-
-// typeModule is a token's module and member for a message.
-func typeModule(t tokens.Type) string { return string(t.Module()) + ":" + string(t.Name()) }
