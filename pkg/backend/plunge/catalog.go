@@ -121,6 +121,25 @@ type TypeInfo struct {
 	Markerless bool
 	// Reason says why Shape is none, unsupported or unknown.
 	Reason string
+
+	// Autoname is what plunge knows about the type's autonamed property (autoname.go).
+	Autoname AutonameInfo
+}
+
+// AutonameInfo is what the schema says about a type's autonamed property.
+type AutonameInfo struct {
+	// Property is the Pulumi input the provider autonames ("name", "bucket", "roleName"); empty when the schema
+	// names none.
+	Property string
+	// MaxLength is the longest name the schema allows, 0 when it does not say. Suffix is what the provider may
+	// append to it (aws-native's ".fifo"), so a name is cut short enough to leave room for it.
+	MaxLength int
+	Suffix    string
+	// Unique reports schema evidence that the cloud refuses a second object of the type with the same name in the
+	// same scope. Evidence names it; Uncovered says why there is none.
+	Unique    bool
+	Evidence  string
+	Uncovered string
 }
 
 // Encoding is how markers are written on the type.
@@ -197,7 +216,10 @@ type bridgeSchema struct {
 }
 
 type bridgeSchemaInfo struct {
-	Name string `json:"name,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Default *struct {
+		AutoNamed bool `json:"autonamed,omitempty"`
+	} `json:"default,omitempty"`
 }
 
 const (
@@ -282,6 +304,7 @@ func (c *catalog) bridged(ctx context.Context, prov plugin.Provider, info *TypeI
 	if m.Provider != nil {
 		schema = m.Provider.Resources[tf]
 	}
+	bridgedAutoname(info, m.Resources[tf].Fields, schema)
 	s, ok := schema[tagsArg]
 	switch {
 	case schema == nil:
@@ -339,6 +362,7 @@ func nativeInfo(md *awsnative.Metadata, info *TypeInfo) {
 		info.Reason = fmt.Sprintf("%s's tags are of style %q, which plunge does not write", r.CF, r.TagsStyle)
 	}
 	info.CreateOnly = r.TagsCreateOnly()
+	nativeAutoname(r, info)
 }
 
 // kubernetesInfo places markers in metadata.labels, which every object kind has. The Helm release type is a
