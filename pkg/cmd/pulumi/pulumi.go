@@ -84,6 +84,7 @@ import (
 	cmdVersion "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/version"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/whoami"
 	backendlogging "github.com/pulumi/pulumi/pkg/v3/logging"
+	"github.com/pulumi/pulumi/pkg/v3/plunge"
 	"github.com/pulumi/pulumi/pkg/v3/util/tracing"
 	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
@@ -258,12 +259,16 @@ func NewPulumiCmd() (*cobra.Command, func()) {
 	_, _, _ = term.StdStreams()
 
 	cmd = &cobra.Command{
-		Use:           "pulumi",
-		Short:         "Pulumi command line",
-		Version:       version.Version,
+		Use:           plunge.BinaryName,
+		Short:         "plunge command line",
+		Version:       plunge.VersionString(),
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		Long: "Pulumi - Modern Infrastructure as Code\n" +
+		Long: "plunge - Pulumi with per-resource ownership\n" +
+			"\n" +
+			"plunge is a fork of Pulumi (https://github.com/INTENTIUS/plunge). It runs Pulumi programs\n" +
+			"and providers unchanged. Command examples below and in subcommand help use the upstream\n" +
+			"name `pulumi`; run them as `plunge`.\n" +
 			"\n" +
 			"To begin working with Pulumi, run the `pulumi new` command:\n" +
 			"\n" +
@@ -299,7 +304,7 @@ func NewPulumiCmd() (*cobra.Command, func()) {
 				parseRootPersistentFlags(cmd.Root().PersistentFlags(), args)
 			}
 
-			commandPath := strings.TrimSpace(strings.TrimPrefix(cmd.CommandPath(), "pulumi"))
+			commandPath := strings.TrimSpace(strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()))
 			client.SetUserAgentCommand(commandPath)
 			client.SetUserAgentAIAgent(agentdetect.Detect(os.Getenv))
 
@@ -408,7 +413,8 @@ func NewPulumiCmd() (*cobra.Command, func()) {
 				}
 			}
 
-			if env.SkipUpdateCheck.Value() {
+			// plunge: upstream's update check points at pulumi releases; see plunge.UpstreamUpdateCheck.
+			if !plunge.UpstreamUpdateCheck || env.SkipUpdateCheck.Value() {
 				slog.InfoContext(ctx, "skipping update check")
 			} else {
 				// Run the version check in parallel so that it doesn't block executing the command.
@@ -705,7 +711,8 @@ func getCLIMetadata(cmd *cobra.Command, environ []string, args []string) map[str
 		return nil
 	}
 
-	command := cmd.CommandPath()
+	// Metadata keeps upstream's command names ("pulumi up") whatever the binary is called.
+	command := "pulumi" + strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name())
 
 	var flags strings.Builder
 	i := 0

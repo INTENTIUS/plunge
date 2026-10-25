@@ -1,7 +1,101 @@
 # plunge
-Pulumi with per-resource ownership: marker tags and a per-resource record store instead of one locked checkpoint
 
-Forked from [pulumi/pulumi](https://github.com/pulumi/pulumi) at `7e12743da8`, with upstream history kept and an `upstream` remote. Upstream's README follows.
+Pulumi with per-resource ownership: marker tags and a per-resource record store instead of one locked
+checkpoint. plunge is to Pulumi what choudoufu is to Terraform: the engine tier for Pulumi teams on
+chant. The plan is in INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
+
+At this stage (P-L0, INTENTIUS/plunge#3) plunge is stock Pulumi under another name. It runs the same
+programs, SDKs, language hosts and providers. The state backend rewrite comes in later milestones.
+
+## Fork point
+
+Forked from [pulumi/pulumi](https://github.com/pulumi/pulumi) master at `7e12743da8` (2026-10-25,
+after the 3.272.0 release), with upstream history kept. The `upstream` remote points at pulumi/pulumi
+and upstream is merged in, never rebased.
+
+Choices made to keep those merges cheap:
+
+- Go module paths stay `github.com/pulumi/pulumi/...`, and the CLI's main package stays at
+  `pkg/cmd/pulumi`. Only the output name changes, to `plunge`.
+- plunge-only code goes in new files where it can: `pkg/plunge/`, `build/plunge.mk`,
+  `.goreleaser.plunge.yml`, `scripts/plunge-*.sh`. Upstream's `.goreleaser.yml` and Makefile targets
+  are left in place.
+- Plugin protocol names are unchanged. Language hosts are still `pulumi-language-<lang>` and providers
+  `pulumi-resource-<name>`, because SDKs and providers look them up by those names.
+- Upstream's GitHub workflows are kept, inactive, in `.github/upstream-workflows/`. See the README there.
+
+## Versions
+
+A plunge build carries two versions:
+
+- plunge's own, from `.plunge-version` (or `PLUNGE_VERSION`), and
+- the Pulumi-compatible version, the newest upstream release merged in (the top heading of
+  `CHANGELOG.md`, or `PULUMI_VERSION`). This is what the engine reports wherever upstream reports
+  "the CLI version": a project's `requiredPulumiVersion`, a plugin's `pulumiVersionRange`, and the
+  `RequirePulumiVersion` RPC that SDKs call (`pulumi.requirePulumiVersion` and friends).
+
+`scripts/plunge-version.sh plunge|pulumi|ldflags` prints them.
+
+```console
+$ plunge version
+plunge v0.1.0-dev.0
+pulumi v3.272.0
+$ plunge version --pulumi-compatible
+v3.272.0
+```
+
+Invoked through a symlink named `pulumi` (for Automation API, which runs `pulumi version` and parses
+a bare semver), `version` prints only the Pulumi-compatible version.
+
+plunge doesn't run upstream's update check, which would point at pulumi's releases and installers.
+
+## Building
+
+Tools come from `.mise.toml`, as upstream (see `CLAUDE.md`).
+
+```sh
+make plunge                  # bin/plunge, both versions stamped
+make build                   # upstream's build (CLI, SDKs, language hosts) plus bin/plunge
+make plunge_language_hosts   # fetch the bundled dotnet and yaml hosts into bin/ for this machine
+mise run plunge-build        # bin/plunge without make
+```
+
+A plain `cd pkg && go build -o plunge ./cmd/pulumi` works too, but leaves both versions empty, which
+turns the version checks off, as on an upstream dev build.
+
+## Language hosts
+
+The release archive is laid out like upstream's. It bundles the in-repo hosts (nodejs, bun, python,
+go, pcl) built from this tree, plus the dotnet and yaml hosts at the versions pinned in
+`scripts/get-language-providers.sh`, downloaded from their pulumi releases. Java and HCL are not
+bundled: the CLI installs them on first use at the versions pinned in `pkg/util/plugin.go`
+(`knownLanguageRuntimes`). The bundled hosts sit next to the `plunge` binary, which is where the CLI
+looks for them.
+
+```sh
+./scripts/prep-for-goreleaser.sh
+PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/plunge-version.sh plunge) \
+  goreleaser release -f .goreleaser.plunge.yml --snapshot --clean
+```
+
+## Baseline against stock Pulumi
+
+`scripts/plunge-baseline.sh` runs `plunge preview` and stock `pulumi preview` on each program in
+`tests/plunge-corpus/` against the local emulators and compares the two. The acceptance for P-L0 is
+that they match at a later upstream merge, not only at the fork point. The maintainer runs it; see the
+script's header for its inputs.
+
+## Merging upstream
+
+```sh
+git fetch upstream
+git merge upstream/master
+```
+
+Then check that no new workflow landed in `.github/workflows` (the `plunge-upstream-guard` workflow
+fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG.md` on its own.
+
+Upstream's README follows.
 
 ---
 
