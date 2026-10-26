@@ -1,0 +1,31 @@
+# What plunge adds on top of upstream's go.mod files (INTENTIUS/plunge#26).
+#
+# scripts/plunge-upstream-merge.sh reads this file when an upstream merge conflicts in a go.mod or go.sum.
+# It takes upstream's file, re-applies each entry below for that module, and runs `go mod tidy` there.
+# Versions are not written here: each entry takes its version (or replace target) from the fork's own
+# go.mod on the base branch, so bumping a fork dependency never needs an edit to this file. A require is
+# only raised, never lowered: when upstream already requires a newer version, upstream's stays.
+#
+# One entry per line:
+#   <module dir> go                 keep the fork's go directive when it is newer than upstream's
+#   <module dir> require <path>     a module plunge itself imports and upstream doesn't require
+#   <module dir> replace <path>     a replace plunge adds (none today)
+#
+# Add a line here whenever plunge adds a direct dependency or a replace to one of these modules. Modules
+# that upstream doesn't have (tests/plunge-corpus/*) can't conflict and aren't listed.
+
+pkg go
+pkg require github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage
+pkg require github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
+pkg require github.com/intentius/choudoufu
+pkg require github.com/mitchellh/go-homedir
+pkg require k8s.io/api
+pkg require k8s.io/apimachinery
+pkg require k8s.io/client-go
+pkg require sigs.k8s.io/structured-merge-diff/v6
+
+tests go
+sdk/pcl go
+sdk/go/pulumi-language-go go
+sdk/nodejs/cmd/pulumi-language-nodejs go
+sdk/python/cmd/pulumi-language-python go
