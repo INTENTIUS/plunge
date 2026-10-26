@@ -49,6 +49,14 @@ a bare semver), `version` prints only the Pulumi-compatible version.
 
 plunge doesn't run upstream's update check, which would point at pulumi's releases and installers.
 
+The generated Automation API wrappers (`sdk/go/auto/automation`, `sdk/nodejs/automation/interface`,
+`sdk/python/lib/pulumi/automation/interface`) are upstream's, regenerated on each upstream merge.
+plunge's own commands, `drift` and `stack adopt`, are in hand-written files beside them: Go's
+`API.Drift` and `API.StackAdopt` in `sdk/go/auto/automation/plunge_commands.go` (options in
+`optplungedrift` and `optplungestackadopt`), and a `PlungeAPI` class, the generated API plus `drift`
+and `stackAdopt` / `stack_adopt`, in `sdk/nodejs/automation/plunge.ts` and
+`sdk/python/lib/pulumi/automation/plunge.py`.
+
 ## Building
 
 Tools come from `.mise.toml`, as upstream (see `CLAUDE.md`).
