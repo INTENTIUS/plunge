@@ -40,6 +40,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	deployproviders "github.com/pulumi/pulumi/pkg/v3/resource/deploy/providers"
 	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
 	"github.com/pulumi/pulumi/pkg/v3/resource/stack"
@@ -74,6 +75,9 @@ type DriftRequest struct {
 	Command string
 	// Now is the clock; time.Now when nil.
 	Now func() time.Time
+	// BackendClient is what the builtin `pulumi` provider reads other stacks through (a StackReference's Read).
+	// ReadResourceDrift sets it from the backend when nil.
+	BackendClient deploy.BackendClient
 }
 
 // DriftResult is the record the read produced and what the read cost.
@@ -175,6 +179,9 @@ func ReadResourceDrift(
 	keys, err := keysFor(ref)
 	if err != nil {
 		return nil, err
+	}
+	if req.BackendClient == nil {
+		req.BackendClient = backend.NewBackendClient(pb, req.SecretsProvider)
 	}
 	return resourceDrift(ctx, pb.store, keys, req)
 }
@@ -330,9 +337,27 @@ func resourceDrift(ctx context.Context, store staterecord.Store, keys stackKeys,
 			ref.URN(), ref.ID(), req.URN)
 	}
 
+	// The resource's views, each from its own record by key, for Read's old views (a refresh step passes them too).
+	var viewStates []apitype.ResourceV3
+	viewSecrets := false
+	for _, viewURN := range res.Views {
+		viewRec, viewPayload, err := readResourceRecord(ctx, counted, keys, viewURN)
+		if err != nil {
+			var none *NoRecordError
+			if errors.As(err, &none) {
+				continue // the view was deleted since the record listed it
+			}
+			return nil, err
+		}
+		if v, ok := liveState(viewRec); ok && v.ViewOf == req.URN {
+			viewStates = append(viewStates, v)
+			viewSecrets = viewSecrets || holdsSecret(viewPayload)
+		}
+	}
+
 	// The secrets record is read only when a record holds a ciphertext: most resources carry none.
 	var dec config.Decrypter = config.NewPanicCrypter()
-	if holdsSecret(resPayload) || holdsSecret(provPayload) {
+	if holdsSecret(resPayload) || holdsSecret(provPayload) || viewSecrets {
 		if dec, err = recordDecrypter(ctx, counted, keys, req.SecretsProvider); err != nil {
 			return nil, err
 		}
@@ -346,10 +371,30 @@ func resourceDrift(ctx context.Context, store staterecord.Store, keys stackKeys,
 		return nil, fmt.Errorf("plunge: decoding the recorded state of the provider %s: %w", ref.URN(), err)
 	}
 
+	oldViews := make([]plugin.View, 0, len(viewStates))
+	for _, v := range viewStates {
+		vs, err := stack.DeserializeResource(v, dec)
+		if err != nil {
+			return nil, fmt.Errorf("plunge: decoding the recorded state of the view %s: %w", v.URN, err)
+		}
+		view := plugin.View{
+			Type:    vs.URN.Type(),
+			Name:    vs.URN.Name(),
+			Inputs:  resource.FromResourcePropertyMap(vs.Inputs),
+			Outputs: resource.FromResourcePropertyMap(vs.Outputs),
+		}
+		if vs.Parent != "" && vs.Parent != vs.ViewOf {
+			view.ParentType = vs.Parent.Type()
+			view.ParentName = vs.Parent.Name()
+		}
+		oldViews = append(oldViews, view)
+	}
+
 	if req.Plugins == nil {
 		return nil, errors.New("plunge: a drift read needs a plugin context to load the provider")
 	}
-	reg := deployproviders.NewRegistry(req.Plugins, false, nil)
+	// The builtin provider serves the `pulumi` package (StackReference and the rest), as in a deployment.
+	reg := deployproviders.NewRegistry(req.Plugins, false, deploy.NewBuiltinProvider(req.BackendClient, req.Plugins.Diag))
 	defer func() { _ = reg.Close() }()
 	if err := reg.Same(ctx, prov, false); err != nil {
 		return unobserved("read-failed", fmt.Sprintf("loading and configuring the provider %s: %v", ref.URN(), err), 0)
@@ -359,14 +404,22 @@ func resourceDrift(ctx context.Context, store staterecord.Store, keys stackKeys,
 		return unobserved("read-failed", fmt.Sprintf("the provider %s was configured and is not registered", ref), 0)
 	}
 
+	status, err := startDriftStatusServer()
+	if err != nil {
+		return nil, err
+	}
+	defer status.close()
 	resp, err := p.Read(ctx, plugin.ReadRequest{
-		URN:     st.URN,
-		Name:    st.URN.Name(),
-		Type:    st.URN.Type(),
-		ID:      st.ID,
-		Inputs:  resource.FromResourcePropertyMap(st.Inputs),
-		State:   resource.FromResourcePropertyMap(st.Outputs),
-		Timeout: st.CustomTimeouts.Read,
+		URN:                   st.URN,
+		Name:                  st.URN.Name(),
+		Type:                  st.URN.Type(),
+		ID:                    st.ID,
+		Inputs:                resource.FromResourcePropertyMap(st.Inputs),
+		State:                 resource.FromResourcePropertyMap(st.Outputs),
+		Timeout:               st.CustomTimeouts.Read,
+		ResourceStatusAddress: status.address(),
+		ResourceStatusToken:   status.token,
+		OldViews:              oldViews,
 	})
 	if err != nil && resp.Status != resource.StatusPartialFailure {
 		return unobserved("read-failed", err.Error(), 1)

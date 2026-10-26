@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -91,6 +92,105 @@ type recordPersister struct {
 	// ownership is this run's marker ledger (inject.go), written into each resource record it has an entry for.
 	// Nil for runs that inject no markers; a record's ownership is then carried forward unchanged.
 	ownership *ledger
+	// started is every pending operation this run began, by URN, in canonical form: the ones it has checked for
+	// in-flight dependencies, and the ones a dependency's record may hold without being another run's.
+	started map[resource.URN]map[string]bool
+	// authoritative makes the deployment the whole truth about pending operations: every URN counts as acted on,
+	// so a record keeps exactly the pending operations the deployment gives it. ImportDeployment sets it, which is
+	// how a user clears a crashed run's pending operation (docs/plunge/CONCURRENCY.md).
+	authoritative bool
+}
+
+// InFlightDependencyError refuses to begin an operation on a resource that depends on a resource another run has an
+// operation in flight on: a pending operation in the dependency's record that this run did not write. The other
+// run's outputs for it are not settled, and the values this run holds for it are the ones that run is replacing, so
+// nothing is created or updated from them. Nothing was written for the dependent. Re-run once the other run has
+// finished; a pending operation left by a run that crashed stays until it is cleared (docs/plunge/CONCURRENCY.md).
+type InFlightDependencyError struct {
+	URN        resource.URN
+	Dependency resource.URN
+	Operation  apitype.OperationType
+	Key        string
+}
+
+func (e *InFlightDependencyError) Error() string {
+	return fmt.Sprintf("plunge: not %s %s: it depends on %s, which another run has a %s operation in flight on "+
+		"(the record at %q holds it), so %s's outputs are not settled and nothing is planned from them. Nothing was "+
+		"written for %s. Re-run when that run has finished; if it crashed, clear its pending operation with "+
+		"`plunge refresh --clear-pending-creates` (a create) or by removing it from a `plunge stack export` and "+
+		"importing that with `plunge stack import`",
+		"changing", e.URN, e.Dependency, e.Operation, e.Key, e.Dependency, e.URN)
+}
+
+// inFlightOps are the pending operation types whose resource's outputs are not settled while they run.
+var inFlightOps = map[apitype.OperationType]bool{
+	apitype.OperationTypeCreating: true,
+	apitype.OperationTypeUpdating: true,
+	apitype.OperationTypeReading:  true,
+	"importing":                   true, // pkg/resource's OperationTypeImporting, which apitype does not name
+}
+
+// stateDependencies is every URN a state's inputs come from: its dependencies and property dependencies.
+func stateDependencies(state apitype.ResourceV3) []resource.URN {
+	seen := map[resource.URN]bool{}
+	var out []resource.URN
+	add := func(u resource.URN) {
+		if u != "" && u != state.URN && !seen[u] {
+			seen[u] = true
+			out = append(out, u)
+		}
+	}
+	for _, d := range state.Dependencies {
+		add(d)
+	}
+	props := make([]string, 0, len(state.PropertyDependencies))
+	for k := range state.PropertyDependencies {
+		props = append(props, string(k))
+	}
+	sort.Strings(props)
+	for _, k := range props {
+		for _, d := range state.PropertyDependencies[resource.PropertyKey(k)] {
+			add(d)
+		}
+	}
+	return out
+}
+
+// checkInFlight refuses op, an operation this run is beginning, when a resource it depends on has another run's
+// operation in flight. Each dependency's record is read again from the store, since the other run may have started
+// after this one read the records.
+func (p *recordPersister) checkInFlight(op apitype.OperationV2) error {
+	if op.Type == apitype.OperationTypeDeleting {
+		return nil
+	}
+	for _, dep := range stateDependencies(op.Resource) {
+		key := p.keys.resource(dep)
+		payload, _, exists, err := p.store.Get(p.ctx, key)
+		if err != nil {
+			return fmt.Errorf("plunge: reading the record of %s, a dependency of %s, at %q: %w", dep, op.Resource.URN, key, err)
+		}
+		if !exists {
+			continue
+		}
+		var r resourceRecord
+		if err := decodeRecord(key, payload, resourceFormat, &r); err != nil {
+			return err
+		}
+		for _, theirs := range r.Pending {
+			if !inFlightOps[theirs.Type] {
+				continue
+			}
+			c, err := p.crypto.canonical(p.ctx, theirs)
+			if err != nil {
+				return err
+			}
+			if p.started[dep][string(c)] {
+				continue // this run's own
+			}
+			return &InFlightDependencyError{URN: op.Resource.URN, Dependency: dep, Operation: theirs.Type, Key: key}
+		}
+	}
+	return nil
 }
 
 var _ backend.SnapshotPersister = (*recordPersister)(nil)
@@ -118,6 +218,7 @@ func newRecordPersister(
 
 		operated:    map[resource.URN]bool{},
 		basePending: basePending,
+		started:     map[resource.URN]map[string]bool{},
 	}
 }
 
@@ -204,6 +305,20 @@ func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired,
 		r := rec(state.URN)
 		r.States = append(r.States, state)
 	}
+	// Each viewed resource's record lists its views, for the drift read's old views. A view's own record holds its
+	// state as any resource's does.
+	for _, state := range dep.Resources {
+		if state.ViewOf == "" || state.Delete {
+			continue
+		}
+		owner, ok := byURN[state.ViewOf]
+		if !ok {
+			continue
+		}
+		if !slices.Contains(owner.Views, state.URN) {
+			owner.Views = append(owner.Views, state.URN)
+		}
+	}
 	for _, op := range dep.PendingOperations {
 		// Pending operations are kept for custom, non-provider resources only: those are the ones with a cloud
 		// object a crash can leave half made. A provider or a component has nothing outside the records, and
@@ -224,6 +339,14 @@ func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired,
 			return nil, err
 		}
 		if own {
+			p.operated[urn] = true
+			// An operation this run is beginning now: refuse it, before the provider is called, when what it
+			// depends on is in flight in another run (INTENTIUS/plunge#14).
+			if err := p.beginPending(urn, r.Pending); err != nil {
+				return nil, err
+			}
+		}
+		if p.authoritative {
 			p.operated[urn] = true
 		}
 		if k := p.known[key]; !p.operated[urn] && k != nil && k.resource != nil {
@@ -261,6 +384,36 @@ func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired,
 		}
 	}
 	return want, nil
+}
+
+// beginPending checks each pending operation on urn that this run has not seen before (one it is beginning) for an
+// in-flight dependency, and remembers it as this run's.
+func (p *recordPersister) beginPending(urn resource.URN, ops []apitype.OperationV2) error {
+	base := map[string]bool{}
+	for _, op := range p.basePending[urn] {
+		c, err := p.crypto.canonical(p.ctx, op)
+		if err != nil {
+			return err
+		}
+		base[string(c)] = true
+	}
+	for _, op := range ops {
+		c, err := p.crypto.canonical(p.ctx, op)
+		if err != nil {
+			return err
+		}
+		if base[string(c)] || p.started[urn][string(c)] {
+			continue
+		}
+		if err := p.checkInFlight(op); err != nil {
+			return err
+		}
+		if p.started[urn] == nil {
+			p.started[urn] = map[string]bool{}
+		}
+		p.started[urn][string(c)] = true
+	}
+	return nil
 }
 
 // ownPending reports whether ops holds a pending operation that was not already in urn's record when this run read

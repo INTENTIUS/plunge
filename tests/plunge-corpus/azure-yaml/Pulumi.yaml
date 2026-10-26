@@ -1,0 +1,118 @@
+# plunge corpus program azure-yaml (INTENTIUS/plunge#16): Azure classic
+# (pulumi-azure, bridged from hashicorp/azurerm) against the lex00/floci-az
+# emulator. The maintainer ruled pulumi-azure on #16, so the corpus compares
+# the same bridged engine path on all three clouds. Whether pulumi-azure runs
+# against floci-az at all is what the first baseline finds out.
+name: corpus-azure-yaml
+description: plunge corpus, YAML program against the floci-az emulator (INTENTIUS/plunge#16)
+runtime: yaml
+
+config:
+  flociAzHost:
+    type: string
+    default: localhost:4577
+  prefix:
+    type: string
+    default: plcaz
+
+resources:
+  # Client-named resource group with a map of tags.
+  app-rg:
+    type: azure:core:ResourceGroup
+    properties:
+      name: ${prefix}-app
+      location: eastus
+      tags:
+        corpus-program: azure-yaml
+        corpus-owner: plunge
+    options:
+      version: 6.10.0
+
+  # Autonamed: no name, so the engine adds a random suffix in Check.
+  scratch-rg:
+    type: azure:core:ResourceGroup
+    properties:
+      location: eastus
+      tags:
+        corpus-program: azure-yaml
+    options:
+      version: 6.10.0
+
+  # Client-named inside the group, with tags. Its id is an ARM resource id
+  # the provider builds from the group and the name.
+  app-vnet:
+    type: azure:network:VirtualNetwork
+    properties:
+      name: ${prefix}-vnet
+      resourceGroupName: ${app-rg.name}
+      location: ${app-rg.location}
+      addressSpaces:
+        - 10.40.0.0/16
+      tags:
+        corpus-program: azure-yaml
+        corpus-owner: plunge
+    options:
+      version: 6.10.0
+
+  # Untaggable: a subnet has no tags argument, so its ownership sits in the
+  # record.
+  app-subnet:
+    type: azure:network:Subnet
+    properties:
+      name: app
+      resourceGroupName: ${app-rg.name}
+      virtualNetworkName: ${app-vnet.name}
+      addressPrefixes:
+        - 10.40.1.0/24
+    options:
+      version: 6.10.0
+
+  app-nsg:
+    type: azure:network:NetworkSecurityGroup
+    properties:
+      name: ${prefix}-nsg
+      resourceGroupName: ${app-rg.name}
+      location: ${app-rg.location}
+      tags:
+        corpus-program: azure-yaml
+    options:
+      version: 6.10.0
+
+  # Explicit provider beside the default one, wired to floci-az the same way
+  # as the stack config does for the default provider.
+  west:
+    type: pulumi:providers:azure
+    properties:
+      subscriptionId: 00000000-0000-0000-0000-00000000c0de
+      tenantId: 00000000-0000-0000-0000-0000000071e7
+      clientId: 00000000-0000-0000-0000-00000000c11e
+      clientSecret: floci-az-does-not-check-this
+      metadataHost: ${flociAzHost}
+      useCli: false
+      useMsi: false
+      useOidc: false
+      useAksWorkloadIdentity: false
+      resourceProviderRegistrations: none
+      disableTerraformPartnerId: true
+      features: {}
+    options:
+      version: 6.10.0
+
+  west-rg:
+    type: azure:core:ResourceGroup
+    properties:
+      name: ${prefix}-west
+      location: westus2
+      tags:
+        corpus-program: azure-yaml
+    options:
+      provider: ${west}
+      version: 6.10.0
+
+outputs:
+  appResourceGroupId: ${app-rg.id}
+  scratchResourceGroupName: ${scratch-rg.name}
+  vnetId: ${app-vnet.id}
+  subnetId: ${app-subnet.id}
+  nsgId: ${app-nsg.id}
+  westResourceGroupId: ${west-rg.id}

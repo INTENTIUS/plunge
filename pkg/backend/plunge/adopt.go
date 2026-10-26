@@ -110,7 +110,9 @@ type AdoptResult struct {
 	// AlreadyAdopted reports that the stack's adoption record names this checkpoint, so nothing was written.
 	AlreadyAdopted bool
 	// Written reports that records were written by this call.
-	Written   bool
+	Written bool
+	// Source names the checkpoint read; for an already-adopted stack, the one its adoption record names.
+	Source    string
 	Digest    string
 	Resources []AdoptedResource
 }
@@ -118,9 +120,41 @@ type AdoptResult struct {
 // AdoptedResource is one resource in an AdoptResult.
 type AdoptedResource struct {
 	URN       resource.URN
+	Type      tokens.Type
 	ID        resource.ID
 	Ownership Ownership
 	Reason    string
+	// Marked reports that the checkpoint's inputs already carry this stack's markers.
+	Marked bool
+}
+
+// AdoptRefusalCode names why an adoption was refused. The codes are part of `plunge stack adopt --json`'s v1
+// document (docs/plunge/ADOPT.md).
+type AdoptRefusalCode string
+
+const (
+	// RefusePendingOperations is a checkpoint with pending operations, one refusal per operation.
+	RefusePendingOperations AdoptRefusalCode = "pending-operations"
+	// RefuseHiddenMarkers is a provider whose ignoreTags, ignoreLabels, defaultTags or defaultLabels would hide
+	// or override the markers. Its URN is the provider's.
+	RefuseHiddenMarkers AdoptRefusalCode = "marker-hiding-provider-config"
+	// RefuseCreateOnlyTags is a resource whose tags can only be set at create (aws-native tagUpdatable: false).
+	RefuseCreateOnlyTags AdoptRefusalCode = "create-only-tags"
+	// RefuseUnrepresentableMarkers is a resource whose URN cannot be written as a marker value.
+	RefuseUnrepresentableMarkers AdoptRefusalCode = "unrepresentable-markers"
+	// RefuseOtherCheckpoint is a stack already adopted from a different checkpoint.
+	RefuseOtherCheckpoint AdoptRefusalCode = "adopted-from-another-checkpoint"
+	// RefuseForeignRecords is a stack that already has plunge records which are not this checkpoint's.
+	RefuseForeignRecords AdoptRefusalCode = "foreign-records"
+	// RefuseEmptyCheckpoint is a checkpoint with no resources.
+	RefuseEmptyCheckpoint AdoptRefusalCode = "empty-checkpoint"
+)
+
+// AdoptRefusal is one reason an adoption was refused. URN is the resource it is about, empty for the stack.
+type AdoptRefusal struct {
+	Code   AdoptRefusalCode
+	URN    resource.URN
+	Reason string
 }
 
 // Adopter is implemented by the plunge backend. The CLI reaches adoption through it.
@@ -146,6 +180,18 @@ func (e *AdoptionRequiredError) Error() string {
 type AdoptRefusedError struct {
 	Stack   string
 	Reasons []string
+	// Refusals are the reasons with their codes, in the same order.
+	Refusals []AdoptRefusal
+	// Result is the classification the refusal was reached from, nil when the checkpoint was not classified.
+	Result *AdoptResult
+}
+
+func newAdoptRefusedError(stack string, refusals []AdoptRefusal, res *AdoptResult) *AdoptRefusedError {
+	e := &AdoptRefusedError{Stack: stack, Refusals: refusals, Result: res}
+	for _, r := range refusals {
+		e.Reasons = append(e.Reasons, r.Reason)
+	}
+	return e
 }
 
 func (e *AdoptRefusedError) Error() string {
@@ -198,18 +244,12 @@ func (b *plungeBackend) Adopt(ctx context.Context, s backend.Stack, opts AdoptOp
 		return nil, fmt.Errorf("plunge: reading the stock checkpoint of %s: %w", ref, err)
 	}
 
-	if l.adoption != nil {
-		if l.adoption.CheckpointDigest == digest {
-			res := &AdoptResult{AlreadyAdopted: true, Digest: digest}
-			for _, r := range l.adoption.Resources {
-				res.Resources = append(res.Resources, AdoptedResource{URN: r.URN, ID: r.ID, Ownership: r.Ownership,
-					Reason: r.Reason})
-			}
-			return res, nil
+	if l.adoption != nil && l.adoption.CheckpointDigest == digest {
+		res := &AdoptResult{AlreadyAdopted: true, Source: l.adoption.Source, Digest: digest}
+		for _, r := range l.adoption.Resources {
+			res.Resources = append(res.Resources, r.result())
 		}
-		return nil, &AdoptRefusedError{Stack: ref.String(), Reasons: []string{fmt.Sprintf(
-			"the stack was already adopted from another checkpoint (%s, digest %s, at %s); this one has digest %s",
-			l.adoption.Source, l.adoption.CheckpointDigest, l.adoption.AdoptedAt, digest)}}
+		return res, nil
 	}
 
 	v3, err := stack.UnmarshalUntypedDeployment(ctx, d)
@@ -218,6 +258,16 @@ func (b *plungeBackend) Adopt(ctx context.Context, s backend.Stack, opts AdoptOp
 	}
 	rec, reasons := b.classify(ctx, v3)
 	rec.Format, rec.Source, rec.CheckpointDigest = adoptionFormat, source, digest
+	res := &AdoptResult{Source: source, Digest: digest}
+	for _, r := range rec.Resources {
+		res.Resources = append(res.Resources, r.result())
+	}
+
+	if l.adoption != nil {
+		return nil, newAdoptRefusedError(ref.String(), []AdoptRefusal{{Code: RefuseOtherCheckpoint, Reason: fmt.Sprintf(
+			"the stack was already adopted from another checkpoint (%s, digest %s, at %s); this one has digest %s",
+			l.adoption.Source, l.adoption.CheckpointDigest, l.adoption.AdoptedAt, digest)}}, res)
+	}
 
 	// Records already present: only a resumed adoption of this same checkpoint (records written, the adoption
 	// record not) is finished; anything else is someone else's state.
@@ -233,22 +283,18 @@ func (b *plungeBackend) Adopt(ctx context.Context, s backend.Stack, opts AdoptOp
 		if sameResources(l.deployment.Deployment.Resources, v3.Resources) {
 			resume = true
 		} else {
-			reasons = append(reasons, "the stack already has plunge records that are not this checkpoint's; adopt "+
-				"only a stack plunge has never run against")
+			reasons = append(reasons, AdoptRefusal{Code: RefuseForeignRecords, Reason: "the stack already has plunge " +
+				"records that are not this checkpoint's; adopt only a stack plunge has never run against"})
 		}
 	}
 	if len(v3.Resources) == 0 {
-		reasons = append(reasons, "the checkpoint holds no resources; a new stack needs no adoption")
+		reasons = append(reasons, AdoptRefusal{Code: RefuseEmptyCheckpoint,
+			Reason: "the checkpoint holds no resources; a new stack needs no adoption"})
 	}
 	if len(reasons) > 0 {
-		return nil, &AdoptRefusedError{Stack: ref.String(), Reasons: reasons}
+		return nil, newAdoptRefusedError(ref.String(), reasons, res)
 	}
 
-	res := &AdoptResult{Digest: digest}
-	for _, r := range rec.Resources {
-		res.Resources = append(res.Resources, AdoptedResource{URN: r.URN, ID: r.ID, Ownership: r.Ownership,
-			Reason: r.Reason})
-	}
 	if !opts.Confirmed {
 		return nil, &AdoptUnconfirmedError{Stack: ref.String(), Result: res}
 	}
@@ -281,17 +327,19 @@ func (b *plungeBackend) Adopt(ctx context.Context, s backend.Stack, opts AdoptOp
 	return res, nil
 }
 
+// result is the resource as an AdoptResult reports it.
+func (r adoptedResource) result() AdoptedResource {
+	return AdoptedResource{URN: r.URN, Type: r.Type, ID: r.ID, Ownership: r.Ownership, Reason: r.Reason, Marked: r.Marked}
+}
+
 // classify classes every resource of a stock deployment for adoption, offline, and returns the reasons it refuses.
-func (b *plungeBackend) classify(ctx context.Context, d *apitype.DeploymentV3) (*adoptionRecord, []string) {
+func (b *plungeBackend) classify(ctx context.Context, d *apitype.DeploymentV3) (*adoptionRecord, []AdoptRefusal) {
 	rec := &adoptionRecord{}
-	var reasons []string
-	if len(d.PendingOperations) > 0 {
-		urns := make([]string, len(d.PendingOperations))
-		for i, op := range d.PendingOperations {
-			urns[i] = fmt.Sprintf("%s (%s)", op.Resource.URN, op.Type)
-		}
-		reasons = append(reasons, "the checkpoint has pending operations, which stock Pulumi must settle first "+
-			"(`pulumi refresh` or `pulumi stack export`/`import` after checking the cloud): "+strings.Join(urns, ", "))
+	var reasons []AdoptRefusal
+	for _, op := range d.PendingOperations {
+		reasons = append(reasons, AdoptRefusal{Code: RefusePendingOperations, URN: op.Resource.URN, Reason: fmt.Sprintf(
+			"the checkpoint has a pending %s operation on %s, which stock Pulumi must settle first (`pulumi refresh` "+
+				"or `pulumi stack export`/`import` after checking the cloud)", op.Type, op.Resource.URN)})
 	}
 
 	providerVersions := map[string]string{} // provider reference -> version input
@@ -301,7 +349,7 @@ func (b *plungeBackend) classify(ctx context.Context, d *apitype.DeploymentV3) (
 		}
 		inputs := resource.NewPropertyMapFromMap(r.Inputs)
 		if err := checkProviderInputs(r.URN, inputs); err != nil {
-			reasons = append(reasons, err.Error())
+			reasons = append(reasons, AdoptRefusal{Code: RefuseHiddenMarkers, URN: r.URN, Reason: err.Error()})
 		}
 		providerVersions[string(r.URN)+resource.URNNameDelimiter+string(r.ID)] = providerString(inputs, "version")
 	}
@@ -338,13 +386,14 @@ func (b *plungeBackend) classify(ctx context.Context, d *apitype.DeploymentV3) (
 		if info.Shape == ShapeMap || info.Shape == ShapeKeyValueArray {
 			want, err := markers.For(r.URN, info.Encoding())
 			if err != nil {
-				reasons = append(reasons, err.Error())
+				reasons = append(reasons, AdoptRefusal{Code: RefuseUnrepresentableMarkers, URN: r.URN, Reason: err.Error()})
 				continue
 			}
 			entry.Marked = carries(inputs, info, want)
 			entry.Ownership, entry.Reason = OwnershipMarker, ""
 			if info.CreateOnly && !entry.Marked {
-				reasons = append(reasons, (&CreateOnlyTagsError{URN: r.URN, Type: r.Type, Property: info.Property}).Error())
+				reasons = append(reasons, AdoptRefusal{Code: RefuseCreateOnlyTags, URN: r.URN,
+					Reason: (&CreateOnlyTagsError{URN: r.URN, Type: r.Type, Property: info.Property}).Error()})
 			}
 		} else if info.Shape == ShapeNone {
 			entry.Ownership, entry.Reason = OwnershipRecord, info.Reason

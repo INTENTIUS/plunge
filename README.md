@@ -72,6 +72,15 @@ bundled: the CLI installs them on first use at the versions pinned in `pkg/util/
 (`knownLanguageRuntimes`). The bundled hosts sit next to the `plunge` binary, which is where the CLI
 looks for them.
 
+A host that is neither bundled nor on `PATH` is fetched the way upstream fetches it: stock pulumi's
+build of that host, at plunge's Pulumi-compatible version, not one built from this tree. That is the
+same code while plunge's hosts don't diverge from upstream's.
+
+Releases are built by `.github/workflows/plunge-release.yml` when a `vX.Y.Z` tag is pushed. It runs
+goreleaser with `.goreleaser.plunge.yml` and publishes `plunge-vX.Y.Z-<os>-<arch>` archives on this
+repository's releases page. Windows binaries are unsigned. The snapshot build below shows the same
+artifact list without publishing anything.
+
 ```sh
 ./scripts/prep-for-goreleaser.sh
 PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/plunge-version.sh plunge) \
@@ -84,6 +93,14 @@ PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/
 `tests/plunge-corpus/` against the local emulators and compares the two. The acceptance for P-L0 is
 that they match at a later upstream merge, not only at the fork point. The maintainer runs it; see the
 script's header for its inputs.
+
+## Record store acceptance
+
+`scripts/plunge-record-store-acceptance.sh` is the maintainer's run of the record backend on a real
+store (INTENTIUS/plunge#6). It defaults to floci's S3 on localhost, refuses a store that is not on
+loopback unless `PLUNGE_ACCEPTANCE_REAL_STORE=yes`, and writes `VERDICT` lines for two concurrent
+updates on disjoint resources, one record per URN in the store listing, and an older program's run
+leaving a newer run's resource in place. See the script's header for its inputs and outputs.
 
 ## Merging upstream
 

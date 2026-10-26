@@ -51,6 +51,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/intentius/choudoufu/pkg/identity"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/awsnative"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
@@ -165,14 +166,48 @@ func (p *autonamePolicy) Autoname(
 	}
 
 	name := DeterministicName(req.URN, info.Autoname.MaxLength, info.Autoname.Suffix)
-	note(autonameEntry{By: AutonamePlunge, Name: name, C1: true})
-	return &plugin.AutonamingOptions{
+	opts := &plugin.AutonamingOptions{
 		ProposedName: name,
 		// Propose, not enforce: the provider still applies its own transform and charset rules (a bridged type's
-		// lowercasing, say), which are deterministic, and refuses a name its maximum length does not allow.
+		// lowercasing, say), which are deterministic. A name over a bridged type's maximum length is refused by
+		// the provider's Check, naming the resource; the bridge does not publish the maximum, so plunge cannot
+		// cut the name to fit (ruled on INTENTIUS/plunge#10: refuse at Check).
 		Mode:            plugin.AutonamingModePropose,
 		WarnIfNoSupport: true,
-	}, true, nil
+	}
+	if supported, known := autonamingSupported(ctx, req.Provider); known && !supported {
+		// The provider drops the proposal and picks its own random name (the engine warns about that), so the
+		// record must not claim C1, and a replacement need not delete first.
+		note(autonameEntry{By: AutonameUpstream, Uncovered: fmt.Sprintf("the %s provider does not support "+
+			"autonaming configuration, so it ignores the proposed name %s and picks its own",
+			providerLabel(ctx, req.Type.Package(), req.Provider), name)})
+		return opts, false, nil
+	}
+	note(autonameEntry{By: AutonamePlunge, Name: name, C1: true})
+	return opts, true, nil
+}
+
+// autonamingSupported asks prov whether it honours autonaming configuration. known is false when prov cannot say
+// (a provider without plugin.AutonamingSupporter, an error, or a configuration not yet known).
+func autonamingSupported(ctx context.Context, prov plugin.Provider) (supported, known bool) {
+	s, ok := prov.(plugin.AutonamingSupporter)
+	if !ok {
+		return false, false
+	}
+	supported, known, err := s.SupportsAutonamingConfiguration(ctx)
+	if err != nil {
+		return false, false
+	}
+	return supported, known
+}
+
+// providerLabel names prov by its package and version, as "aws@7.0.0".
+func providerLabel(ctx context.Context, pkg tokens.Package, prov plugin.Provider) string {
+	label := string(pkg)
+	if v := providerVersion(ctx, prov); v != "" {
+		label += "@" + v
+	}
+	return label
 }
 
 // c1Covers reports whether C1 covers info's type: a name the cloud keeps unique, and a marker the loser of a
@@ -280,6 +315,7 @@ func bridgedAutoname(info *TypeInfo, fields map[string]*bridgeSchemaInfo, schema
 			if c.Block == "" && contains(c.Attrs, tf) {
 				info.Autoname.Unique = true
 				info.Autoname.Evidence = "pkg/identity builds " + info.TFType + "'s import identity from " + tf
+				info.Autoname.ImportIDIsName = importIDIsName(row.Components, tf)
 				return
 			}
 		}
@@ -310,6 +346,17 @@ func nativeAutoname(r awsnative.Resource, info *TypeInfo) {
 	}
 	info.Autoname.Unique = true
 	info.Autoname.Evidence = fmt.Sprintf("%s's primary identifier includes %s", r.CF, spec.SDKName)
+	info.Autoname.ImportIDIsName = len(r.PrimaryIdentifier) == 1
+}
+
+// importIDIsName reports whether an import identity built from components is the value of tf and nothing else:
+// one component, no literal, no nested block, and tf as its only argument.
+func importIDIsName(components []identity.Component, tf string) bool {
+	if len(components) != 1 {
+		return false
+	}
+	c := components[0]
+	return c.Block == "" && c.Literal == "" && len(c.Attrs) == 1 && c.Attrs[0] == tf
 }
 
 // pulumiName is the bridge's default Pulumi name for a Terraform argument: snake_case to camelCase.

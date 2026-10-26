@@ -23,7 +23,7 @@
 #      or $BASE. Merging the branch into $BASE is a human's call.
 #
 # Environment:
-#   BASE      integration branch to branch from   (default: integration/pulumi-engine)
+#   BASE      integration branch to branch from   (default: main)
 #   UPSTREAM  upstream remote name                (default: upstream)
 #   OUT       report directory                    (default: plunge-upstream-merge-out)
 #
@@ -46,7 +46,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${ROOT}"
 
-BASE="${BASE:-integration/pulumi-engine}"
+BASE="${BASE:-main}"
 UPSTREAM="${UPSTREAM:-upstream}"
 UPSTREAM_URL="https://github.com/pulumi/pulumi.git"
 OUT="${OUT:-plunge-upstream-merge-out}"

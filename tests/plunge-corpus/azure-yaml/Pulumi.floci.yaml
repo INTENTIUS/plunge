@@ -1,0 +1,28 @@
+# Stack "floci": every Azure call goes to floci-az, never to Azure.
+# metadataHost alone decides azurerm's cloud: with it set, every endpoint
+# (ARM, the Entra login endpoint, the storage suffix) is read from the
+# /metadata/endpoints document floci-az serves at that host. The ids
+# and the secret are fakes (floci-az issues a token for any client id and
+# secret). The four sign-in switches are off and the secret is explicit, so
+# the provider never falls back to `az login` or managed identity, the way
+# choudoufu's live/e2e/lib/floci-az.sh wires hashicorp/azurerm. floci-az
+# answers the providers listing with an empty list, so provider
+# registration is off. floci-az serves TLS with its own CA;
+# scripts/plunge-baseline.sh fetches it and hands it to both engines.
+# Change the port in both places if floci-az listens somewhere other than
+# localhost:4577.
+config:
+  azure:subscriptionId: 00000000-0000-0000-0000-00000000c0de
+  azure:tenantId: 00000000-0000-0000-0000-0000000071e7
+  azure:clientId: 00000000-0000-0000-0000-00000000c11e
+  azure:clientSecret: floci-az-does-not-check-this
+  azure:metadataHost: localhost:4577
+  azure:location: eastus
+  azure:useCli: "false"
+  azure:useMsi: "false"
+  azure:useOidc: "false"
+  azure:useAksWorkloadIdentity: "false"
+  azure:resourceProviderRegistrations: none
+  azure:disableTerraformPartnerId: "true"
+  corpus-azure-yaml:flociAzHost: localhost:4577
+  corpus-azure-yaml:prefix: plcaz

@@ -145,6 +145,10 @@ type resourceRecord struct {
 	// Ownership is how the resource is known to be this stack's (INTENTIUS/plunge#7): by the markers on its live
 	// object, or, for a type that cannot carry one, by this record alone. Absent on records written before P-L4.
 	Ownership *ownershipEntry `json:"ownership,omitempty"`
+	// Views are the URNs of the view resources of this resource (states whose ViewOf is this URN), each in its own
+	// record. A per-resource drift read reads them by key to hand the provider its old views
+	// (INTENTIUS/plunge#14). Absent when the resource has none, and on records written before it.
+	Views []resource.URN `json:"views,omitempty"`
 }
 
 // outputRecord is what an outputs/<name> key holds: one root Stack output, serialized exactly as it would be in the
@@ -261,14 +265,15 @@ func resourceContent(r *resourceRecord, ignoreTimes bool) any {
 		States    []apitype.ResourceV3
 		Pending   []apitype.OperationV2
 		Ownership *ownershipEntry `json:",omitempty"`
+		Views     []resource.URN  `json:",omitempty"`
 	}
 	if !ignoreTimes {
-		return content{r.States, r.Pending, r.Ownership}
+		return content{r.States, r.Pending, r.Ownership, r.Views}
 	}
 	states := make([]apitype.ResourceV3, len(r.States))
 	for i, s := range r.States {
 		s.Created, s.Modified = nil, nil
 		states[i] = s
 	}
-	return content{states, r.Pending, r.Ownership}
+	return content{states, r.Pending, r.Ownership, r.Views}
 }

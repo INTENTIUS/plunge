@@ -17,6 +17,10 @@
 #   STACK           stack name in each program     (default: floci, i.e. Pulumi.floci.yaml)
 #   OUT             output directory               (default: plunge-baseline-out/<UTC timestamp>)
 #   PULUMI_CONFIG_PASSPHRASE                       (default: plunge-baseline)
+#   FLOCI_AZ_HOST   floci-az's host:port, loopback only (default: localhost:4577); read only when an
+#                   Azure program is selected
+#   FLOCI_AZ_CA_FILE  PEM file floci-az's TLS certificate verifies against (default: fetched from
+#                   http://$FLOCI_AZ_HOST/_floci/tls-cert into $OUT/floci-az-ca.pem)
 #
 # Each engine gets its own copy of the program and its own file backend under $OUT, so the two runs
 # share nothing but the plugin cache in PULUMI_HOME. Each runs with its own binary's directory first on
@@ -93,10 +97,59 @@ else
 fi
 [ "${#PROGRAMS[@]}" -gt 0 ] || die "no programs with a Pulumi.yaml under ${CORPUS}"
 
-# refuse_nonlocal prints the endpoint lines in a stack config that point anywhere but this machine.
+# refuse_nonlocal prints the endpoint lines in a stack config that point anywhere but this machine: URLs,
+# and azure:metadataHost, which names a host with no scheme.
 refuse_nonlocal() {
   grep -nE 'https?://' "$1" | grep -vE 'https?://(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)([:/]|$)' || true
+  grep -nE '^[[:space:]]*[A-Za-z0-9_-]+:(metadataHost|flociAzHost):' "$1" |
+    grep -vE ':(metadataHost|flociAzHost):[[:space:]]*"?(localhost|127\.0\.0\.1):[0-9]+"?[[:space:]]*$' || true
 }
+
+# Azure (INTENTIUS/plunge#16). pulumi-azure is azurerm: with azure:metadataHost set, it reads every endpoint
+# from https://<host>/metadata/endpoints, so floci-az's TLS has to verify. The real AZURE_* and ARM_* values
+# were unset above; what is exported here is floci-az's fakes, the same ones the stack configs carry, so a
+# provider that reads the environment ahead of its config still signs in to floci-az and nowhere else.
+# AZURE_CONFIG_DIR names an empty directory, so an Azure CLI started by anything finds no login.
+azure_setup() {
+  local host="${FLOCI_AZ_HOST:-localhost:4577}"
+  case "${host}" in
+    localhost:[0-9]*|127.0.0.1:[0-9]*) ;;
+    *) die "FLOCI_AZ_HOST=${host} is not a loopback host:port, so it is not floci-az" ;;
+  esac
+  local ca="${FLOCI_AZ_CA_FILE:-}"
+  if [ -z "${ca}" ]; then
+    ca="${OUT}/floci-az-ca.pem"
+    # floci-az serves HTTP and HTTPS on one port; the certificate is fetched over plain HTTP.
+    curl -sf "http://${host}/_floci/tls-cert" -o "${ca}" ||
+      die "could not fetch floci-az's certificate from http://${host}/_floci/tls-cert (is floci-az up? set FLOCI_AZ_HOST or FLOCI_AZ_CA_FILE)"
+  fi
+  [ -s "${ca}" ] || die "floci-az CA file ${ca} is empty or missing"
+  if [ "$(uname -s)" = "Darwin" ]; then
+    >&2 echo "plunge-baseline: macOS: Go ignores SSL_CERT_FILE and trusts only the keychain, so floci-az's"
+    >&2 echo "  certificate must be trusted there (choudoufu's scripts/floci-az-mac-cert.sh makes one to mount)"
+  fi
+  export SSL_CERT_FILE="${ca}"
+  mkdir -p "${OUT}/.azure-no-login"
+  export AZURE_CONFIG_DIR="${OUT}/.azure-no-login"
+  export ARM_SUBSCRIPTION_ID=00000000-0000-0000-0000-00000000c0de
+  export ARM_TENANT_ID=00000000-0000-0000-0000-0000000071e7
+  export ARM_CLIENT_ID=00000000-0000-0000-0000-00000000c11e
+  export ARM_CLIENT_SECRET=floci-az-does-not-check-this
+  export ARM_METADATA_HOSTNAME="${host}" ARM_METADATA_HOST="${host}"
+  export ARM_USE_CLI=false ARM_USE_MSI=false ARM_USE_OIDC=false ARM_USE_AKS_WORKLOAD_IDENTITY=false
+  # azurerm refuses ARM_SKIP_PROVIDER_REGISTRATION beside resource_provider_registrations, which the stack
+  # config already sets; the deprecated variable is left unset.
+  export ARM_RESOURCE_PROVIDER_REGISTRATIONS=none
+  export ARM_DISABLE_TERRAFORM_PARTNER_ID=true
+  echo "azure:  floci-az at ${host}, CA ${ca}" | tee -a "${OUT}/versions.txt"
+}
+
+for prog in "${PROGRAMS[@]}"; do
+  if grep -qE '^[[:space:]]*azure:metadataHost:' "${CORPUS}/${prog}/Pulumi.${STACK}.yaml" 2>/dev/null; then
+    azure_setup
+    break
+  fi
+done
 
 verdict() {
   echo "VERDICT $1 $2" | tee -a "${VERDICTS}"

@@ -1,9 +1,9 @@
 # Scheduled upstream merge (INTENTIUS/plunge#5, P-L2).
 #
 # Fetches pulumi/pulumi master and merges it into a fresh upstream-merge/<date>-<sha> branch off
-# integration/pulumi-engine with scripts/plunge-upstream-merge.sh, rebuilds, pushes that branch, and opens
+# main with scripts/plunge-upstream-merge.sh, rebuilds, pushes that branch, and opens
 # an issue with the report. It only pulls from pulumi/pulumi: no PR, issue or push goes there. It never
-# pushes to main or to the integration branch and opens no PR; a human merges the branch.
+# pushes to main (or whatever base it branched from) and opens no PR; a human merges the branch.
 #
 # Upstream's commits touch .github/workflows in their own history, and GitHub refuses a push of such
 # commits made with GITHUB_TOKEN (it can't hold the `workflows` permission). Set the PLUNGE_MERGE_TOKEN
@@ -21,7 +21,7 @@ on:
     inputs:
       base:
         description: Branch to merge upstream into (a fresh branch is cut from it)
-        default: integration/pulumi-engine
+        default: main
 
 permissions:
   contents: write # push the upstream-merge/* branch to this repo
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      BASE: ${{ inputs.base || 'integration/pulumi-engine' }}
+      BASE: ${{ inputs.base || 'main' }}
       OUT: ${{ github.workspace }}/plunge-upstream-merge-out
     steps:
       - uses: actions/checkout@v4

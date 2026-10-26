@@ -102,8 +102,11 @@ linters:
         regexp:
           COPYRIGHT_YEARS: \d{4}
           WHITESPACE: '[ ]{4}'
+          # plunge (INTENTIUS/plunge#13): upstream's files carry Pulumi Corporation, plunge's own new files
+          # may carry INTENTIUS. Either holder passes.
+          COPYRIGHT_HOLDER: (Pulumi Corporation|INTENTIUS)
       template: |-
-        Copyright {{ COPYRIGHT_YEARS }}, Pulumi Corporation.
+        Copyright {{ COPYRIGHT_YEARS }}, {{ COPYRIGHT_HOLDER }}.
 
         Licensed under the Apache License, Version 2.0 (the "License");
         you may not use this file except in compliance with the License.

@@ -53,6 +53,7 @@ type BulkReader interface {
 var (
 	_ BulkReader = (*LocalStore)(nil)
 	_ BulkReader = (*S3Store)(nil)
+	_ BulkReader = (*KubernetesStore)(nil)
 	_ BulkReader = (*GCSStore)(nil)
 )
 

@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // accessDenied reports whether err is S3 refusing the request by policy:
@@ -54,6 +56,17 @@ func IsAccessDenied(err error) bool {
 	if errors.As(err, &denied) || errors.As(err, &unusable) {
 		return false
 	}
+	// An admission denial is deliberately NOT one of these either, for the
+	// reason the KMS refusals are not. It is a 403 the cluster's own policy
+	// raised about a write the authorizer had already allowed, so a caller
+	// that read it as "this identity may read but not write" would carry on
+	// with a store that will refuse every record it writes. GitHub issue
+	// #1448 measured that on kind: the fenced identity opened the store
+	// green and was refused mid-apply. See [AdmissionDeniedError].
+	var admission *AdmissionDeniedError
+	if errors.As(err, &admission) {
+		return false
+	}
 	// The GCS store's Cloud KMS refusal, for the KMS reason above. It is
 	// checked by recognising the error and not only by type, because the
 	// sentinel write's error can reach here before the store wraps it.
@@ -67,6 +80,17 @@ func IsAccessDenied(err error) bool {
 	// status 403, whatever its code: a missing data role, a SAS without the
 	// permission, or the ABAC read fence's condition (Azure epic, #1120).
 	if isAzureForbidden(err) {
+		return true
+	}
+	// [KubernetesStore] surfaces a refusal as the API server's own 403,
+	// which arrives as a *k8serrors.StatusError with reason Forbidden and
+	// carries none of the smithy shapes accessDenied looks for. Without this
+	// leg the reader tolerance #1370 built for the bucket reached neither
+	// the Kubernetes store nor a plan against it: a CI plan identity with
+	// get and list on the records namespace and no create had its sentinel
+	// write read as an outage and the run stopped. GitHub issue #1393
+	// measured that on kind before this line existed.
+	if k8serrors.IsForbidden(err) {
 		return true
 	}
 	// [GCSStore] surfaces a refusal as the JSON API's own 403, a
