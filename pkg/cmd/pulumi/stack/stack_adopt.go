@@ -15,6 +15,7 @@
 package stack
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
@@ -33,6 +35,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/result"
 
 	"github.com/pulumi/pulumi/pkg/v3/backend/secrets"
 )
@@ -43,6 +46,7 @@ func newStackAdoptCmd() *cobra.Command {
 	var stackName string
 	var file string
 	var yes bool
+	var jsonOut bool
 
 	cmd := &cobra.Command{
 		Use:   "adopt",
@@ -61,7 +65,11 @@ func newStackAdoptCmd() *cobra.Command {
 			"be set at create (marking it would replace it). Adopting the same checkpoint again does nothing.\n" +
 			"\n" +
 			"To back out: `plunge stack export --file s.json`, then `pulumi stack import --file s.json` on a stock\n" +
-			"backend. `pulumi preview --refresh` then shows only the removal of the plunge-* tags.",
+			"backend. `pulumi preview --refresh` then shows only the removal of the plunge-* tags.\n" +
+			"\n" +
+			"--json prints the classification as one JSON document (docs/plunge/ADOPT.md) and never prompts. Alone it\n" +
+			"writes nothing; with --yes it adopts and prints the result. A refused adoption prints the document with\n" +
+			"its refusals and exits non-zero.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			ws := pkgWorkspace.Instance
@@ -85,6 +93,10 @@ func newStackAdoptCmd() *cobra.Command {
 					return err
 				}
 				adoptOpts.Checkpoint, adoptOpts.Source = d, "the file "+file
+			}
+
+			if jsonOut {
+				return runStackAdoptJSON(ctx, cmd.OutOrStdout(), adopter, s, adoptOpts, yes)
 			}
 
 			// The gate: classify without writing, show it, and confirm.
@@ -123,7 +135,30 @@ func newStackAdoptCmd() *cobra.Command {
 		&file, "file", "", "", "Adopt this exported deployment instead of the DIY checkpoint at the same root")
 	cmd.PersistentFlags().BoolVarP(
 		&yes, "yes", "y", false, "Skip the confirmation prompt and adopt")
+	cmd.PersistentFlags().BoolVarP(
+		&jsonOut, "json", "j", false, "Print the classification as JSON; without --yes nothing is written")
 	return cmd
+}
+
+// runStackAdoptJSON is `plunge stack adopt --json` (INTENTIUS/plunge#17). Without yes the adoption is not
+// confirmed, so Adopt classifies and writes nothing. A refusal is the document and a bail, so the exit is non-zero
+// and the refusal is not printed a second time as text.
+func runStackAdoptJSON(
+	ctx context.Context, w io.Writer, adopter plunge.Adopter, s backend.Stack, opts plunge.AdoptOptions, yes bool,
+) error {
+	opts.Confirmed = yes
+	res, err := adopter.Adopt(ctx, s, opts)
+	view, verr := plunge.NewAdoptView(s.Ref().String(), res, err)
+	if verr != nil {
+		return verr
+	}
+	if perr := ui.FprintJSON(w, view); perr != nil {
+		return perr
+	}
+	if view.Status == plunge.AdoptRefused {
+		return result.BailError(err)
+	}
+	return nil
 }
 
 func readDeploymentFile(path string) (*apitype.UntypedDeployment, error) {
