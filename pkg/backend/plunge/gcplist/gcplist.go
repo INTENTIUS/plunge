@@ -37,6 +37,11 @@
 // collection paths. A type outside the covered set is listed through Asset Inventory as before: it binds, and the
 // collision claim does not cover it.
 //
+// Ten server-assigned types whose services are not in [Services] (Vertex AI, Document AI, Transcoder, Service
+// Directory, reCAPTCHA Enterprise, Managed Microsoft AD) are written out in [ServerAssigned], ported from choudoufu's
+// gcpsweep. The covered set is the same in both repos: testdata/covered-types.txt is a copy of choudoufu's
+// internal/live/gcpsweep/testdata/covered-types.txt, and each repo tests its own set against its copy.
+//
 // # Consistency
 //
 // Each list reads the service's own store. Cloud Storage documents bucket listing as strongly consistent
@@ -160,8 +165,16 @@ type Type struct {
 	Asset string
 }
 
-// Lookup returns tfType's list, or a reason it has none.
+// Lookup returns tfType's list, or a reason it has none. A server-assigned type ([ServerAssigned]) is written out;
+// every other covered type is derived from its Asset name and its service.
 func Lookup(tfType string) (Type, string, bool) {
+	if t, ok := serverAssigned(tfType); ok {
+		t.Asset = identity.GoogleAssetImports[tfType].Asset
+		return t, "", true
+	}
+	if why, ok := NotCovered[tfType]; ok {
+		return Type{}, tfType + " has no per-type lister: " + why, false
+	}
 	row, ok := identity.GoogleAssetImports[tfType]
 	if !ok {
 		return Type{}, fmt.Sprintf("choudoufu's pkg/identity has no Asset name for %s, so there is no collection to "+
@@ -189,11 +202,16 @@ func Lookup(tfType string) (Type, string, bool) {
 	return t, "", true
 }
 
-// Covered lists every covered type, sorted.
+// Covered lists every covered type, sorted: the server-assigned ones and the derived ones.
 func Covered() []string {
+	seen := map[string]bool{}
 	var out []string
+	for tf := range ServerAssigned {
+		seen[tf] = true
+		out = append(out, tf)
+	}
 	for tf := range identity.GoogleAssetImports {
-		if _, _, ok := Lookup(tf); ok {
+		if _, _, ok := Lookup(tf); ok && !seen[tf] {
 			out = append(out, tf)
 		}
 	}
@@ -262,8 +280,12 @@ func fill(tmpl string, vars func(string) (string, bool)) (string, error) {
 }
 
 // URL is t's first-page list URL under root, its variables filled by vars. An unset variable is an error wrapping
-// ErrUnresolved naming it.
+// ErrUnresolved naming it. A root may carry {{region}} or {{location}} (a regional host); it is filled too.
 func (t Type) URL(root string, vars func(string) (string, bool)) (string, string, error) {
+	root, err := fill(root, vars)
+	if err != nil {
+		return "", "", err
+	}
 	coll, err := fill(t.Collection, vars)
 	if err != nil {
 		return "", "", err
