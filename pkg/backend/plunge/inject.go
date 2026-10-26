@@ -74,6 +74,8 @@ type ownershipEntry struct {
 	Bound resource.ID `json:"bound,omitempty"`
 	// Unlisted says why the type had no consistent lister when it was created, so no bind or collision check ran.
 	Unlisted string `json:"unlisted,omitempty"`
+	// ByName is what the by-name read found, for a covered type no lister covers (bind.go's readByName).
+	ByName string `json:"byName,omitempty"`
 	// Autoname is where the resource's name came from and whether C1 covers it (autoname.go).
 	Autoname *autonameEntry `json:"autoname,omitempty"`
 }
