@@ -79,3 +79,44 @@ if (features.Contains(ResourceMonitorFeature.ResourceReferences)) {}
 	assert.Equal(t, []string{"deletedWith"}, asked.Legacy)
 	assert.Equal(t, []string{"RESOURCE_MONITOR_FEATURE_RESOURCE_REFERENCES"}, asked.Enum)
 }
+
+// dotnet 3.116.1 asks SupportsFeature("stateMigrations") before registering a resource with state
+// migrations (sdk/Pulumi/Deployment/Deployment_RegisterResource.cs) and never reads GetDeploymentInfo.
+// Upstream's engine has no "stateMigrations" SupportsFeature id; it advertises
+// RESOURCE_MONITOR_FEATURE_STATE_MIGRATIONS through GetDeploymentInfo, which plunge's DIY-backed monitor
+// does. That is an SDK-LEGACY-ID line, not a FEATURE-MISSING one (plunge#25).
+func TestDotnetStateMigrationsIsALegacyIDNotAGap(t *testing.T) {
+	t.Parallel()
+
+	rel := Release{Lang: "dotnet", Version: "3.116.1", Files: []Source{
+		{Path: "sdk/Pulumi/Deployment/Deployment_RegisterResource.cs", Data: []byte(`
+if (options.StateMigrations.Count > 0 && !await MonitorSupportsFeature("stateMigrations").ConfigureAwait(false))
+{
+    throw new InvalidOperationException("The Pulumi CLI does not support state migrations. Please update the Pulumi CLI.");
+}
+`)},
+		{Path: "sdk/Pulumi/Deployment/Deployment.cs", Data: []byte(`
+return MonitorSupportsFeature("resourceReferences");
+`)},
+	}}
+
+	asked := Extract(rel.Files)
+	assert.Equal(t, []string{"resourceReferences", "stateMigrations"}, asked.Legacy)
+	assert.Empty(t, asked.Enum)
+
+	vs, err := Check(context.Background(), rel, "3.272.0", MonitorOptions())
+	require.NoError(t, err)
+
+	var lines []string
+	for _, v := range vs {
+		lines = append(lines, v.String())
+	}
+	text := strings.Join(lines, "\n")
+
+	assert.Contains(t, text, "SDK-LEGACY-ID dotnet 3.116.1 stateMigrations (not a SupportsFeature id upstream's "+
+		"engine knows, so stock pulumi answers false too; advertised as RESOURCE_MONITOR_FEATURE_STATE_MIGRATIONS "+
+		"through GetDeploymentInfo)")
+	assert.Contains(t, text, "FEATURE-OK dotnet 3.116.1 resourceReferences (SupportsFeature)")
+	assert.NotContains(t, text, "FEATURE-MISSING")
+	assert.Contains(t, text, "missing=0")
+}
