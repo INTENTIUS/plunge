@@ -244,6 +244,19 @@ reference and the record key).
 An update and a preview refresh first, so the plan diffs against what the
 cloud holds now. `PLUNGE_REFRESH=false` turns that off.
 
+## Design choices
+
+The maintainer reviewed these five on INTENTIUS/plunge#12 (2026-10-25) and
+kept each as built.
+
+| Choice | What plunge does | Cost accepted |
+|---|---|---|
+| Replacing a deterministically autonamed resource | Deletes the old object before creating the new one, warning once per URN when the provider alone would have created first | A window in which neither object exists |
+| A new provider resource's ID | A v5 UUID of the URN and the provider's configuration, with secret values hashed as a fixed placeholder, so two first runs converge on one default provider | A forced replace of a provider with identical configuration gets the old ID again |
+| Which run may delete a resource the program no longer registers | The run whose program commit time is not older than the stamp on the resource's record (`PLUNGE_PROGRAM_TIME`, else `git log -1 --format=%ct`) | Committer clock skew can misorder two commits, and equal times allow the delete |
+| Refresh before update and preview | On by default on the plunge backend; `PLUNGE_REFRESH=false` turns it off | One provider Read per resource on every run |
+| Where a saved plan carries its record versions | `plungeRecordVersions` on `apitype.DeploymentPlanV1`, omitted for every other backend | An SDK struct an upstream merge can conflict on |
+
 ## CI
 
 Serialize applies against one estate in CI anyway, where the real mutex has
