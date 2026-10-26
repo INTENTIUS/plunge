@@ -38,6 +38,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/diag/colors"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/property"
 )
@@ -48,7 +49,7 @@ func newFileBackend(t *testing.T) (*plungeBackend, backend.Stack) {
 	t.Helper()
 	ctx := context.Background()
 	dir := t.TempDir()
-	sink := diag.DefaultSink(io.Discard, io.Discard, diag.FormatOptions{})
+	sink := diag.DefaultSink(io.Discard, io.Discard, diag.FormatOptions{Color: colors.Never})
 	be, err := New(ctx, sink, URLPrefix+"file://"+filepath.ToSlash(dir), nil)
 	require.NoError(t, err)
 	pb := be.(*plungeBackend)
