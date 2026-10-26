@@ -40,8 +40,9 @@
 // Ten server-assigned types whose services are not in [Services] (Vertex AI, Document AI, Transcoder, Service
 // Directory, reCAPTCHA Enterprise, Managed Microsoft AD) are written out in [ServerAssigned], ported from choudoufu's
 // gcpsweep. Three types with no Asset name (Cloud SQL instances, GKE clusters, Assured Workloads workloads) are
-// written out in [Handwritten] (INTENTIUS/plunge#19). The covered set is the same in both repos: testdata/covered-types.txt is a copy of choudoufu's
-// internal/live/gcpsweep/testdata/covered-types.txt, and each repo tests its own set against its copy.
+// written out in [Handwritten] (INTENTIUS/plunge#19). The covered set is the same in both repos:
+// testdata/covered-types.txt is a copy of choudoufu's internal/live/gcpsweep/testdata/covered-types.txt, and each
+// repo tests its own set against its copy.
 //
 // # Consistency
 //
