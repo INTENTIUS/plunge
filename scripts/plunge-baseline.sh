@@ -137,7 +137,9 @@ azure_setup() {
   export ARM_CLIENT_SECRET=floci-az-does-not-check-this
   export ARM_METADATA_HOSTNAME="${host}" ARM_METADATA_HOST="${host}"
   export ARM_USE_CLI=false ARM_USE_MSI=false ARM_USE_OIDC=false ARM_USE_AKS_WORKLOAD_IDENTITY=false
-  export ARM_RESOURCE_PROVIDER_REGISTRATIONS=none ARM_SKIP_PROVIDER_REGISTRATION=true
+  # azurerm refuses ARM_SKIP_PROVIDER_REGISTRATION beside resource_provider_registrations, which the stack
+  # config already sets; the deprecated variable is left unset.
+  export ARM_RESOURCE_PROVIDER_REGISTRATIONS=none
   export ARM_DISABLE_TERRAFORM_PARTNER_ID=true
   echo "azure:  floci-az at ${host}, CA ${ca}" | tee -a "${OUT}/versions.txt"
 }
