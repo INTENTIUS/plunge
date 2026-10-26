@@ -76,6 +76,9 @@ type ownershipEntry struct {
 	Unlisted string `json:"unlisted,omitempty"`
 	// ByName is what the by-name read found, for a covered type no lister covers (bind.go's readByName).
 	ByName string `json:"byName,omitempty"`
+	// Listing names what the bind phase listed the type through when the resource was created (for Google Cloud,
+	// the service's own list or the Asset Inventory fallback), so the record says which claim covers it.
+	Listing string `json:"listing,omitempty"`
 	// Autoname is where the resource's name came from and whether C1 covers it (autoname.go).
 	Autoname *autonameEntry `json:"autoname,omitempty"`
 }
@@ -169,9 +172,15 @@ func newMarkerPolicy(c *catalog, snap *deploy.Snapshot, l *ledger, d diag.Sink) 
 	return &markerPolicy{catalog: c, base: base, ledger: l, diag: d}
 }
 
-func (p *markerPolicy) warn(urn resource.URN, format string, args ...any) {
-	if p.diag != nil {
-		p.diag.Warningf(diag.Message(urn, format), args...)
+// warn reports a marker policy diagnostic. The engine hands each request its own diagnostic sink, so the warning
+// arrives as an engine diagnostic event on the resource (INTENTIUS/plunge#15); the backend's sink is the fallback for
+// a caller that passes none.
+func (p *markerPolicy) warn(sink diag.Sink, urn resource.URN, format string, args ...any) {
+	if sink == nil {
+		sink = p.diag
+	}
+	if sink != nil {
+		sink.Warningf(diag.Message(urn, format), args...)
 	}
 }
 
@@ -186,7 +195,7 @@ func (p *markerPolicy) Inject(ctx context.Context, req deploy.MarkerRequest) (re
 			}
 		})
 	}
-	if info.Family == FamilyAzureNative {
+	if info.Family == FamilyAzureNative && info.azureNativeFallback {
 		if _, ok := req.Properties[resource.PropertyKey(info.Property)]; ok {
 			info.Shape, info.Reason = ShapeMap, ""
 		}
@@ -197,7 +206,8 @@ func (p *markerPolicy) Inject(ctx context.Context, req deploy.MarkerRequest) (re
 		return req.Properties, nil
 	case ShapeUnsupported:
 		note(MarkerUnsupported, OwnershipRecord, info.Reason)
-		p.warn(req.URN, "plunge: no ownership marker for this resource: %s; its record carries ownership", info.Reason)
+		p.warn(req.Diag, req.URN, "plunge: no ownership marker for this resource: %s; its record carries ownership",
+			info.Reason)
 		return req.Properties, nil
 	case ShapeUnknown:
 		note(MarkerSchemaAbsent, OwnershipRecord, info.Reason)
@@ -221,7 +231,7 @@ func (p *markerPolicy) Inject(ctx context.Context, req deploy.MarkerRequest) (re
 		// be merged into them. They are merged at `up`, when the value is known; the preview says so.
 		note(MarkerTagsUnknown, OwnershipMarker, fmt.Sprintf("%s is not known during preview", info.Property))
 		if req.DryRun {
-			p.warn(req.URN, "plunge: %s is not known yet, so the preview does not show the ownership markers; "+
+			p.warn(req.Diag, req.URN, "plunge: %s is not known yet, so the preview does not show the ownership markers; "+
 				"`up` adds them once it is known", info.Property)
 			return req.Properties, nil
 		}
@@ -513,6 +523,9 @@ func mergeOwnership(prior *ownershipEntry, l *ledger, urn resource.URN) *ownersh
 		}
 		if e.Unlisted == "" {
 			e.Unlisted = prior.Unlisted
+		}
+		if e.Listing == "" {
+			e.Listing = prior.Listing
 		}
 		if e.Autoname == nil {
 			e.Autoname = prior.Autoname

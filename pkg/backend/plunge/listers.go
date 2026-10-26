@@ -22,6 +22,7 @@ package plunge
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,6 +37,7 @@ import (
 
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/azsweep"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/cloudcontrol"
+	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcplist"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcpsweep"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/kubesweep"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
@@ -73,14 +75,33 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 		return false, fmt.Sprintf("Cloud Control cannot list %s without a parent's input", info.CFNType)
 	}
 	if info.Family == FamilyAWS {
-		// pulumi-aws's ID is the Terraform id. It is the Cloud Control identifier only for a single-part one;
-		// a multi-part identifier needs a per-type translation plunge does not have yet.
-		if roster, err := registry.Embedded(); err != nil || roster.IdentifierArity(info.CFNType) != 1 {
-			return false, fmt.Sprintf("%s's Cloud Control identifier is not a single part, so it cannot stand for "+
-				"the Terraform id of %s", info.CFNType, info.TFType)
+		// pulumi-aws's ID is the Terraform id. A single-part Cloud Control identifier is it; a multi-part one is
+		// translated through the type's import id grammar (ccid.go).
+		if _, reason := awsIDTranslation(info); reason != "" {
+			return false, reason
 		}
 	}
 	return true, ""
+}
+
+// awsIDTranslation is how a pulumi-aws type's Cloud Control identifiers become Terraform ids: nil for a single-part
+// identifier, which is the id as it is.
+func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
+	roster, err := registry.Embedded()
+	if err != nil {
+		return nil, "choudoufu's registry could not be read: " + err.Error()
+	}
+	switch roster.IdentifierArity(info.CFNType) {
+	case 0:
+		return nil, fmt.Sprintf("the registry has no primary identifier for %s", info.CFNType)
+	case 1:
+		return nil, ""
+	}
+	t, reason := ccTerraformID(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
+	if reason != "" {
+		return nil, reason
+	}
+	return &t, ""
 }
 
 func (l *cloudControlLister) ListMarked(
@@ -101,6 +122,13 @@ func (l *cloudControlLister) ListMarked(
 	if err != nil {
 		return nil, err
 	}
+	var translate *ccTranslation
+	if info.Family == FamilyAWS {
+		var reason string
+		if translate, reason = awsIDTranslation(info); reason != "" {
+			return nil, errors.New(reason)
+		}
+	}
 	var objs []LiveObject
 	for _, d := range descs {
 		tags, ok := cfnTags(d.Properties)
@@ -115,7 +143,16 @@ func (l *cloudControlLister) ListMarked(
 			}
 			tags, _ = cfnTags(full.Properties)
 		}
-		objs = append(objs, LiveObject{ID: resource.ID(d.Identifier), Tags: tags})
+		id := d.Identifier
+		if translate != nil {
+			tfID, ok := translate.apply(d.Identifier)
+			if !ok {
+				return nil, fmt.Errorf("the Cloud Control identifier %q of %s does not have the %d parts its "+
+					"primary identifier names", d.Identifier, info.CFNType, translate.arity)
+			}
+			id = tfID
+		}
+		objs = append(objs, LiveObject{ID: resource.ID(id), Tags: tags})
 	}
 	return filterMarked(objs, want), nil
 }
@@ -359,9 +396,147 @@ func (l *kubeLister) ListMarked(
 	return filterMarked(out, want), nil
 }
 
+// gcpLister lists a covered Google Cloud type through its own service's list call (package gcplist), which reads
+// the store the create wrote to, so it carries the collision claim. A type gcplist does not cover, or one whose list
+// cannot be addressed from the resource's inputs and the provider's configuration, is searched through Asset
+// Inventory instead (assetLister), which binds but does not carry the claim; the ownership entry says which it was.
+type gcpLister struct {
+	asset   *assetLister
+	clients listerCache[http.Client]
+}
+
+func newGCPLister() *gcpLister { return &gcpLister{asset: &assetLister{}} }
+
+func (l *gcpLister) Covers(info TypeInfo) (bool, string) { return true, "" }
+
+// Consistent is false for the family as a whole; ConsistentFor answers per type and request.
+func (l *gcpLister) Consistent() bool { return false }
+
+// gcpList is where one request's objects are listed through the type's service, or why they are not.
+type gcpList struct {
+	t        gcplist.Type
+	url      string
+	coll     string
+	fallback string
+}
+
+func (l *gcpLister) plan(info TypeInfo, req deploy.BindRequest) gcpList {
+	if info.TFType == "" {
+		return gcpList{fallback: fmt.Sprintf("%s's Terraform type is not known", info.Type)}
+	}
+	t, reason, ok := gcplist.Lookup(info.TFType)
+	if !ok {
+		return gcpList{fallback: reason}
+	}
+	endpoint := providerString(req.ProviderInputs, t.Service.EndpointArg)
+	if endpoint == "" && t.Service.EndpointEnv != "" {
+		endpoint = os.Getenv(t.Service.EndpointEnv)
+	}
+	u, coll, err := t.URL(t.Root(endpoint), func(name string) (string, bool) { return gcpVar(name, req) })
+	if err != nil {
+		return gcpList{fallback: fmt.Sprintf("the %s list for %s cannot be addressed: %v", t.Service.Host,
+			info.TFType, err)}
+	}
+	return gcpList{t: t, url: u, coll: coll}
+}
+
+// gcpVar fills one variable of a list path: the resource's own input (camelCase, as pulumi-gcp names it), else, for
+// the scope variables, the provider's configuration and the provider's environment fallbacks.
+func gcpVar(name string, req deploy.BindRequest) (string, bool) {
+	scope := name == "project" || name == "region" || name == "zone" || name == "location"
+	for _, key := range []string{snakeToCamel(name), name} {
+		if v := providerString(req.Inputs, key); v != "" {
+			if scope {
+				// A self link or a full name ("projects/p", ".../zones/z") names its last segment.
+				v = v[strings.LastIndex(v, "/")+1:]
+			}
+			return v, true
+		}
+	}
+	if !scope {
+		return "", false
+	}
+	a := gcpsweep.Attrs{
+		Project: providerString(req.ProviderInputs, "project"),
+		Region:  providerString(req.ProviderInputs, "region"),
+		Zone:    providerString(req.ProviderInputs, "zone"),
+	}.WithEnv(os.Getenv)
+	switch name {
+	case "project":
+		return a.Project, a.Project != ""
+	case "zone":
+		return a.Zone, a.Zone != ""
+	default:
+		// pulumi-gcp defaults a regional resource's region, and most location arguments, to the provider's region.
+		return a.Region, a.Region != ""
+	}
+}
+
+func snakeToCamel(s string) string {
+	parts := strings.Split(s, "_")
+	for i := 1; i < len(parts); i++ {
+		if parts[i] != "" {
+			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
+// ConsistentFor implements requestConsistency.
+func (l *gcpLister) ConsistentFor(info TypeInfo, req deploy.BindRequest) (bool, string) {
+	p := l.plan(info, req)
+	if p.fallback != "" {
+		return false, p.fallback + "; Cloud Asset Inventory binds it instead"
+	}
+	return true, ""
+}
+
+// Listing implements listingDescriber.
+func (l *gcpLister) Listing(info TypeInfo, req deploy.BindRequest) string {
+	p := l.plan(info, req)
+	if p.fallback != "" {
+		return "gcp: Cloud Asset Inventory (eventually consistent)"
+	}
+	d := fmt.Sprintf("gcp: %s list of %s (consistent per type)", p.t.Service.Host, p.coll)
+	if p.t.Service.Consistency != "" {
+		d += "; Google documents that " + p.t.Service.Consistency
+	}
+	return d
+}
+
+func (l *gcpLister) ListMarked(
+	ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string,
+) ([]LiveObject, error) {
+	p := l.plan(info, req)
+	if p.fallback != "" {
+		return l.asset.ListMarked(ctx, info, req, want)
+	}
+	in := req.ProviderInputs
+	a := gcpsweep.Attrs{
+		Project:                   providerString(in, "project"),
+		Credentials:               providerString(in, "credentials"),
+		AccessToken:               providerString(in, "accessToken"),
+		ImpersonateServiceAccount: providerString(in, "impersonateServiceAccount"),
+	}.WithEnv(os.Getenv)
+	key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
+	c, err := l.clients.get(key, func() (*http.Client, error) { return gcpsweep.HTTPClient(ctx, a) })
+	if err != nil {
+		return nil, err
+	}
+	objs, err := p.t.List(ctx, c, p.url, p.coll)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]LiveObject, 0, len(objs))
+	for _, o := range objs {
+		out = append(out, LiveObject{ID: resource.ID(p.t.ImportID(o)), Tags: o.Labels})
+	}
+	return filterMarked(out, want), nil
+}
+
 // assetLister binds Google Cloud resources through Cloud Asset Inventory (gcpsweep). The index is eventually
-// consistent, so a bind it makes is sound but its silence is not proof there is no duplicate; Google Cloud has no
-// per-type tagged list of its own across services. The collision claim does not cover Google Cloud types.
+// consistent, so a bind it makes is sound but its silence is not proof there is no duplicate. It is gcpLister's
+// fallback for the types gcplist does not cover, and the collision claim does not cover those.
 type assetLister struct {
 	clients listerCache[gcpsweep.Client]
 }
