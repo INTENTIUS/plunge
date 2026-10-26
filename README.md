@@ -94,6 +94,14 @@ PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/
 that they match at a later upstream merge, not only at the fork point. The maintainer runs it; see the
 script's header for its inputs.
 
+## Record store acceptance
+
+`scripts/plunge-record-store-acceptance.sh` is the maintainer's run of the record backend on a real
+store (INTENTIUS/plunge#6). It defaults to floci's S3 on localhost, refuses a store that is not on
+loopback unless `PLUNGE_ACCEPTANCE_REAL_STORE=yes`, and writes `VERDICT` lines for two concurrent
+updates on disjoint resources, one record per URN in the store listing, and an older program's run
+leaving a newer run's resource in place. See the script's header for its inputs and outputs.
+
 ## Merging upstream
 
 ```sh
