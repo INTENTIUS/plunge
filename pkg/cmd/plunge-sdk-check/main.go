@@ -22,6 +22,9 @@
 //	SDK-AHEAD <lang> <sdk-version> plunge-pulumi=<v>  a lockstep SDK newer than plunge's upstream base
 //	FEATURE-OK <lang> <sdk-version> <feature> (...)
 //	FEATURE-MISSING <lang> <sdk-version> <feature> (...)
+//	SDK-LEGACY-ID <lang> <sdk-version> <id> (...)    the SDK asks SupportsFeature for an id upstream's
+//	                                                  engine doesn't know either; the feature is advertised
+//	                                                  through GetDeploymentInfo
 //	SDK-ERROR <lang> ...                              the release couldn't be fetched or read
 //
 // Usage, from pkg/:
