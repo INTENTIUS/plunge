@@ -158,7 +158,8 @@ func TestCloudControlIdentifierTranslation(t *testing.T) {
 	id, _ = tr.apply("f-1|i-1")
 	assert.Equal(t, "f-1/i-1", id)
 
-	// A server-assigned row has no grammar to translate into: the type stays unlisted, with the reason.
+	// A server-assigned row has no grammar to translate into. (aws_guardduty_ipset is translated by hand since
+	// INTENTIUS/plunge#19, ccid_hand.go; the grammar rule alone still gives the reason.)
 	_, reason = ccTerraformID("aws_guardduty_ipset", "AWS::GuardDuty::IPSet", []string{"Id", "DetectorId"})
 	assert.NotEmpty(t, reason)
 
@@ -436,4 +437,42 @@ func TestCollisionClaimIsCloudStorageAndCloudControlOnly(t *testing.T) {
 	assert.False(t, ok)
 	assert.Contains(t, why, "binds, consistency unmeasured")
 	assert.Contains(t, why, "pubsub.googleapis.com")
+}
+
+// The written-out Cloud Control translations (INTENTIUS/plunge#19, ccid_hand.go): each turns a listed identifier,
+// and for SageMaker the model's ARN, into the Terraform id the type is imported by. Budgets actions stay unlisted.
+func TestHandWrittenCloudControlTranslations(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		tfType, cfnType, identifier string
+		props                       map[string]any
+		want                        string
+	}{
+		{"aws_eip", "AWS::EC2::EIP", "203.0.113.7|eipalloc-0abc", nil, "eipalloc-0abc"},
+		{"aws_ecs_service", "AWS::ECS::Service",
+			"arn:aws:ecs:us-east-1:123456789012:service/main/web|arn:aws:ecs:us-east-1:123456789012:cluster/main",
+			nil, "main/web"},
+		{"aws_guardduty_ipset", "AWS::GuardDuty::IPSet", "ip1|det1", nil, "det1:ip1"},
+		{"aws_guardduty_threatintelset", "AWS::GuardDuty::ThreatIntelSet", "ti1|det1", nil, "det1:ti1"},
+		{"aws_guardduty_publishing_destination", "AWS::GuardDuty::PublishingDestination", "det1|pd1", nil,
+			"det1:pd1"},
+		{"aws_quicksight_folder", "AWS::QuickSight::Folder", "123456789012|f1", nil, "123456789012,f1"},
+		{"aws_sagemaker_space", "AWS::SageMaker::Space", "d-1|space1",
+			map[string]any{"SpaceArn": "arn:aws:sagemaker:us-east-1:123456789012:space/d-1/space1"},
+			"arn:aws:sagemaker:us-east-1:123456789012:space/d-1/space1"},
+	} {
+		tr, ok := ccHandTranslation(tc.tfType, tc.cfnType)
+		require.True(t, ok, tc.cfnType)
+		got, ok := tr.translate(tc.identifier, tc.props)
+		require.True(t, ok, tc.cfnType)
+		assert.Equal(t, tc.want, got, tc.cfnType)
+	}
+
+	tr, _ := ccHandTranslation("aws_sagemaker_app", "AWS::SageMaker::App")
+	assert.Equal(t, "AppArn", tr.needsModel())
+	_, ok := tr.translate("a|JupyterServer|d-1|u", nil)
+	assert.False(t, ok, "without the model's ARN there is no id")
+
+	_, ok = ccHandTranslation("aws_budgets_budget_action", "AWS::Budgets::BudgetsAction")
+	assert.False(t, ok, "a budgets action id needs the account ID, which Cloud Control does not carry")
 }
