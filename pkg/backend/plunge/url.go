@@ -56,8 +56,9 @@ const URLPrefix = "plunge+"
 const k8sScheme = "k8s"
 
 // EnvAllowInsecure names record store settings whose failed check a run proceeds past, comma separated, as the
-// allow_insecure query key does. The setting names are staterecord's (blob_versioning, lifecycle_management,
-// public_access for Azure Blob).
+// allow_insecure query key does. The setting names are staterecord's: blob_versioning, lifecycle_management and
+// public_access for Azure Blob; versioning, lifecycle and public_access_block for S3; object_versioning,
+// noncurrent_lifecycle, public_access_prevention and uniform_bucket_level_access for GCS.
 const EnvAllowInsecure = "PLUNGE_ALLOW_INSECURE"
 
 // recordsDir is where the records live relative to the DIY backend root.
@@ -181,7 +182,19 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 				o.UsePathStyle = true
 			}
 		})
-		return staterecord.NewS3Store(staterecord.S3Config{Client: client, Bucket: u.Host, KeyPrefix: keyPrefix})
+		// The bucket's settings are checked on open, as the Azure Blob store's are (INTENTIUS/plunge#20):
+		// versioning, a lifecycle rule for noncurrent versions, and the public access block. bucket_owner, when
+		// set, makes every request carry S3's ExpectedBucketOwner.
+		store, err := staterecord.NewS3Store(staterecord.S3Config{
+			Client: client, Bucket: u.Host, KeyPrefix: keyPrefix, ExpectedBucketOwner: q.Get("bucket_owner"),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if err := enforceContract(ctx, store, allowInsecure(q)); err != nil {
+			return nil, err
+		}
+		return store, nil
 
 	case "azblob":
 		account := q.Get("storage_account")
@@ -243,7 +256,17 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 		if err != nil {
 			return nil, fmt.Errorf("plunge: building the GCS client for %q: %w", plungeURL, err)
 		}
-		return staterecord.NewGCSStore(staterecord.GCSConfig{Client: client, Bucket: u.Host, KeyPrefix: keyPrefix})
+		// The bucket's settings are checked on open, as the Azure Blob store's are (INTENTIUS/plunge#20): object
+		// versioning, a lifecycle rule for noncurrent versions, public access prevention and uniform bucket-level
+		// access are refused when they fail; list_isolation only warns.
+		store, err := staterecord.NewGCSStore(staterecord.GCSConfig{Client: client, Bucket: u.Host, KeyPrefix: keyPrefix})
+		if err != nil {
+			return nil, err
+		}
+		if err := enforceContract(ctx, store, allowInsecure(q)); err != nil {
+			return nil, err
+		}
+		return store, nil
 
 	case k8sScheme:
 		return openKubernetesStore(plungeURL, u.Host, prefix, q)
@@ -295,9 +318,9 @@ func openKubernetesStore(plungeURL, namespace, prefix string, q url.Values) (sta
 }
 
 // ContractRefusedError refuses to open a record store whose own settings fail the contract its records depend on
-// (staterecord's ContractChecker): Azure Blob versioning, a lifecycle rule for previous versions, no anonymous
-// access. It names each failed setting with the store's own words and the fix. A setting named in allow_insecure
-// (or PLUNGE_ALLOW_INSECURE) is proceeded past, except one the store marks unwaivable.
+// (staterecord's ContractChecker): versioning, a lifecycle rule for previous versions and no anonymous access, on
+// S3, GCS and Azure Blob alike. It names each failed setting with the store's own words and the fix. A setting named
+// in allow_insecure (or PLUNGE_ALLOW_INSECURE) is proceeded past, except one the store marks unwaivable.
 type ContractRefusedError struct {
 	Subject  string
 	Settings []staterecord.Setting

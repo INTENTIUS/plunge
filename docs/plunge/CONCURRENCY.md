@@ -53,6 +53,15 @@ name (`ContractRefusedError`, with the fix for each). Naming the setting in
 the `allow_insecure` query key or `PLUNGE_ALLOW_INSECURE` proceeds past it; a
 lifecycle rule that deletes current records cannot be waived.
 
+`plunge+s3://` and `plunge+gs://` check their bucket the same way when they
+open it. S3: `versioning`, `lifecycle` (a rule that expires noncurrent
+versions under the records' prefix) and `public_access_block`; the
+`bucket_owner` query key, when set, makes every request carry S3's
+`ExpectedBucketOwner`. GCS: `object_versioning`, `noncurrent_lifecycle`,
+`public_access_prevention` and `uniform_bucket_level_access`, plus
+`list_isolation`, which warns and never refuses. The names are the ones
+`allow_insecure` takes.
+
 ## Races
 
 | Race | Outcome |
@@ -62,7 +71,7 @@ lifecycle rule that deletes current records cannot be waived.
 | An update racing a destroy of one resource | The loser's conditional write finds a different version, or no record, and is told by name |
 | Two first runs create the default provider | The provider's ID is derived from its URN and configuration, so both write the same record; the second adopts the first's |
 | A run of an older program version, after a newer one created a resource | The older run keeps the resource, with a warning naming it and both program stamps |
-| A run changes a resource that depends on one another run has an operation in flight on | The run is refused before the provider is called (`InFlightDependencyError`, naming both resources and the record). Nothing is written for the dependent, so it holds no value from the other run's unfinished state |
+| A run changes a resource that depends on, is a child of, or is deleted with one another run has an operation in flight on | The run is refused before the provider is called (`InFlightDependencyError`, naming both resources, the link and the record). Nothing is written for the dependent, so it holds no value from the other run's unfinished state. Provider links need no check: a provider's record keeps no pending operations |
 
 Every record carries the program stamp (commit and commit time, from git or
 from `PLUNGE_PROGRAM_COMMIT` and `PLUNGE_PROGRAM_TIME`) of the run that last
