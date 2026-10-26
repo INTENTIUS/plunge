@@ -91,7 +91,11 @@ func New(ctx context.Context, d diag.Sink, plungeURL string, project *workspace.
 	if !IsPlungeBackendURL(plungeURL) {
 		return nil, fmt.Errorf("plunge: %q is not a plunge backend URL", plungeURL)
 	}
-	inner, err := diy.New(ctx, d, innerURL(plungeURL), project)
+	meta, err := metadataURL(plungeURL)
+	if err != nil {
+		return nil, err
+	}
+	inner, err := diy.New(ctx, d, meta, project)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +119,14 @@ func Login(ctx context.Context, d diag.Sink, plungeURL string, project *workspac
 	return be, workspace.StoreAccount(be.URL(), workspace.Account{}, true)
 }
 
-func (b *plungeBackend) URL() string { return URLPrefix + b.Backend.URL() }
+// URL is the plunge URL this backend was opened with, normalized through the DIY backend's own URL where the DIY
+// URL is inside it. A plunge+k8s:// URL keeps its metadata URL in a query key, so it is returned as given.
+func (b *plungeBackend) URL() string {
+	if isK8sURL(b.url) {
+		return b.url
+	}
+	return URLPrefix + b.Backend.URL()
+}
 
 // keysFor is the record namespace of a stack. Records are per project, so a stack reference must name one.
 func keysFor(ref backend.StackReference) (stackKeys, error) {
@@ -228,6 +239,9 @@ func (b *plungeBackend) CreateStack(
 }
 
 func (b *plungeBackend) RemoveStack(ctx context.Context, s backend.Stack, force, removeBackups bool) (bool, error) {
+	if removeBackups {
+		return false, &UnsupportedOnRecordsError{What: "checkpoint backups", Ref: s.Ref().String()}
+	}
 	keys, err := keysFor(s.Ref())
 	if err != nil {
 		return false, err
