@@ -101,25 +101,65 @@ type recordPersister struct {
 	authoritative bool
 }
 
-// InFlightDependencyError refuses to begin an operation on a resource that depends on a resource another run has an
-// operation in flight on: a pending operation in the dependency's record that this run did not write. The other
+// InFlightDependencyError refuses to begin an operation on a resource linked to a resource another run has an
+// operation in flight on: a pending operation in the linked resource's record that this run did not write. The links
+// are its dependencies and property dependencies, its parent and its deletedWith resource (INTENTIUS/plunge#20); a
+// provider link needs no check, since a provider's record never keeps a pending operation (see Save). The other
 // run's outputs for it are not settled, and the values this run holds for it are the ones that run is replacing, so
 // nothing is created or updated from them. Nothing was written for the dependent. Re-run once the other run has
 // finished; a pending operation left by a run that crashed stays until it is cleared (docs/plunge/CONCURRENCY.md).
 type InFlightDependencyError struct {
 	URN        resource.URN
 	Dependency resource.URN
-	Operation  apitype.OperationType
-	Key        string
+	// Link is how URN is linked to Dependency: "depends on", "is a child of" or "is deleted with".
+	Link      string
+	Operation apitype.OperationType
+	Key       string
 }
 
 func (e *InFlightDependencyError) Error() string {
-	return fmt.Sprintf("plunge: not %s %s: it depends on %s, which another run has a %s operation in flight on "+
+	link := e.Link
+	if link == "" {
+		link = linkDependsOn
+	}
+	return fmt.Sprintf("plunge: not %s %s: it %s %s, which another run has a %s operation in flight on "+
 		"(the record at %q holds it), so %s's outputs are not settled and nothing is planned from them. Nothing was "+
 		"written for %s. Re-run when that run has finished; if it crashed, clear its pending operation with "+
 		"`plunge refresh --clear-pending-creates` (a create) or by removing it from a `plunge stack export` and "+
 		"importing that with `plunge stack import`",
-		"changing", e.URN, e.Dependency, e.Operation, e.Key, e.Dependency, e.URN)
+		"changing", e.URN, link, e.Dependency, e.Operation, e.Key, e.Dependency, e.URN)
+}
+
+// The links an in-flight check follows, in the words InFlightDependencyError uses.
+const (
+	linkDependsOn   = "depends on"
+	linkChildOf     = "is a child of"
+	linkDeletedWith = "is deleted with"
+)
+
+// stateLink is one resource a state is linked to, and how.
+type stateLink struct {
+	URN  resource.URN
+	Link string
+}
+
+// stateLinks is every resource whose in-flight operation unsettles state: its dependencies and property
+// dependencies, its parent and its deletedWith resource, each once, in that order. The provider link is left out:
+// pending operations are never kept for provider resources.
+func stateLinks(state apitype.ResourceV3) []stateLink {
+	seen := map[resource.URN]bool{}
+	var out []stateLink
+	for _, d := range stateDependencies(state) {
+		seen[d] = true
+		out = append(out, stateLink{URN: d, Link: linkDependsOn})
+	}
+	for _, l := range []stateLink{{state.Parent, linkChildOf}, {state.DeletedWith, linkDeletedWith}} {
+		if l.URN != "" && l.URN != state.URN && !seen[l.URN] {
+			seen[l.URN] = true
+			out = append(out, l)
+		}
+	}
+	return out
 }
 
 // inFlightOps are the pending operation types whose resource's outputs are not settled while they run.
@@ -156,18 +196,20 @@ func stateDependencies(state apitype.ResourceV3) []resource.URN {
 	return out
 }
 
-// checkInFlight refuses op, an operation this run is beginning, when a resource it depends on has another run's
-// operation in flight. Each dependency's record is read again from the store, since the other run may have started
-// after this one read the records.
+// checkInFlight refuses op, an operation this run is beginning, when a resource it is linked to (stateLinks) has
+// another run's operation in flight. Each linked resource's record is read again from the store, since the other run
+// may have started after this one read the records.
 func (p *recordPersister) checkInFlight(op apitype.OperationV2) error {
 	if op.Type == apitype.OperationTypeDeleting {
 		return nil
 	}
-	for _, dep := range stateDependencies(op.Resource) {
+	for _, link := range stateLinks(op.Resource) {
+		dep := link.URN
 		key := p.keys.resource(dep)
 		payload, _, exists, err := p.store.Get(p.ctx, key)
 		if err != nil {
-			return fmt.Errorf("plunge: reading the record of %s, a dependency of %s, at %q: %w", dep, op.Resource.URN, key, err)
+			return fmt.Errorf("plunge: reading the record of %s, which %s %s, at %q: %w",
+				dep, op.Resource.URN, link.Link, key, err)
 		}
 		if !exists {
 			continue
@@ -187,7 +229,9 @@ func (p *recordPersister) checkInFlight(op apitype.OperationV2) error {
 			if p.started[dep][string(c)] {
 				continue // this run's own
 			}
-			return &InFlightDependencyError{URN: op.Resource.URN, Dependency: dep, Operation: theirs.Type, Key: key}
+			return &InFlightDependencyError{
+				URN: op.Resource.URN, Dependency: dep, Link: link.Link, Operation: theirs.Type, Key: key,
+			}
 		}
 	}
 	return nil
