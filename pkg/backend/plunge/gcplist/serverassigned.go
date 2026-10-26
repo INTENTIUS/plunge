@@ -66,10 +66,10 @@ var ServerAssigned = map[string]Type{
 }
 
 // NotCovered is each labelled server-assigned type with no per-type lister, and why, as choudoufu's gcpsweep names
-// them. They bind through Asset Inventory.
+// them. They bind through Asset Inventory. google_assured_workloads_workload left this list in INTENTIUS/plunge#19:
+// its list is under the organization its own required input names (handwritten.go).
 var NotCovered = map[string]string{
-	"google_dialogflow_cx_intent":       "its list is under its agent (parent), which is another resource's attribute at plan time",
-	"google_assured_workloads_workload": "its list is under an organization, and the scope a list is made in is a project",
+	"google_dialogflow_cx_intent": "its list is under its agent (parent), which is another resource's attribute at plan time",
 }
 
 // serverAssigned returns tfType's written-out list, if it is one of [ServerAssigned].

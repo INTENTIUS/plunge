@@ -39,7 +39,8 @@
 //
 // Ten server-assigned types whose services are not in [Services] (Vertex AI, Document AI, Transcoder, Service
 // Directory, reCAPTCHA Enterprise, Managed Microsoft AD) are written out in [ServerAssigned], ported from choudoufu's
-// gcpsweep. The covered set is the same in both repos: testdata/covered-types.txt is a copy of choudoufu's
+// gcpsweep. Three types with no Asset name (Cloud SQL instances, GKE clusters, Assured Workloads workloads) are
+// written out in [Handwritten] (INTENTIUS/plunge#19). The covered set is the same in both repos: testdata/covered-types.txt is a copy of choudoufu's
 // internal/live/gcpsweep/testdata/covered-types.txt, and each repo tests its own set against its copy.
 //
 // # Consistency
@@ -162,6 +163,11 @@ type Type struct {
 	Query map[string]string
 	// Asset is the Asset name template the type's objects are named by (identity.GoogleAssetImports).
 	Asset string
+	// LabelsAt is where a listed object keeps its labels, as a path of fields; empty is "labels". Cloud SQL keeps
+	// them at settings.userLabels and GKE at resourceLabels.
+	LabelsAt []string
+	// ItemName names a listed object, in place of the rule objectName applies; nil for that rule.
+	ItemName func(o map[string]any, coll string) string
 }
 
 // Lookup returns tfType's list, or a reason it has none. A server-assigned type ([ServerAssigned]) is written out;
@@ -169,6 +175,9 @@ type Type struct {
 func Lookup(tfType string) (Type, string, bool) {
 	if t, ok := serverAssigned(tfType); ok {
 		t.Asset = identity.GoogleAssetImports[tfType].Asset
+		return t, "", true
+	}
+	if t, ok := handwritten(tfType); ok {
 		return t, "", true
 	}
 	if why, ok := NotCovered[tfType]; ok {
@@ -206,6 +215,10 @@ func Covered() []string {
 	seen := map[string]bool{}
 	var out []string
 	for tf := range ServerAssigned {
+		seen[tf] = true
+		out = append(out, tf)
+	}
+	for tf := range Handwritten {
 		seen[tf] = true
 		out = append(out, tf)
 	}
@@ -359,7 +372,8 @@ func (t Type) List(ctx context.Context, c *http.Client, first, coll string) ([]O
 			if name == "" {
 				continue
 			}
-			out = append(out, Object{Name: name, AssetName: "//" + t.Service.Host + "/" + name, Labels: labels(o)})
+			out = append(out, Object{Name: name, AssetName: "//" + t.Service.Host + "/" + name,
+				Labels: labels(o, t.LabelsAt)})
 		}
 		next = ""
 		if v, ok := raw["nextPageToken"]; ok {
@@ -378,6 +392,9 @@ func (t Type) List(ctx context.Context, c *http.Client, first, coll string) ([]O
 // object's name is bare, and its selfLink carries the path. Anything else is named under the collection, except a
 // bucket, whose Asset name is its bare name.
 func (t Type) objectName(o map[string]any, coll string) string {
+	if t.ItemName != nil {
+		return t.ItemName(o, coll)
+	}
 	name, _ := o["name"].(string)
 	if strings.Contains(name, "/") {
 		return strings.TrimPrefix(name, "//"+t.Service.Host+"/")
@@ -396,9 +413,17 @@ func (t Type) objectName(o map[string]any, coll string) string {
 	return coll + "/" + name
 }
 
-func labels(o map[string]any) map[string]string {
+func labels(o map[string]any, at []string) map[string]string {
 	out := map[string]string{}
-	m, _ := o["labels"].(map[string]any)
+	if len(at) == 0 {
+		at = []string{"labels"}
+	}
+	var cur any = o
+	for _, f := range at {
+		obj, _ := cur.(map[string]any)
+		cur = obj[f]
+	}
+	m, _ := cur.(map[string]any)
 	for k, v := range m {
 		if s, ok := v.(string); ok {
 			out[k] = s
