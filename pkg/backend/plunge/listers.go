@@ -46,7 +46,8 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
 
-// EnvCloudControlEndpoint points the Cloud Control lister at an emulator ("http://localhost:4566").
+// EnvCloudControlEndpoint points the Cloud Control lister at an emulator ("http://localhost:4566"). Unset, the
+// lister takes the endpoint from the stack's aws provider configuration (cloudControlEndpoint, endpoints.go).
 const EnvCloudControlEndpoint = "PLUNGE_CLOUDCONTROL_ENDPOINT"
 
 func firstEnv(names ...string) string {
@@ -114,9 +115,12 @@ func (l *cloudControlLister) ListMarked(
 	if region == "" {
 		region = firstEnv("AWS_REGION", "AWS_DEFAULT_REGION")
 	}
-	endpoint := os.Getenv(EnvCloudControlEndpoint)
+	endpoint, skip := cloudControlEndpoint(req.ProviderInputs)
+	if skip != "" {
+		return nil, skipped(req.URN, "AWS Cloud Control", "%s", skip)
+	}
 	c, err := l.clients.get(region+"|"+endpoint, func() (*cloudcontrol.Client, error) {
-		return cloudcontrol.New(cloudcontrol.Config{Region: region, Endpoint: endpoint}), nil
+		return cloudcontrol.New(cloudcontrol.Config{Region: region, Endpoint: endpoint, RoundTripper: listerTransport}), nil
 	})
 	if err != nil {
 		return nil, err
@@ -224,6 +228,12 @@ func (l *armLister) ListMarked(
 	ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string,
 ) ([]LiveObject, error) {
 	in := req.ProviderInputs
+	if host := azureMetadataHost(in); host != "" {
+		// The provider reads every endpoint from the metadata host (an emulator such as floci-az). The lister does
+		// not resolve one, and without it the call would go to the public cloud's ARM.
+		return nil, skipped(req.URN, "ARM", "the azure provider takes its endpoints from the metadata host %s, "+
+			"which plunge's ARM lister does not resolve", host)
+	}
 	sub := providerString(in, "subscriptionId")
 	if sub == "" {
 		sub = firstEnv("ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID")
@@ -438,6 +448,8 @@ type gcpList struct {
 	url      string
 	coll     string
 	fallback string
+	// skip says why nothing is listed: the provider names custom endpoints and none for the type's service.
+	skip string
 }
 
 func (l *gcpLister) plan(info TypeInfo, req deploy.BindRequest) gcpList {
@@ -451,6 +463,12 @@ func (l *gcpLister) plan(info TypeInfo, req deploy.BindRequest) gcpList {
 	endpoint := providerString(req.ProviderInputs, t.Service.EndpointArg)
 	if endpoint == "" && t.Service.EndpointEnv != "" {
 		endpoint = os.Getenv(t.Service.EndpointEnv)
+	}
+	if endpoint == "" {
+		if named := gcpCustomEndpoints(req.ProviderInputs); len(named) > 0 {
+			return gcpList{t: t, skip: fmt.Sprintf("the google provider sets custom endpoints (%s) and no %s for %s",
+				strings.Join(named, ", "), t.Service.EndpointArg, t.Service.Host)}
+		}
 	}
 	u, coll, err := t.URL(t.Root(endpoint), func(name string) (string, bool) { return gcpVar(name, req) })
 	if err != nil {
@@ -505,6 +523,9 @@ func snakeToCamel(s string) string {
 // ConsistentFor implements requestConsistency.
 func (l *gcpLister) ConsistentFor(info TypeInfo, req deploy.BindRequest) (bool, string) {
 	p := l.plan(info, req)
+	if p.skip != "" {
+		return false, "not listed: " + p.skip
+	}
 	if p.fallback != "" {
 		return false, p.fallback + "; Cloud Asset Inventory binds it instead"
 	}
@@ -518,6 +539,9 @@ func (l *gcpLister) ConsistentFor(info TypeInfo, req deploy.BindRequest) (bool, 
 // Listing implements listingDescriber.
 func (l *gcpLister) Listing(info TypeInfo, req deploy.BindRequest) string {
 	p := l.plan(info, req)
+	if p.skip != "" {
+		return fmt.Sprintf("gcp: not listed (%s)", p.skip)
+	}
 	if p.fallback != "" {
 		return "gcp: Cloud Asset Inventory (eventually consistent)"
 	}
@@ -532,6 +556,9 @@ func (l *gcpLister) ListMarked(
 	ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string,
 ) ([]LiveObject, error) {
 	p := l.plan(info, req)
+	if p.skip != "" {
+		return nil, skipped(req.URN, p.t.Service.Host, "%s", p.skip)
+	}
 	if p.fallback != "" {
 		return l.asset.ListMarked(ctx, info, req, want)
 	}
@@ -541,7 +568,11 @@ func (l *gcpLister) ListMarked(
 		Credentials:               providerString(in, "credentials"),
 		AccessToken:               providerString(in, "accessToken"),
 		ImpersonateServiceAccount: providerString(in, "impersonateServiceAccount"),
+		IAMCredentialsEndpoint:    providerString(in, "iamCredentialsCustomEndpoint"),
 	}.WithEnv(os.Getenv)
+	if err := gcpImpersonationEndpoint(req, a); err != nil {
+		return nil, err
+	}
 	key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
 	c, err := l.clients.get(key, func() (*http.Client, error) { return gcpsweep.HTTPClient(ctx, a) })
 	if err != nil {
@@ -578,7 +609,18 @@ func (l *assetLister) ListMarked(
 		Credentials:               providerString(in, "credentials"),
 		AccessToken:               providerString(in, "accessToken"),
 		ImpersonateServiceAccount: providerString(in, "impersonateServiceAccount"),
+		CloudAssetEndpoint:        providerString(in, "cloudAssetCustomEndpoint"),
+		IAMCredentialsEndpoint:    providerString(in, "iamCredentialsCustomEndpoint"),
 	}.WithEnv(os.Getenv)
+	if a.CloudAssetEndpoint == "" {
+		if named := gcpCustomEndpoints(in); len(named) > 0 {
+			return nil, skipped(req.URN, "cloudasset.googleapis.com", "the google provider sets custom endpoints "+
+				"(%s) and no cloudAssetCustomEndpoint", strings.Join(named, ", "))
+		}
+	}
+	if err := gcpImpersonationEndpoint(req, a); err != nil {
+		return nil, err
+	}
 	if a.Project == "" {
 		return nil, fmt.Errorf("no project: the provider sets no project and GOOGLE_PROJECT is unset")
 	}
@@ -602,4 +644,18 @@ func (l *assetLister) ListMarked(
 		out = append(out, LiveObject{ID: resource.ID(id), Tags: as.Labels})
 	}
 	return filterMarked(out, want), nil
+}
+
+// gcpImpersonationEndpoint refuses an impersonated token request that would go to the public IAM Credentials API
+// although the provider names custom endpoints for other services.
+func gcpImpersonationEndpoint(req deploy.BindRequest, a gcpsweep.Attrs) error {
+	if a.ImpersonateServiceAccount == "" || a.IAMCredentialsEndpoint != "" {
+		return nil
+	}
+	if named := gcpCustomEndpoints(req.ProviderInputs); len(named) > 0 {
+		return skipped(req.URN, "iamcredentials.googleapis.com", "the google provider impersonates %s and sets "+
+			"custom endpoints (%s) but no iamCredentialsCustomEndpoint", a.ImpersonateServiceAccount,
+			strings.Join(named, ", "))
+	}
+	return nil
 }

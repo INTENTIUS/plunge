@@ -53,6 +53,32 @@ name (`ContractRefusedError`, with the fix for each). Naming the setting in
 the `allow_insecure` query key or `PLUNGE_ALLOW_INSECURE` proceeds past it; a
 lifecycle rule that deletes current records cannot be waived.
 
+Without an `endpoint` or `metadata_host` query key, `plunge+azblob://` is real
+Azure (`https://<account>.blob.core.windows.net`, azidentity's default
+credential chain). With either, it talks only to the endpoints the URL names
+and never falls back to the shell's Azure login (INTENTIUS/plunge#35):
+
+- `endpoint` is the account's blob service URL, for floci-az
+  `https://<account>.blob.localhost:<port>` under
+  `FLOCI_AZ_STORAGE_SUFFIX=localhost:<port>`; the container is appended.
+- `metadata_host` (`localhost:4577`) serves `/metadata/endpoints`, as the azure
+  provider's `metadataHost` does. It gives the storage suffix when `endpoint`
+  is unset, and ARM and the login endpoint for the settings check.
+- The blobs are signed with `ARM_ACCESS_KEY` (or `AZURE_STORAGE_KEY`), else
+  `ARM_SAS_TOKEN` (or `AZURE_STORAGE_SAS_TOKEN`), else a client secret
+  (`ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`) against the metadata
+  host's login endpoint. Secrets come from the environment only, since the
+  backend URL is saved and printed. With none of them the open is refused.
+- The settings check reads ARM, so it needs `metadata_host` and the client
+  secret, plus `resource_group` and `subscription_id`. Without them each
+  setting is reported unreadable with the reason, and the open is refused
+  unless `allow_insecure` names them.
+
+For example, against floci-az:
+`plunge+azblob://records?storage_account=devacct&resource_group=rg&subscription_id=<sub>&metadata_host=localhost:4577&endpoint=https://devacct.blob.localhost:4577`
+with `ARM_TENANT_ID`, `ARM_CLIENT_ID` and `ARM_CLIENT_SECRET` set to floci-az's
+fakes.
+
 `plunge+s3://` and `plunge+gs://` check their bucket the same way when they
 open it. S3: `versioning`, `lifecycle` (a rule that expires noncurrent
 versions under the records' prefix) and `public_access_block`; the
@@ -211,6 +237,27 @@ A pulumi-gcp type outside `gcplist.Covered()`, or one whose list path cannot be
 filled from the resource's inputs and the provider's project, region and zone,
 is searched through Cloud Asset Inventory. That index lags its services, so it
 binds and does not back the collision check either.
+
+### Where the listings call
+
+Each lister calls where the provider does, from the same provider
+configuration (INTENTIUS/plunge#27). The Cloud Control lister takes its
+endpoint from `PLUNGE_CLOUDCONTROL_ENDPOINT` when it is set, else from the
+provider's `endpoints` (`aws:endpoints` on a default provider): its
+`cloudcontrol` entry, then `AWS_ENDPOINT_URL_CLOUDCONTROL` or
+`AWS_ENDPOINT_URL`, then the one URL every entry shares (a stack pointing
+every service at floci). A Google Cloud list uses the service's
+`<service>CustomEndpoint` input or its `GOOGLE_*_CUSTOM_ENDPOINT` variable, and
+Asset Inventory uses `cloudAssetCustomEndpoint`.
+
+When the configuration names custom endpoints and none that the listing can
+use (an `aws:endpoints` with several URLs and no `cloudcontrol` entry, a google
+provider with custom endpoints for other services, an azure provider with a
+`metadataHost`, which the ARM lister does not resolve), the listing is
+skipped. plunge warns once, naming the stack and the service, records the
+reason in `ownership.unlisted`, and runs no bind or collision check for those
+creates. It never falls back to the cloud's public endpoint. The sweep for
+unrecorded marked objects skips the same listings with the same warning.
 
 Where the claim is not made, two marked objects are still refused by name, and
 one is still bound; what is not claimed is that an empty listing proves no

@@ -44,6 +44,7 @@ package plunge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -106,6 +107,9 @@ type binder struct {
 	catalog *catalog
 	ledger  *ledger
 	listers map[Family]Lister
+	// warnedSkips holds the SkippedListing messages already warned about, so a run warns once per stack and
+	// service rather than once per create.
+	warnedSkips sync.Map
 }
 
 var _ deploy.MarkerBinder = (*binder)(nil)
@@ -165,6 +169,17 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 	sweepReq.Diag = nil
 	b.ledger.noteMarked(req.URN, info, &sweepReq)
 	found, err := lister.ListMarked(ctx, info, req, want)
+	var skip *SkippedListing
+	if errors.As(err, &skip) {
+		// The stack points the provider at custom endpoints and names none for the listing's service: no call is
+		// made to the cloud's public endpoint (INTENTIUS/plunge#27).
+		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Unlisted = skip.Error() })
+		if _, seen := b.warnedSkips.LoadOrStore(skip.Error(), true); !seen && req.Diag != nil {
+			req.Diag.Warningf(diag.Message(req.URN, "plunge: %s; no marker bind or collision check ran for "+
+				"the creates it would have listed"), skip.Error())
+		}
+		return b.readByName(ctx, info, req, want), nil
+	}
 	if err != nil {
 		// A listing that failed is a coverage gap for this run, not grounds to refuse it or to bind.
 		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Unlisted = "the listing failed: " + err.Error() })

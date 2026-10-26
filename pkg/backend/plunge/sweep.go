@@ -30,6 +30,7 @@ package plunge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -74,11 +75,18 @@ func (o UnrecordedObject) String() string {
 		o.Type, o.ID, claims, o.Listing)
 }
 
+// sweepNote is one type the sweep could not list, with the reason. warn is set for a listing skipped because the
+// stack points its provider at custom endpoints and names none for the service (INTENTIUS/plunge#27).
+type sweepNote struct {
+	text string
+	warn bool
+}
+
 // sweepUnrecorded lists every covered type marks says the run marked, with the stack's marker, and returns the live
 // objects no record under keys names. notes are the types it could not list, each with the reason.
 func sweepUnrecorded(
 	ctx context.Context, store staterecord.Store, keys stackKeys, marks *ledger, listers map[Family]Lister,
-) (found []UnrecordedObject, notes []string, err error) {
+) (found []UnrecordedObject, notes []sweepNote, err error) {
 	targets := marks.sweepTargets()
 	if len(targets) == 0 {
 		return nil, nil, nil
@@ -154,9 +162,15 @@ func sweepUnrecorded(
 
 		want := map[string]string{markers.TagStack: mustMarkers(urn, t.info)[markers.TagStack]}
 		objs, err := lister.ListMarked(ctx, t.info, *req, want)
+		var skip *SkippedListing
+		if errors.As(err, &skip) {
+			notes = append(notes, sweepNote{text: fmt.Sprintf("the sweep for unrecorded %s objects did not run: %v",
+				t.info.Type, skip), warn: true})
+			continue
+		}
 		if err != nil {
-			notes = append(notes, fmt.Sprintf("the sweep for unrecorded %s objects could not list them: %v",
-				t.info.Type, err))
+			notes = append(notes, sweepNote{text: fmt.Sprintf("the sweep for unrecorded %s objects could not list "+
+				"them: %v", t.info.Type, err)})
 			continue
 		}
 		for _, o := range objs {
@@ -259,7 +273,11 @@ func reportUnrecorded(
 		return nil
 	}
 	for _, n := range notes {
-		d.Infof(diag.RawMessage("", "plunge: "+n+"\n"))
+		if n.warn {
+			d.Warningf(diag.RawMessage("", "plunge: "+n.text+"\n"))
+			continue
+		}
+		d.Infof(diag.RawMessage("", "plunge: "+n.text+"\n"))
 	}
 	for _, o := range found {
 		d.Warningf(diag.Message(o.Claims, "%s"), o.String())
