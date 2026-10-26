@@ -97,6 +97,9 @@ func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
 	case 1:
 		return nil, ""
 	}
+	if t, ok := ccHandTranslation(info.TFType, info.CFNType); ok {
+		return t, ""
+	}
 	t, reason := ccTerraformID(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
 	if reason != "" {
 		return nil, reason
@@ -132,8 +135,14 @@ func (l *cloudControlLister) ListMarked(
 	var objs []LiveObject
 	for _, d := range descs {
 		tags, ok := cfnTags(d.Properties)
+		if prop := translate.needsModel(); prop != "" {
+			// The id is read from a model property (an ARN), which a list handler may leave out.
+			if _, has := d.Properties[prop]; !has {
+				ok = false
+			}
+		}
 		if !ok {
-			// The list handler left the tags out: read the one resource.
+			// The list handler left the tags, or the property the id is read from, out: read the one resource.
 			full, err := cloudcontrol.GetResourceByIdentity(ctx, c, info.CFNType, d.Identifier)
 			if err != nil {
 				return nil, err
@@ -142,13 +151,14 @@ func (l *cloudControlLister) ListMarked(
 				continue
 			}
 			tags, _ = cfnTags(full.Properties)
+			d.Properties = full.Properties
 		}
 		id := d.Identifier
 		if translate != nil {
-			tfID, ok := translate.apply(d.Identifier)
+			tfID, ok := translate.translate(d.Identifier, d.Properties)
 			if !ok {
-				return nil, fmt.Errorf("the Cloud Control identifier %q of %s does not have the %d parts its "+
-					"primary identifier names", d.Identifier, info.CFNType, translate.arity)
+				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s's "+
+					"Terraform id (it should have %d parts)", d.Identifier, info.CFNType, info.TFType, translate.arity)
 			}
 			id = tfID
 		}
