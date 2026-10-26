@@ -60,8 +60,22 @@ make plunge_language_hosts   # fetch the bundled dotnet and yaml hosts into bin/
 mise run plunge-build        # bin/plunge without make
 ```
 
-A plain `cd pkg && go build -o plunge ./cmd/pulumi` works too, but leaves both versions empty, which
-turns the version checks off, as on an upstream dev build.
+`make plunge` needs mise's protoc. On a fresh checkout it first runs `proto/generate.sh` (the
+`.make/proto` step), which looks protoc up with `mise where protoc` and also needs mise's
+protoc-gen-go, protoc-gen-go-grpc and the node protoc plugins. The generated protobuf code is
+committed, so building the binary itself doesn't need protoc. Without mise, build it directly:
+
+```sh
+go build -C pkg -o ../bin/plunge -ldflags "$(./scripts/plunge-version.sh ldflags)" ./cmd/pulumi
+```
+
+Dropping the `-ldflags` leaves both versions empty, which turns the version checks off, as on an
+upstream dev build.
+
+The language hosts are separate Go modules and build with a plain `go build`, for example
+`go build -C sdk/nodejs/cmd/pulumi-language-nodejs -o ../../../../bin/pulumi-language-nodejs .`.
+Build to `bin/` (ignored) or to `-o /dev/null`. A `go build` with no `-o` leaves the binary in the
+source directory; `.gitignore` covers those paths so one isn't committed by accident.
 
 ## Language hosts
 

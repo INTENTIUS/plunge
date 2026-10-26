@@ -110,3 +110,14 @@ yarn-error.log
 
 # plunge: scripts/plunge-baseline.sh output
 /plunge-baseline-out/
+
+# plunge: binaries a plain `go build` leaves in the tree. Build to bin/ or -o /dev/null instead.
+/sdk/nodejs/cmd/pulumi-language-nodejs/pulumi-language-nodejs
+/sdk/nodejs/cmd/pulumi-language-bun/pulumi-language-bun
+/sdk/python/cmd/pulumi-language-python/pulumi-language-python
+/sdk/go/pulumi-language-go/pulumi-language-go
+/sdk/pcl/cmd/pulumi-language-pcl/pulumi-language-pcl
+/sdk/pcl/pulumi-language-pcl
+/pkg/pulumi
+/pkg/plunge/pulumi
+/pkg/plunge/plunge
