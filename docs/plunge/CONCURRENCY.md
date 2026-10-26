@@ -95,6 +95,21 @@ with the reason when it does not (`ownership.autoname`: `by`, `name`, `c1`,
 family lister covers them, a duplicate create is caught by the marker listing
 instead.
 
+## Saved plans
+
+`plunge preview --save-plan` stamps the plan with the version of each record
+it was computed against, and `plunge up --plan` checks the stamp before the
+update runs. When any of those records has moved since, or the plan carries no
+stamp, the update is refused by name (`PlanMovedError`, `UnstampedPlanError`)
+and plunge exits 40.
+
+Stock Pulumi uses 3 for an authentication error, and its exit codes grow one
+at a time from 0, so plunge's code sits well above them and below the sysexits
+range (64 to 78). choudoufu and chant give a moved plan 3, so a driver that
+reads plunge's exit status maps 40 to its own moved-plan code. A test in
+`pkg/backend/plunge` reads `pkg/cmd/pulumi/cmd/exit_codes.go` and fails if an
+upstream merge adds a code equal to 40.
+
 ## Reading a stack
 
 The snapshot is assembled from the records on every read, in an order where

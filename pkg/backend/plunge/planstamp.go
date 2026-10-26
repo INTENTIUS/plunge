@@ -20,7 +20,7 @@ package plunge
 // so a value another run moved after approval is not refused. plunge's answer is record versions: the plan carries
 // the version of each record it was computed against, and applying it refuses, with exit code ExitPlanMoved, when
 // any of those records has moved since. A record version moves exactly when a run wrote that record, so this is
-// the record-store counterpart of choudoufu's before/after gate (exit 3 there too).
+// the record-store counterpart of choudoufu's before/after gate (which exits 3 for it).
 //
 // What lives here is the backend half: taking the stamp, checking it, and the refusal. The stamp rides in the plan
 // file as apitype.DeploymentPlanV1.RecordVersions (P-L4, INTENTIUS/plunge#7): `preview --save-plan` stamps it
@@ -41,8 +41,11 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
 
-// ExitPlanMoved is the exit code for applying a saved plan whose records moved since it was approved.
-const ExitPlanMoved = 3
+// ExitPlanMoved is the exit code for applying a saved plan whose records moved since it was approved
+// (INTENTIUS/plunge#11). Upstream's taxonomy (pkg/cmd/pulumi/cmd/exit_codes.go) grows one code at a time from 0,
+// and its 3 is ExitAuthenticationError, so plunge's refusals take a code well above it and below the sysexits
+// range (64-78). choudoufu and chant give a moved plan 3; a driver reading plunge's status maps 40 itself.
+const ExitPlanMoved = 40
 
 // PlanRecordVersions is the version of each resource record a plan was computed against. A URN with no record
 // maps to "", which asserts that the resource had no record when the plan was made.
@@ -73,9 +76,6 @@ func (e *PlanMovedError) Error() string {
 func (e *PlanMovedError) ExitCode() int { return ExitPlanMoved }
 
 // CustomExitCode is ExitPlanMoved; the CLI's exit-code mapping (pkg/cmd/pulumi/cmd/exit_codes.go) reads it.
-//
-// Note: 3 is choudoufu's code for this refusal and also stock Pulumi's ExitAuthenticationError. P-L3 chose it for
-// parity with choudoufu; whether plunge keeps it or moves to an unused code is the maintainer's call.
 func (e *PlanMovedError) CustomExitCode() int { return ExitPlanMoved }
 
 // UnstampedPlanError refuses a saved plan with no record-version stamp on the plunge backend.

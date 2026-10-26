@@ -621,8 +621,8 @@ func mustKeys(t *testing.T, s backend.Stack) stackKeys {
 	return k
 }
 
-// A saved plan whose records moved after it was stamped is refused, naming the record, with exit code 3.
-func TestMovedPlanIsRefusedWithExitCode3(t *testing.T) {
+// A saved plan whose records moved after it was stamped is refused, naming the record, with exit code 40.
+func TestMovedPlanIsRefusedWithExitCode40(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -650,7 +650,8 @@ func TestMovedPlanIsRefusedWithExitCode3(t *testing.T) {
 	err = VerifyPlan(ctx, store, testKeys, stamp)
 	var movedErr *PlanMovedError
 	require.ErrorAs(t, err, &movedErr)
-	assert.Equal(t, 3, movedErr.CustomExitCode())
+	assert.Equal(t, 40, movedErr.CustomExitCode())
+	assert.Equal(t, 40, ExitPlanMoved)
 	assert.Contains(t, err.Error(), string(bucketURN()))
 }
 
