@@ -192,7 +192,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 3600,
-                    "name": "events-c4dceaa",
+                    "name": "events-6079e40",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-owner": "plunge",
@@ -230,7 +230,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 345600,
-                    "name": "worker-0-9d4567b",
+                    "name": "worker-0-8198c00",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-index": "0",
@@ -269,7 +269,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 345600,
-                    "name": "worker-2-0d1debd",
+                    "name": "worker-2-a504ac6",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-index": "2",
@@ -308,7 +308,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 345600,
-                    "name": "worker-1-1f10a7e",
+                    "name": "worker-1-0f1d9ea",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-index": "1",
@@ -410,7 +410,7 @@
                     "__defaults": [
                         "name"
                     ],
-                    "name": "docs-notify-7f582f5",
+                    "name": "docs-notify-44137a9",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-owner": "plunge",
@@ -425,6 +425,46 @@
                 "provider": "urn:pulumi:floci::corpus-aws-csharp::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
                 "propertyDependencies": {
                     "tags": []
+                }
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/securityGroup:SecurityGroup::app-sg",
+            "provider": "urn:pulumi:floci::corpus-aws-csharp::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/securityGroup:SecurityGroup::app-sg",
+                "custom": true,
+                "type": "aws:ec2/securityGroup:SecurityGroup",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "description": "plunge corpus app security group",
+                    "name": "app-sg-893f347",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-csharp"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-csharp"
+                    },
+                    "vpcId": "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-csharp::pulumi:pulumi:Stack::corpus-aws-csharp-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/vpc:Vpc::main"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-csharp::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "description": [],
+                    "tags": [],
+                    "vpcId": [
+                        "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/vpc:Vpc::main"
+                    ]
                 }
             },
             "detailedDiff": null
@@ -461,46 +501,6 @@
         },
         {
             "op": "create",
-            "urn": "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/securityGroup:SecurityGroup::app-sg",
-            "provider": "urn:pulumi:floci::corpus-aws-csharp::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-            "newState": {
-                "urn": "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/securityGroup:SecurityGroup::app-sg",
-                "custom": true,
-                "type": "aws:ec2/securityGroup:SecurityGroup",
-                "inputs": {
-                    "__defaults": [
-                        "name"
-                    ],
-                    "description": "plunge corpus app security group",
-                    "name": "app-sg-52ea9c8",
-                    "region": "us-east-1",
-                    "tags": {
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-csharp"
-                    },
-                    "tagsAll": {
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-csharp"
-                    },
-                    "vpcId": "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
-                },
-                "parent": "urn:pulumi:floci::corpus-aws-csharp::pulumi:pulumi:Stack::corpus-aws-csharp-floci",
-                "dependencies": [
-                    "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/vpc:Vpc::main"
-                ],
-                "provider": "urn:pulumi:floci::corpus-aws-csharp::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                "propertyDependencies": {
-                    "description": [],
-                    "tags": [],
-                    "vpcId": [
-                        "urn:pulumi:floci::corpus-aws-csharp::aws:ec2/vpc:Vpc::main"
-                    ]
-                }
-            },
-            "detailedDiff": null
-        },
-        {
-            "op": "create",
             "urn": "urn:pulumi:floci::corpus-aws-csharp::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
             "provider": "urn:pulumi:floci::corpus-aws-csharp::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
             "newState": {
@@ -524,15 +524,15 @@
                         "urn:pulumi:floci::corpus-aws-csharp::aws:s3/bucket:Bucket::site-bucket"
                     ],
                     "policy": [
-                        "urn:pulumi:floci::corpus-aws-csharp::aws:iam/role:Role::app-role",
-                        "urn:pulumi:floci::corpus-aws-csharp::aws:s3/bucket:Bucket::site-bucket"
+                        "urn:pulumi:floci::corpus-aws-csharp::aws:s3/bucket:Bucket::site-bucket",
+                        "urn:pulumi:floci::corpus-aws-csharp::aws:iam/role:Role::app-role"
                     ]
                 }
             },
             "detailedDiff": null
         }
     ],
-    "duration": 2249567333,
+    "duration": 3328720125,
     "changeSummary": {
         "create": 16
     }

@@ -21,31 +21,31 @@
                 "urn": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
                 "custom": false,
                 "type": "pulumi:pulumi:Stack",
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#235",
+                "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#235",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#235"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#235"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -59,39 +59,39 @@
                 "custom": false,
                 "type": "corpus:index:Site",
                 "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#98",
+                "sourcePosition": "project:///__main__.py#98",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#98"
+                        "sourcePosition": "project:///__main__.py#98"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -134,180 +134,45 @@
                     "secretKey",
                     "token"
                 ],
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi_aws/provider.py#805",
+                "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi_aws/provider.py#805",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi_aws/provider.py#805"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi_aws/provider.py#805"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi_aws/provider.py#713"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi_aws/provider.py#713"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#101"
-                    },
-                    {},
-                    {},
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
-                    }
-                ]
-            },
-            "detailedDiff": null
-        },
-        {
-            "op": "create",
-            "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
-            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-            "newState": {
-                "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
-                "custom": true,
-                "type": "aws:s3/bucket:Bucket",
-                "inputs": {
-                    "__defaults": [],
-                    "bucket": "plc-python-site",
-                    "region": "us-east-1",
-                    "tags": {
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-python"
-                    },
-                    "tagsAll": {
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-python"
-                    }
-                },
-                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
-                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                "propertyDependencies": {
-                    "bucket": [],
-                    "tags": []
-                },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#25",
-                "stackTrace": [
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#25"
+                        "sourcePosition": "project:///__main__.py#101"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
-                    }
-                ]
-            },
-            "detailedDiff": null
-        },
-        {
-            "op": "create",
-            "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main",
-            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-            "newState": {
-                "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main",
-                "custom": true,
-                "type": "aws:ec2/vpc:Vpc",
-                "inputs": {
-                    "__defaults": [
-                        "enableDnsSupport"
-                    ],
-                    "cidrBlock": "10.42.0.0/16",
-                    "enableDnsSupport": true,
-                    "region": "us-east-1",
-                    "tags": {
-                        "Name": "plc-python-main",
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-python"
-                    },
-                    "tagsAll": {
-                        "Name": "plc-python-main",
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-python"
-                    }
-                },
-                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
-                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                "propertyDependencies": {
-                    "cidrBlock": [],
-                    "tags": []
-                },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#65",
-                "stackTrace": [
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#65"
-                    },
-                    {},
-                    {},
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -346,39 +211,39 @@
                     "name": [],
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#27",
+                "sourcePosition": "project:///__main__.py#27",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#27"
+                        "sourcePosition": "project:///__main__.py#27"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -386,21 +251,85 @@
         },
         {
             "op": "create",
-            "urn": "urn:pulumi:floci::corpus-aws-python::aws:sqs/queue:Queue::events",
+            "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main",
             "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
             "newState": {
-                "urn": "urn:pulumi:floci::corpus-aws-python::aws:sqs/queue:Queue::events",
+                "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main",
                 "custom": true,
-                "type": "aws:sqs/queue:Queue",
+                "type": "aws:ec2/vpc:Vpc",
                 "inputs": {
                     "__defaults": [
-                        "maxMessageSize",
-                        "name",
-                        "visibilityTimeoutSeconds"
+                        "enableDnsSupport"
                     ],
-                    "maxMessageSize": 262144,
-                    "messageRetentionSeconds": 3600,
-                    "name": "events-01674e0",
+                    "cidrBlock": "10.42.0.0/16",
+                    "enableDnsSupport": true,
+                    "region": "us-east-1",
+                    "tags": {
+                        "Name": "plc-python-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-python"
+                    },
+                    "tagsAll": {
+                        "Name": "plc-python-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-python"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "cidrBlock": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///__main__.py#65",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///__main__.py#65"
+                    },
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
+            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
+                "custom": true,
+                "type": "aws:s3/bucket:Bucket",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "plc-python-site",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-owner": "plunge",
@@ -409,48 +338,47 @@
                     "tagsAll": {
                         "corpus-owner": "plunge",
                         "corpus-program": "aws-python"
-                    },
-                    "visibilityTimeoutSeconds": 30
+                    }
                 },
                 "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
                 "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
                 "propertyDependencies": {
-                    "messageRetentionSeconds": [],
+                    "bucket": [],
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#75",
+                "sourcePosition": "project:///__main__.py#25",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#75"
+                        "sourcePosition": "project:///__main__.py#25"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -473,7 +401,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 345600,
-                    "name": "worker-0-cc22911",
+                    "name": "worker-0-eef9d6e",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-index": "0",
@@ -492,39 +420,111 @@
                 "propertyDependencies": {
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#79",
+                "sourcePosition": "project:///__main__.py#79",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#79"
+                        "sourcePosition": "project:///__main__.py#79"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-python::aws:sqs/queue:Queue::events",
+            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-python::aws:sqs/queue:Queue::events",
+                "custom": true,
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 3600,
+                    "name": "events-94cd12c",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-python"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-python"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "messageRetentionSeconds": [],
+                    "tags": []
+                },
+                "sourcePosition": "project:///__main__.py#75",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///__main__.py#75"
+                    },
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -547,7 +547,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 345600,
-                    "name": "worker-1-b63fe83",
+                    "name": "worker-1-f26c17c",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-index": "1",
@@ -566,39 +566,39 @@
                 "propertyDependencies": {
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#79",
+                "sourcePosition": "project:///__main__.py#79",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#79"
+                        "sourcePosition": "project:///__main__.py#79"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -621,7 +621,7 @@
                     ],
                     "maxMessageSize": 262144,
                     "messageRetentionSeconds": 345600,
-                    "name": "worker-2-027e7e8",
+                    "name": "worker-2-4541686",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-index": "2",
@@ -640,39 +640,39 @@
                 "propertyDependencies": {
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#79",
+                "sourcePosition": "project:///__main__.py#79",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#79"
+                        "sourcePosition": "project:///__main__.py#79"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -713,39 +713,39 @@
                     "value",
                     "valueWo"
                 ],
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#132",
+                "sourcePosition": "project:///__main__.py#132",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#132"
+                        "sourcePosition": "project:///__main__.py#132"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -763,7 +763,7 @@
                     "__defaults": [
                         "name"
                     ],
-                    "name": "docs-notify-14ef29a",
+                    "name": "docs-notify-95b38d0",
                     "region": "us-east-1",
                     "tags": {
                         "corpus-owner": "plunge",
@@ -779,42 +779,42 @@
                 "propertyDependencies": {
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#92",
+                "sourcePosition": "project:///__main__.py#92",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#92"
+                        "sourcePosition": "project:///__main__.py#92"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#98"
+                        "sourcePosition": "project:///__main__.py#98"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -847,42 +847,184 @@
                     "bucket": [],
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#91",
+                "sourcePosition": "project:///__main__.py#91",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#91"
+                        "sourcePosition": "project:///__main__.py#91"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#98"
+                        "sourcePosition": "project:///__main__.py#98"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/securityGroup:SecurityGroup::app-sg",
+            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/securityGroup:SecurityGroup::app-sg",
+                "custom": true,
+                "type": "aws:ec2/securityGroup:SecurityGroup",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "description": "plunge corpus app security group",
+                    "name": "app-sg-2f74bcb",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-python"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-python"
+                    },
+                    "vpcId": "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "description": [],
+                    "tags": [],
+                    "vpcId": [
+                        "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main"
+                    ]
+                },
+                "sourcePosition": "project:///__main__.py#67",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///__main__.py#67"
+                    },
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "create",
+            "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
+            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "newState": {
+                "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
+                "custom": true,
+                "type": "aws:s3/bucketPolicy:BucketPolicy",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                    "policy": "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                    "region": "us-east-1"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
+                    "urn:pulumi:floci::corpus-aws-python::aws:iam/role:Role::app-role"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+                "propertyDependencies": {
+                    "bucket": [
+                        "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket"
+                    ],
+                    "policy": [
+                        "urn:pulumi:floci::corpus-aws-python::aws:iam/role:Role::app-role",
+                        "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket"
+                    ]
+                },
+                "sourcePosition": "project:///__main__.py#46",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///__main__.py#46"
+                    },
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                    },
+                    {
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
@@ -915,188 +1057,46 @@
                     "name": [],
                     "tags": []
                 },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#124",
+                "sourcePosition": "project:///__main__.py#124",
                 "stackTrace": [
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#124"
+                        "sourcePosition": "project:///__main__.py#124"
                     },
                     {},
                     {},
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#188"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
+                        "sourcePosition": "project:///venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
+                        "sourcePosition": "project:///../../../../../../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
                     },
                     {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
-                    }
-                ]
-            },
-            "detailedDiff": null
-        },
-        {
-            "op": "create",
-            "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/securityGroup:SecurityGroup::app-sg",
-            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-            "newState": {
-                "urn": "urn:pulumi:floci::corpus-aws-python::aws:ec2/securityGroup:SecurityGroup::app-sg",
-                "custom": true,
-                "type": "aws:ec2/securityGroup:SecurityGroup",
-                "inputs": {
-                    "__defaults": [
-                        "name"
-                    ],
-                    "description": "plunge corpus app security group",
-                    "name": "app-sg-3403a5b",
-                    "region": "us-east-1",
-                    "tags": {
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-python"
-                    },
-                    "tagsAll": {
-                        "corpus-owner": "plunge",
-                        "corpus-program": "aws-python"
-                    },
-                    "vpcId": "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
-                },
-                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
-                "dependencies": [
-                    "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main"
-                ],
-                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                "propertyDependencies": {
-                    "description": [],
-                    "tags": [],
-                    "vpcId": [
-                        "urn:pulumi:floci::corpus-aws-python::aws:ec2/vpc:Vpc::main"
-                    ]
-                },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#67",
-                "stackTrace": [
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#67"
-                    },
-                    {},
-                    {},
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
-                    }
-                ]
-            },
-            "detailedDiff": null
-        },
-        {
-            "op": "create",
-            "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
-            "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-            "newState": {
-                "urn": "urn:pulumi:floci::corpus-aws-python::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
-                "custom": true,
-                "type": "aws:s3/bucketPolicy:BucketPolicy",
-                "inputs": {
-                    "__defaults": [],
-                    "bucket": "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                    "policy": "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                    "region": "us-east-1"
-                },
-                "parent": "urn:pulumi:floci::corpus-aws-python::pulumi:pulumi:Stack::corpus-aws-python-floci",
-                "dependencies": [
-                    "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
-                    "urn:pulumi:floci::corpus-aws-python::aws:iam/role:Role::app-role"
-                ],
-                "provider": "urn:pulumi:floci::corpus-aws-python::pulumi:providers:aws::default_7_51_1::04da6b54-80e4-46f7-96ec-b56ff0331ba9",
-                "propertyDependencies": {
-                    "bucket": [
-                        "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket"
-                    ],
-                    "policy": [
-                        "urn:pulumi:floci::corpus-aws-python::aws:s3/bucket:Bucket::site-bucket",
-                        "urn:pulumi:floci::corpus-aws-python::aws:iam/role:Role::app-role"
-                    ]
-                },
-                "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#46",
-                "stackTrace": [
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/__main__.py#46"
-                    },
-                    {},
-                    {},
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#188"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#237"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#133"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../private/tmp/epic2-baseline/.work/pulumi/aws-python/venv/lib/python3.14/site-packages/pulumi/runtime/stack.py#254"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/events.py#94"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#2056"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#677"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py#706"
-                    },
-                    {
-                        "sourcePosition": "project:///../../../../../opt/homebrew/bin/pulumi-language-python-exec#232"
+                        "sourcePosition": "project:///../../../../../../../../../../Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-python-exec#232"
                     }
                 ]
             },
             "detailedDiff": null
         }
     ],
-    "duration": 4060369625,
+    "duration": 6325978459,
     "changeSummary": {
         "create": 16
     }

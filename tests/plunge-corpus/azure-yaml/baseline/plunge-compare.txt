@@ -1,0 +1,2 @@
+DIFF-INPUTS: 8 steps (pulumi), 8 steps (plunge)
+inputs differ: urn:pulumi:floci::corpus-azure-yaml::azure:core/resourceGroup:ResourceGroup::scratch-rg: name
