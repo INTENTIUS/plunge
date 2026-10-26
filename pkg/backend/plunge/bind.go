@@ -47,6 +47,7 @@ import (
 
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
 
@@ -131,13 +132,13 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 	}
 	if !ok {
 		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Unlisted = reason })
-		return "", nil
+		return b.readByName(ctx, info, req, want), nil
 	}
 	found, err := lister.ListMarked(ctx, info, req, want)
 	if err != nil {
 		// A listing that failed is a coverage gap for this run, not grounds to refuse it or to bind.
 		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Unlisted = "the listing failed: " + err.Error() })
-		return "", nil
+		return b.readByName(ctx, info, req, want), nil
 	}
 	if !lister.Consistent() {
 		b.ledger.record(req.URN, func(e *ownershipEntry) {
@@ -147,6 +148,10 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 	}
 	switch len(found) {
 	case 0:
+		if !lister.Consistent() {
+			// The index may not hold the winner yet (Cloud Asset Inventory lags a create).
+			return b.readByName(ctx, info, req, want), nil
+		}
 		return "", nil
 	case 1:
 		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Bound = found[0].ID })
@@ -158,6 +163,56 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 	}
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	return "", &CollisionError{URN: req.URN, IDs: ids}
+}
+
+// readByName is the bind for a C1-covered type no lister covers, whose listing failed, or whose eventually
+// consistent listing found nothing (INTENTIUS/plunge#10). When the winner of a racing create stopped after its
+// create and before its record write, no listing finds it, and the loser's create is refused by the cloud on
+// every re-run. For a type whose import ID is its name, the one name a create would ask
+// for is known before Check: the program's own, else plunge's deterministic name. A provider Read of that name
+// finds the winner; it is bound when it carries this resource's markers. An object with the name but without the
+// markers is left alone, and the create then fails at the cloud naming it, as before.
+//
+// A user `pulumi:autonaming` pattern without a random part also gives a deterministic name, but the binder does
+// not evaluate patterns, so for those the read finds nothing and the create goes ahead as it did before.
+func (b *binder) readByName(ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string) resource.ID {
+	if !info.Autoname.ImportIDIsName || req.Provider == nil {
+		return ""
+	}
+	if covered, _ := c1Covers(info); !covered {
+		return ""
+	}
+	name := DeterministicName(req.URN, info.Autoname.MaxLength, info.Autoname.Suffix)
+	if v, ok := req.Inputs[resource.PropertyKey(info.Autoname.Property)]; ok {
+		v = unwrapValue(v)
+		if !v.IsString() || v.StringValue() == "" {
+			// An unknown or non-string name: nothing to read by yet.
+			return ""
+		}
+		name = v.StringValue()
+	}
+	resp, err := req.Provider.Read(ctx, plugin.ReadRequest{
+		URN:  req.URN,
+		Name: req.URN.Name(),
+		Type: req.Type,
+		ID:   resource.ID(name),
+	})
+	note := func(s string) { b.ledger.record(req.URN, func(e *ownershipEntry) { e.ByName = s }) }
+	switch {
+	case err != nil:
+		note(fmt.Sprintf("the read of %q failed: %v", name, err))
+		return ""
+	case resp.ID == "" || resp.Outputs == nil:
+		note(fmt.Sprintf("no object is named %q", name))
+		return ""
+	}
+	if !markers.Carries(tagsOf(resource.ToResourcePropertyMap(*resp.Outputs), info), want) {
+		note(fmt.Sprintf("an object named %q exists without this resource's markers, so it is not bound", name))
+		return ""
+	}
+	note(fmt.Sprintf("bound %q by a read of its name", name))
+	b.ledger.record(req.URN, func(e *ownershipEntry) { e.Bound = resp.ID })
+	return resp.ID
 }
 
 func mustMarkers(urn resource.URN, info TypeInfo) map[string]string {

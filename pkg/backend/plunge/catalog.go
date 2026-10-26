@@ -140,6 +140,9 @@ type AutonameInfo struct {
 	Unique    bool
 	Evidence  string
 	Uncovered string
+	// ImportIDIsName reports that the type's import ID is the name alone, so a provider Read of the name finds the
+	// object. The binder reads by name for a covered type no lister covers (bind.go).
+	ImportIDIsName bool
 }
 
 // Encoding is how markers are written on the type.

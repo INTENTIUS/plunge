@@ -23,7 +23,9 @@ package plunge
 //   - a replacement of a deterministic-name resource deletes first, and says so once;
 //   - a user pattern with a random part is refused by name, unless the opt-out is set;
 //   - a type with no uniqueness evidence keeps upstream's autonaming;
-//   - the loser of a racing create fails at the cloud, and its re-run binds the winner by marker.
+//   - the loser of a racing create fails at the cloud, and its re-run binds the winner by marker;
+//   - on a type no lister covers, the re-run binds the winner by a read of its name (INTENTIUS/plunge#10);
+//   - a provider that ignores the proposed name leaves the record with c1 false, naming the provider (#10).
 //
 // Written for this unit and not run in it; the maintainer runs them.
 
@@ -452,6 +454,90 @@ func TestRacingCreateLoserBindsTheWinnerOnReRun(t *testing.T) {
 	e, ok := marks.get(roleURN())
 	require.True(t, ok)
 	assert.Equal(t, resource.ID(name), e.Bound)
+}
+
+// noAutonamingProvider is the fake cloud's provider as an old plugin sees the engine: it reports no support for
+// autonaming configuration, and the plugin layer drops the options before Check, as provider_plugin.go does.
+type noAutonamingProvider struct{ *deploytest.Provider }
+
+func (p noAutonamingProvider) SupportsAutonamingConfiguration(context.Context) (bool, bool, error) {
+	return false, true, nil
+}
+
+func (p noAutonamingProvider) Check(ctx context.Context, req plugin.CheckRequest) (plugin.CheckResponse, error) {
+	req.Autonaming = nil
+	return p.Provider.Check(ctx, req)
+}
+
+// A provider without autonaming-configuration support ignores the proposed name and picks its own, so the
+// record says C1 does not cover the resource, naming the provider, and plunge does not claim the name.
+func TestProviderWithoutAutonamingSupportIsNotC1(t *testing.T) {
+	t.Parallel()
+
+	cloud := newFakeCloud()
+	loader := deploytest.NewProviderLoader("aws", semver.MustParse("7.0.0"), func() (plugin.Provider, error) {
+		return noAutonamingProvider{cloud.provider()}, nil
+	})
+	marks := newLedger()
+	_, err := run(t, newCountingStore(t), deploytest.NewPluginHostF(nil, nil, roleProgram("/"), nil, nil, loader),
+		runConfig{markers: true, persist: true, marks: marks})
+	require.NoError(t, err)
+
+	require.Len(t, cloud.names(), 1)
+	assert.NotEqual(t, DeterministicName(roleURN(), 0, ""), cloud.names()[0], "the provider picked its own name")
+
+	e, ok := marks.get(roleURN())
+	require.True(t, ok)
+	require.NotNil(t, e.Autoname)
+	assert.False(t, e.Autoname.C1)
+	assert.Equal(t, AutonameUpstream, e.Autoname.By)
+	assert.Empty(t, e.Autoname.Name)
+	assert.Contains(t, e.Autoname.Uncovered, "aws@7.0.0")
+	assert.Contains(t, e.Autoname.Uncovered, "does not support autonaming configuration")
+}
+
+// The winner of a racing create on a type no lister covers stopped after its create and before its record write.
+// The loser, on its own store and with no lister for the family, reads the role by its deterministic name (the
+// role's import ID is its name), finds the winner's markers on it, and binds it: no already-exists failure and no
+// second create.
+func TestUnlistedWinnerIsBoundByNameOnReRun(t *testing.T) {
+	t.Parallel()
+
+	info := roleInfo(t)
+	require.True(t, info.Autoname.ImportIDIsName, "pkg/identity builds aws_iam_role's import ID from name alone")
+
+	cloud := newFakeCloud()
+	_, err := run(t, newCountingStore(t), deploytest.NewPluginHostF(nil, nil, roleProgram("/"), nil, nil,
+		cloud.loaders()...), runConfig{markers: true, persist: true})
+	require.NoError(t, err)
+	name := DeterministicName(roleURN(), 0, "")
+	require.Equal(t, []string{"create " + name}, cloud.ops)
+
+	marks := newLedger()
+	_, err = run(t, newCountingStore(t), deploytest.NewPluginHostF(nil, nil, roleProgram("/"), nil, nil,
+		cloud.loaders()...), runConfig{markers: true, persist: true, marks: marks, listers: map[Family]Lister{}})
+	require.NoError(t, err, "the loser binds the winner instead of failing on already-exists")
+	assert.Equal(t, []string{"create " + name}, cloud.ops, "the re-run created nothing")
+
+	e, ok := marks.get(roleURN())
+	require.True(t, ok)
+	assert.Equal(t, resource.ID(name), e.Bound)
+	assert.NotEmpty(t, e.Unlisted, "the record still says no lister covered the type")
+	assert.Contains(t, e.ByName, "by a read of its name")
+
+	// An object with the name but without the resource's markers is not bound: the create goes ahead and the cloud
+	// refuses it, as it did before the by-name read.
+	stranger := newFakeCloud()
+	stranger.byName[name] = resource.NewPropertyMapFromMap(map[string]any{
+		"name": name, "path": "/", "tags": map[string]any{"team": "a"},
+	})
+	marks = newLedger()
+	_, err = run(t, newCountingStore(t), deploytest.NewPluginHostF(nil, nil, roleProgram("/"), nil, nil,
+		stranger.loaders()...), runConfig{markers: true, persist: true, marks: marks, listers: map[Family]Lister{}})
+	require.Error(t, err)
+	e, _ = marks.get(roleURN())
+	assert.Empty(t, e.Bound)
+	assert.Contains(t, e.ByName, "without this resource's markers")
 }
 
 // taggedInputs are the role's inputs with its markers merged in, as the injector leaves them.
