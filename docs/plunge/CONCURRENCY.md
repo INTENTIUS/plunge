@@ -212,6 +212,27 @@ filled from the resource's inputs and the provider's project, region and zone,
 is searched through Cloud Asset Inventory. That index lags its services, so it
 binds and does not back the collision check either.
 
+### Where the listings call
+
+Each lister calls where the provider does, from the same provider
+configuration (INTENTIUS/plunge#27). The Cloud Control lister takes its
+endpoint from `PLUNGE_CLOUDCONTROL_ENDPOINT` when it is set, else from the
+provider's `endpoints` (`aws:endpoints` on a default provider): its
+`cloudcontrol` entry, then `AWS_ENDPOINT_URL_CLOUDCONTROL` or
+`AWS_ENDPOINT_URL`, then the one URL every entry shares (a stack pointing
+every service at floci). A Google Cloud list uses the service's
+`<service>CustomEndpoint` input or its `GOOGLE_*_CUSTOM_ENDPOINT` variable, and
+Asset Inventory uses `cloudAssetCustomEndpoint`.
+
+When the configuration names custom endpoints and none that the listing can
+use (an `aws:endpoints` with several URLs and no `cloudcontrol` entry, a google
+provider with custom endpoints for other services, an azure provider with a
+`metadataHost`, which the ARM lister does not resolve), the listing is
+skipped. plunge warns once, naming the stack and the service, records the
+reason in `ownership.unlisted`, and runs no bind or collision check for those
+creates. It never falls back to the cloud's public endpoint. The sweep for
+unrecorded marked objects skips the same listings with the same warning.
+
 Where the claim is not made, two marked objects are still refused by name, and
 one is still bound; what is not claimed is that an empty listing proves no
 other run's create landed a moment before.

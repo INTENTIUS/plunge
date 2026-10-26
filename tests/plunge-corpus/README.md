@@ -111,6 +111,15 @@ issues a token for any client), `useCli`, `useMsi`, `useOidc` and
 listing with an empty list. This is the wiring choudoufu's
 `live/e2e/lib/floci-az.sh` gives hashicorp/azurerm.
 
+plunge's own marker listings follow the same configuration
+(docs/plunge/CONCURRENCY.md, "Where the listings call"). The `aws-*` stacks
+give every service one URL, so Cloud Control is listed there with
+`PLUNGE_CLOUDCONTROL_ENDPOINT` unset; set the variable to send it somewhere
+else. In `gcp-yaml` the storage and pubsub lists go to floci-gcp; any other
+service's list, and Asset Inventory, has no endpoint there, and `azure-yaml`
+reads its endpoints from a metadata host, so plunge skips those listings with
+a warning naming the stack and makes no call to Google or Azure.
+
 If an emulator listens on another port, change it in the stack file (both
 the provider endpoints and the `flociEndpoint` key; for `azure-yaml`,
 `azure:metadataHost` and `flociAzHost`, and `FLOCI_AZ_HOST` below).
