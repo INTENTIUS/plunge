@@ -191,7 +191,7 @@ through the service's own store:
 | pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (`pkg/backend/plunge/ccid.go`) |
 | pulumi-azure, azure-native | ARM's own list, filtered by the `plunge-urn` tag |
 | pulumi-kubernetes | a LIST of the kind by label selector |
-| pulumi-gcp | the type's own service list (`pkg/backend/plunge/gcplist`): the parent collection of the Asset name choudoufu's `pkg/identity` gives the type, `projects/<project>/topics` for a topic. 143 types across 28 services at choudoufu's pkg/identity pin, listed by `gcplist.Covered()` |
+| pulumi-gcp | the type's own service list (`pkg/backend/plunge/gcplist`): the parent collection of the Asset name choudoufu's `pkg/identity` gives the type, `projects/<project>/topics` for a topic. 143 types across 28 services at choudoufu's pkg/identity pin, plus ten server-assigned types written out from choudoufu's gcpsweep (Vertex AI, Document AI, Transcoder, Service Directory, reCAPTCHA Enterprise, Managed Microsoft AD): 153 in all, listed by `gcplist.Covered()` and the same set choudoufu lists (`gcplist/testdata/covered-types.txt`) |
 
 A pulumi-gcp type outside `gcplist.Covered()`, or one whose list path cannot be
 filled from the resource's inputs and the provider's project, region and zone,
