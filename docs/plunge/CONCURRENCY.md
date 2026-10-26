@@ -79,8 +79,10 @@ A type is covered when all of these hold:
 and the type carries ownership markers (a map or key/value-array tags
 property, not classed markerless by `pkg/identity`), and its family's lister
 lists it consistently (see the bind phase in `pkg/backend/plunge/bind.go`), so
-the loser can find the winner. The provider has to support autonaming
-configuration; the engine warns about one that does not.
+the loser can find the winner, or the type's import ID is its name alone (see
+below). The provider has to support autonaming configuration: one that does not
+ignores the proposed name, the engine warns, and the record says C1 does not
+cover the resource.
 
 What the program and the user say comes first. A name the program sets is used
 as given. A `pulumi:autonaming` config is used as given when it has no random
@@ -94,6 +96,52 @@ with the reason when it does not (`ownership.autoname`: `by`, `name`, `c1`,
 `uncovered`). Types C1 does not cover keep upstream's autonaming; where their
 family lister covers them, a duplicate create is caught by the marker listing
 instead.
+
+When no lister covers a covered type, its listing failed, or its eventually
+consistent listing (GCP's Cloud Asset Inventory) found nothing, and the type's
+import ID is its name alone (one pkg/identity component holding only the
+autonamed argument, or an aws-native primary identifier of the name alone), the
+loser's re-run reads the object by its name with the provider's Read. The name
+is the program's own, or plunge's deterministic name. An object that carries the
+resource's markers is bound; one without them is left alone and the create fails
+at the cloud as before. The record says what the read found
+(`ownership.byName`).
+
+### What C1 leaves open
+
+Each of these keeps upstream's behaviour, and the record's
+`ownership.autoname.uncovered` says which applies. `<tf>` is the Terraform type,
+`<arg>` the autonamed argument, `<cf>` the CloudFormation type.
+
+| Gap | `uncovered` reason |
+|---|---|
+| aws-native type whose name is not in its `primaryIdentifier` (`aws-native:sqs:Queue`, whose identifier is `queueUrl`) | `<cf>'s primary identifier (<ids>) does not include its name <prop>` |
+| aws-native type with no autonamed property | `<cf> has no autonamed property in the aws-native metadata` |
+| Bridged type whose mapping marks no field autonamed | `the provider's mapping marks no property of <tf> as autonamed` |
+| Bridged type whose autonamed argument can change in place | `<tf>'s <arg> can change in place, so it is not taken as the type's identity` |
+| Bridged type with no pkg/identity row (every azurerm type, and AWS and Google types the table does not list) | `pkg/identity has no row for <tf>, so nothing says its <arg> is unique` |
+| Bridged type whose row is server-assigned or built from other arguments, with no `UniqueName` | `pkg/identity's row for <tf> does not build its identity from <arg> or name it unique` |
+| Kubernetes (`metadata.name`) and azure-native: no autoname schema is read | `the schema gives no evidence that this type's names are unique` |
+| Untaggable type | `the type carries no ownership marker, so the loser of a racing create has nothing to bind by` |
+| Type pkg/identity classes markerless | `pkg/identity classes <tf> as markerless, so the loser of a racing create has nothing to bind by` |
+| A random `pulumi:autonaming` pattern kept with `PLUNGE_ALLOW_RANDOM_AUTONAMES=true` | `the pulumi:autonaming pattern has a random part (<exprs>), kept because PLUNGE_ALLOW_RANDOM_AUTONAMES=true` |
+| A provider without autonaming-configuration support | `the <pkg>@<version> provider does not support autonaming configuration, so it ignores the proposed name <name> and picks its own` |
+
+Three limits apply inside covered types, and no record reason marks them:
+
+- A bridged type's maximum name length is not in `GetMapping` (the bridge does
+  not marshal `AutoNameOptions`), so plunge proposes the full name. A name over
+  the maximum is refused by the provider's Check, naming the resource, where
+  upstream would have cut its random name. Set the name in the program, or a
+  shorter `pulumi:autonaming` pattern without a random part.
+- The loser of a racing create is not retried inline. Its run fails with the
+  cloud's already-exists error and the re-run binds the winner.
+- A covered type that no lister covers and whose import ID is more than its
+  name (pulumi-aws multi-part identifiers) has no by-name read: its record
+  carries `ownership.unlisted`, and a winner that stopped before its record
+  write is refused by the cloud on every re-run until it is imported by hand
+  (listers are #15). The by-name read also skips a name set by a
+  `pulumi:autonaming` pattern, since the binder does not evaluate patterns.
 
 ## Saved plans
 

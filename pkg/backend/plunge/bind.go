@@ -148,6 +148,10 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 	}
 	switch len(found) {
 	case 0:
+		if !lister.Consistent() {
+			// The index may not hold the winner yet (Cloud Asset Inventory lags a create).
+			return b.readByName(ctx, info, req, want), nil
+		}
 		return "", nil
 	case 1:
 		b.ledger.record(req.URN, func(e *ownershipEntry) { e.Bound = found[0].ID })
@@ -161,9 +165,10 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 	return "", &CollisionError{URN: req.URN, IDs: ids}
 }
 
-// readByName is the bind for a C1-covered type no lister covers (INTENTIUS/plunge#10). When the winner of a racing
-// create stopped after its create and before its record write, no listing finds it, and the loser's create is
-// refused by the cloud on every re-run. For a type whose import ID is its name, the one name a create would ask
+// readByName is the bind for a C1-covered type no lister covers, whose listing failed, or whose eventually
+// consistent listing found nothing (INTENTIUS/plunge#10). When the winner of a racing create stopped after its
+// create and before its record write, no listing finds it, and the loser's create is refused by the cloud on
+// every re-run. For a type whose import ID is its name, the one name a create would ask
 // for is known before Check: the program's own, else plunge's deterministic name. A provider Read of that name
 // finds the winner; it is bound when it carries this resource's markers. An object with the name but without the
 // markers is left alone, and the create then fails at the cloud naming it, as before.
