@@ -174,7 +174,8 @@ const gcpMapping = `{
 }`
 
 // A covered GCP type is listed through its own service (Pub/Sub's projects/<p>/topics), two marked topics are a
-// collision naming both, one is bound, and the ownership entry names the consistent listing.
+// collision naming both, one is bound, and the ownership entry names the listing and says its consistency is
+// unmeasured.
 func TestGCPCoveredTypeListsThroughItsService(t *testing.T) {
 	t.Parallel()
 
@@ -216,9 +217,11 @@ func TestGCPCoveredTypeListsThroughItsService(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, resource.ID("projects/plc/topics/events"), id)
 	e, _ := marks.get(urn)
-	assert.Empty(t, e.Unlisted, "a per-service listing carries the collision claim")
+	// Only Cloud Storage's listing carries the collision claim (INTENTIUS/plunge#15, ruled 2026-10-26): Pub/Sub's
+	// binds, and the record says its consistency is unmeasured.
+	assert.Contains(t, e.Unlisted, "binds, consistency unmeasured")
 	assert.Contains(t, e.Listing, "pubsub.googleapis.com")
-	assert.Contains(t, e.Listing, "consistent per type")
+	assert.Contains(t, e.Listing, "binds, consistency unmeasured")
 	assert.Equal(t, []string{"/v1/projects/plc/topics"}, paths)
 
 	mu.Lock()
@@ -404,4 +407,33 @@ func TestMarkerDiagnosticsArriveAsEngineEvents(t *testing.T) {
 	has("w", diag.Warning, "no ownership marker")
 	has("unknown", diag.Warning, "not known yet")
 	has("known", diag.Info, "no marker bind or collision check")
+}
+
+// The C2 claims (INTENTIUS/plunge#15, ruled 2026-10-26): Cloud Storage's list and Cloud Control's carry the collision
+// claim; every other GCP service's list and ARM's bind with "binds, consistency unmeasured" as the coverage reason.
+func TestCollisionClaimIsCloudStorageAndCloudControlOnly(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, (&cloudControlLister{}).Consistent())
+
+	arm := &armLister{}
+	assert.False(t, arm.Consistent())
+	ok, why := arm.ConsistentFor(TypeInfo{Type: "azure-native:storage:StorageAccount", Family: FamilyAzureNative},
+		deploy.BindRequest{})
+	assert.False(t, ok)
+	assert.Contains(t, why, "binds, consistency unmeasured")
+
+	gcp := newGCPLister()
+	prov := resource.NewPropertyMapFromMap(map[string]any{"project": "plc"})
+	ok, why = gcp.ConsistentFor(TypeInfo{Type: "gcp:storage/bucket:Bucket", Family: FamilyGoogle,
+		TFType: "google_storage_bucket"}, deploy.BindRequest{ProviderInputs: prov})
+	assert.True(t, ok, why)
+	assert.Contains(t, gcp.Listing(TypeInfo{TFType: "google_storage_bucket"},
+		deploy.BindRequest{ProviderInputs: prov}), "strongly consistent")
+
+	ok, why = gcp.ConsistentFor(TypeInfo{Type: "gcp:pubsub/topic:Topic", Family: FamilyGoogle,
+		TFType: "google_pubsub_topic"}, deploy.BindRequest{ProviderInputs: prov})
+	assert.False(t, ok)
+	assert.Contains(t, why, "binds, consistency unmeasured")
+	assert.Contains(t, why, "pubsub.googleapis.com")
 }

@@ -28,10 +28,13 @@ package plunge
 //   - AWS and aws-native: Cloud Control ListResources on the CloudFormation type, filtered by tag client-side.
 //     aws-native names its CloudFormation type; a pulumi-aws type is joined to one through choudoufu's registry.
 //   - Azure and azure-native: ARM's own resource list filtered by the URN tag (not Resource Graph, whose index lags).
+//     It binds; its consistency is unmeasured, so it does not carry the collision claim (INTENTIUS/plunge#15, ruled
+//     2026-10-26) until the maintainer's measurement on a real subscription.
 //   - Kubernetes: a LIST of the kind by label selector, which the API server answers from a quorum read.
 //   - Google Cloud: each covered type's own service list (package gcplist, INTENTIUS/plunge#15, ruled 2026-10-25),
-//     filtered by label client-side. A type gcplist does not cover is searched through Cloud Asset Inventory, which
-//     is eventually consistent: it binds, but it cannot carry the collision claim, and the ownership entry says so.
+//     filtered by label client-side. Only Cloud Storage's carries the collision claim; every other service's list
+//     binds, consistency unmeasured (ruled 2026-10-26). A type gcplist does not cover is searched through Cloud Asset
+//     Inventory, which is eventually consistent: it binds and cannot carry the claim. The ownership entry says which.
 //
 // SDKv2-bridged types have no provider List (pulumi-terraform-bridge pkg/tfbridge/provider.go:2065-2072), so the
 // provider is never asked. Decision taken: an SDKv2 type is covered exactly when its family lister covers its

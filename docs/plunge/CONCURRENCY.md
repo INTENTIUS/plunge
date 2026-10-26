@@ -127,7 +127,8 @@ family lister covers them, a duplicate create is caught by the marker listing
 instead.
 
 When no lister covers a covered type, its listing failed, or its eventually
-consistent listing (GCP's Cloud Asset Inventory) found nothing, and the type's
+consistent listing found nothing (Cloud Asset Inventory, or a listing whose
+consistency is unmeasured), and the type's
 import ID is its name alone (one pkg/identity component holding only the
 autonamed argument, or an aws-native primary identifier of the name alone), the
 loser's re-run reads the object by its name with the provider's Read. The name
@@ -192,25 +193,35 @@ upstream merge adds a code equal to 40.
 Before a create, the bind phase lists the type's live objects carrying the
 resource's markers. One object is bound; two or more are refused by name
 (`CollisionError`, naming every ID). The refusal proves there is no duplicate
-only when the listing sees a create the moment it returns, so each family lists
-through the service's own store:
+only when the listing sees a create the moment it returns. Each family lists
+through the service's own store. Among the clouds, the collision claim is made
+only for AWS Cloud Control and Cloud Storage; every other Google Cloud service
+and ARM bind, consistency unmeasured. A Kubernetes LIST is the API server's
+quorum read, and keeps its claim.
 
-| Family | Listing |
-|---|---|
-| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (`pkg/backend/plunge/ccid.go`) |
-| pulumi-azure, azure-native | ARM's own list, filtered by the `plunge-urn` tag |
-| pulumi-kubernetes | a LIST of the kind by label selector |
-| pulumi-gcp | the type's own service list (`pkg/backend/plunge/gcplist`): the parent collection of the Asset name choudoufu's `pkg/identity` gives the type, `projects/<project>/topics` for a topic. 143 types across 28 services at choudoufu's pkg/identity pin, plus ten server-assigned types written out from choudoufu's gcpsweep (Vertex AI, Document AI, Transcoder, Service Directory, reCAPTCHA Enterprise, Managed Microsoft AD): 153 in all, listed by `gcplist.Covered()` and the same set choudoufu lists (`gcplist/testdata/covered-types.txt`) |
+| Family | Listing | C2 |
+|---|---|---|
+| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (`pkg/backend/plunge/ccid.go`) | claimed |
+| pulumi-azure, azure-native | ARM's own list, filtered by the `plunge-urn` tag | binds, consistency unmeasured (the measurement on a real subscription is the maintainer's) |
+| pulumi-kubernetes | a LIST of the kind by label selector, answered from a quorum read | claimed |
+| pulumi-gcp, Cloud Storage | the bucket list, which Google documents as strongly consistent | claimed |
+| pulumi-gcp, every other service | the type's own service list (`pkg/backend/plunge/gcplist`): the parent collection of the Asset name choudoufu's `pkg/identity` gives the type, `projects/<project>/topics` for a topic. 143 types across 28 services at choudoufu's pkg/identity pin, plus ten server-assigned types written out from choudoufu's gcpsweep (Vertex AI, Document AI, Transcoder, Service Directory, reCAPTCHA Enterprise, Managed Microsoft AD): 153 in all, listed by `gcplist.Covered()` and the same set choudoufu lists (`gcplist/testdata/covered-types.txt`) | binds, consistency unmeasured |
 
 A pulumi-gcp type outside `gcplist.Covered()`, or one whose list path cannot be
 filled from the resource's inputs and the provider's project, region and zone,
 is searched through Cloud Asset Inventory. That index lags its services, so it
-binds and does not back the collision check.
+binds and does not back the collision check either.
+
+Where the claim is not made, two marked objects are still refused by name, and
+one is still bound; what is not claimed is that an empty listing proves no
+other run's create landed a moment before.
 
 Each resource record says which listing ran when it was created
 (`ownership.listing`, for example `gcp: pubsub.googleapis.com list of
-projects/plc/topics (consistent per type)`), and `ownership.unlisted` holds the
-reason when the collision check does not cover it.
+projects/plc/topics (binds, consistency unmeasured)`), and `ownership.unlisted`
+holds the reason when the collision check does not cover it, starting `binds,
+consistency unmeasured` for ARM and for a Google Cloud service other than
+Cloud Storage.
 
 ### Unrecorded marked objects
 
@@ -228,9 +239,9 @@ plunge: unrecorded marked object: the aws:s3/bucket:Bucket logs-2 carries this s
 
 The warning names the type, the ID and, when the markers can be read back, the
 URN they name. plunge never deletes the object: delete it if it is a
-duplicate, or import it. Only consistent listings are swept, since an
-eventually consistent index (Cloud Asset Inventory) can still list an object
-that was just deleted. A type with no lister is not swept. An object another
+duplicate, or import it. Every listing of a service's own store is swept,
+whether or not C2 is claimed for it. Cloud Asset Inventory is not, since a
+lagging index can still list an object that was just deleted. A type with no lister is not swept. An object another
 run created a moment ago and has not recorded yet is reported too, so check
 with a second run before deleting anything.
 
