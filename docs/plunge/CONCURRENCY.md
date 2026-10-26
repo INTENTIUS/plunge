@@ -203,6 +203,28 @@ Each resource record says which listing ran when it was created
 projects/plc/topics (consistent per type)`), and `ownership.unlisted` holds the
 reason when the collision check does not cover it.
 
+### Unrecorded marked objects
+
+When two runs race to create one resource and both creates land, the second
+record write is refused (`RecordConflictError`) and the next run plans from
+the winner's record. Bind runs only for creates, so the loser's object would
+never be looked at again. After each `up` and `preview`, once the run's records
+are written, plunge lists every type the run marked through the listings above,
+asking only for the `plunge-stack` marker, and warns about each live object
+that carries it and that no record of the stack names:
+
+```
+plunge: unrecorded marked object: the aws:s3/bucket:Bucket logs-2 carries this stack's ownership marker, ...
+```
+
+The warning names the type, the ID and, when the markers can be read back, the
+URN they name. plunge never deletes the object: delete it if it is a
+duplicate, or import it. Only consistent listings are swept, since an
+eventually consistent index (Cloud Asset Inventory) can still list an object
+that was just deleted. A type with no lister is not swept. An object another
+run created a moment ago and has not recorded yet is reported too, so check
+with a second run before deleting anything.
+
 ## Pending operations
 
 A run marks each operation it begins on a custom resource as a pending

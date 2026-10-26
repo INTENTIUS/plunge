@@ -158,6 +158,9 @@ func (b *binder) Bind(ctx context.Context, req deploy.BindRequest) (resource.ID,
 		listing = d.Listing(info, req)
 	}
 	b.ledger.record(req.URN, func(e *ownershipEntry) { e.Listing = listing })
+	sweepReq := req
+	sweepReq.Diag = nil
+	b.ledger.noteMarked(req.URN, info, &sweepReq)
 	found, err := lister.ListMarked(ctx, info, req, want)
 	if err != nil {
 		// A listing that failed is a coverage gap for this run, not grounds to refuse it or to bind.

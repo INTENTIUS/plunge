@@ -464,11 +464,13 @@ func (b *plungeBackend) apply(
 	// Ownership markers and the bind phase (INTENTIUS/plunge#7) run where the program registers resources, and the
 	// autonaming policy (autoname.go, claim C1) runs before each resource's Check.
 	var marks *ledger
+	var listers map[Family]Lister
 	if programDriven(kind) && markersEnabled() {
 		marks = newLedger()
 		cat := newCatalog()
+		listers = b.listers()
 		target.Markers = newMarkerPolicy(cat, snap, marks, b.d)
-		target.Binder = newBinder(cat, marks, b.listers())
+		target.Binder = newBinder(cat, marks, listers)
 		target.Autonames = newAutonamePolicy(cat, marks)
 	}
 	update := engine.UpdateInfo{Root: op.Root, Project: op.Proj, Target: target}
@@ -551,13 +553,20 @@ func (b *plungeBackend) apply(
 	<-displayDone
 	scope.Close()
 	close(engineEvents)
+	var closeErr error
 	if manager != nil {
-		if err := manager.Close(); err != nil {
-			return plan, changes, fmt.Errorf("writing records: %w", err)
-		}
+		closeErr = manager.Close()
 	}
 	<-eventsDone
 	close(displayEvents)
+	// After the bind phase and the record writes, warn about marked objects no record names (sweep.go,
+	// INTENTIUS/plunge#18). It runs when a record write lost too, which is the case it exists for.
+	if marks != nil {
+		reportUnrecorded(ctx, b.d, b.store, l.keys, marks, listers)
+	}
+	if closeErr != nil {
+		return plan, changes, fmt.Errorf("writing records: %w", closeErr)
+	}
 
 	return plan, changes, updateErr
 }

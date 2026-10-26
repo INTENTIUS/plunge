@@ -87,9 +87,45 @@ type ownershipEntry struct {
 type ledger struct {
 	mu      sync.Mutex
 	entries map[resource.URN]*ownershipEntry
+	// sweep is every resource the run marked, with its type and, for a create, the bind request: what the
+	// unrecorded-object sweep lists after the run (sweep.go). It is never written into a record.
+	sweep map[resource.URN]sweepTarget
 }
 
 func newLedger() *ledger { return &ledger{entries: map[resource.URN]*ownershipEntry{}} }
+
+// noteMarked records that the run marked urn, a resource of info's type, so the sweep lists the type. req is the
+// bind request for a create, nil otherwise.
+func (l *ledger) noteMarked(urn resource.URN, info TypeInfo, req *deploy.BindRequest) {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.sweep == nil {
+		l.sweep = map[resource.URN]sweepTarget{}
+	}
+	t := l.sweep[urn]
+	t.info = info
+	if req != nil {
+		t.req = req
+	}
+	l.sweep[urn] = t
+}
+
+// sweepTargets is a copy of what noteMarked recorded.
+func (l *ledger) sweepTargets() map[resource.URN]sweepTarget {
+	if l == nil {
+		return nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	out := make(map[resource.URN]sweepTarget, len(l.sweep))
+	for k, v := range l.sweep {
+		out[k] = v
+	}
+	return out
+}
 
 func (l *ledger) entry(urn resource.URN) *ownershipEntry {
 	e, ok := l.entries[urn]
@@ -245,6 +281,7 @@ func (p *markerPolicy) Inject(ctx context.Context, req deploy.MarkerRequest) (re
 			e.Identity = info.Identity.Claim()
 		}
 	})
+	p.ledger.noteMarked(req.URN, info, nil)
 	return out, nil
 }
 
