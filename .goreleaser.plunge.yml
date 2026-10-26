@@ -83,10 +83,13 @@ archives:
     - src: 'bin/{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}/*'
       dst: '.'
       strip_parent: true
-  name_template: '{{ .ProjectName }}-{{ .Tag }}-{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}'
+  # Named from PLUNGE_VERSION, not .Tag: this tree carries upstream's tags (v3.*, pkg/v3.*, sdk/v3.*),
+  # so outside a plunge tag push git describe finds pulumi's version, and a monorepo tag puts a slash
+  # in the name.
+  name_template: '{{ .ProjectName }}-v{{ .Env.PLUNGE_VERSION }}-{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}'
 
 snapshot:
-  version_template: "{{ .Version }}-SNAPSHOT"
+  version_template: "{{ .Env.PLUNGE_VERSION }}-SNAPSHOT"
 
 checksum:
-  name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.txt"
+  name_template: "{{ .ProjectName }}-v{{ .Env.PLUNGE_VERSION }}-checksums.txt"

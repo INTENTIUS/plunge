@@ -44,7 +44,7 @@ jobs:
       - name: Versions
         id: versions
         run: |
-          plunge="${GITHUB_REF_NAME#v}"
+          plunge="$(PLUNGE_VERSION="${GITHUB_REF_NAME}" ./scripts/plunge-version.sh plunge)"
           pulumi="$(./scripts/plunge-version.sh pulumi)"
           echo "plunge=${plunge}" >> "$GITHUB_OUTPUT"
           echo "pulumi=${pulumi}" >> "$GITHUB_OUTPUT"
@@ -62,5 +62,7 @@ jobs:
           args: release --clean -f .goreleaser.plunge.yml
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # The pushed tag, so goreleaser never picks an upstream tag on the same commit.
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
           PLUNGE_VERSION: ${{ steps.versions.outputs.plunge }}
           PULUMI_VERSION: ${{ steps.versions.outputs.pulumi }}
