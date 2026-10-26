@@ -18,7 +18,7 @@ on:
     inputs:
       ref:
         description: Branch of plunge to check
-        default: integration/pulumi-engine
+        default: main
 
 permissions:
   contents: read
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || 'integration/pulumi-engine' }}
+          ref: ${{ inputs.ref || 'main' }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: pkg/go.mod
