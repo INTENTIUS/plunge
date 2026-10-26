@@ -1,0 +1,66 @@
+# plunge's release (INTENTIUS/plunge#13; tag-triggered, as ruled there).
+#
+# Pushing a tag vX.Y.Z builds every archive in .goreleaser.plunge.yml and publishes a GitHub release on
+# INTENTIUS/plunge: plunge-vX.Y.Z-<os>-<arch> archives holding the plunge CLI, the language hosts it builds,
+# and the dotnet and yaml hosts that scripts/prep-for-goreleaser.sh bundles under bin/<os>-<arch>/. The
+# tag (without its v) is plunge's own version; the Pulumi-compatible version comes from CHANGELOG.md
+# (scripts/plunge-version.sh). Windows binaries are unsigned: the signing hook needs pulumi's credentials.
+#
+# Nothing else triggers it. To see the artifact list without publishing, run a snapshot locally:
+#
+#   ./scripts/prep-for-goreleaser.sh
+#   PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/plunge-version.sh plunge) \
+#     goreleaser release --snapshot --clean -f .goreleaser.plunge.yml
+#   ls goreleaser/*.tar.gz goreleaser/*.zip
+name: plunge-release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write # create the release and upload its archives
+
+concurrency:
+  group: plunge-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'INTENTIUS/plunge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # goreleaser reads the previous tag for the changelog
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: pkg/go.mod
+          cache-dependency-path: |
+            pkg/go.sum
+            sdk/go.sum
+      - name: Versions
+        id: versions
+        run: |
+          plunge="${GITHUB_REF_NAME#v}"
+          pulumi="$(./scripts/plunge-version.sh pulumi)"
+          echo "plunge=${plunge}" >> "$GITHUB_OUTPUT"
+          echo "pulumi=${pulumi}" >> "$GITHUB_OUTPUT"
+          echo "plunge ${plunge}, Pulumi-compatible ${pulumi}"
+      - name: Prepare bin dir for goreleaser
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./scripts/prep-for-goreleaser.sh
+      - name: Show bundled files
+        run: find bin -type f | sort
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean -f .goreleaser.plunge.yml
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PLUNGE_VERSION: ${{ steps.versions.outputs.plunge }}
+          PULUMI_VERSION: ${{ steps.versions.outputs.pulumi }}

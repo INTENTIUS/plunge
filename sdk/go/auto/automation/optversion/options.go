@@ -46,6 +46,8 @@ type Options struct {
 	OtelTraces string
 	// Emit CPU and memory profiles and an execution trace to '[filename].[pid].{cpu,mem,trace}', respectively
 	Profiling string
+	// Print only the Pulumi-compatible version, as a bare semver
+	PulumiCompatible bool
 	// Emit tracing to the specified endpoint. Use the `file:` scheme to write tracing data to a local file
 	Tracing string
 	// Include the tracing header with the given contents.
@@ -124,6 +126,13 @@ func OtelTraces(v string) Option {
 func Profiling(v string) Option {
 	return func(o *Options) {
 		o.Profiling = v
+	}
+}
+
+// PulumiCompatible returns an Option that sets PulumiCompatible.
+func PulumiCompatible(v bool) Option {
+	return func(o *Options) {
+		o.PulumiCompatible = v
 	}
 }
 
