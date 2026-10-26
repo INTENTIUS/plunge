@@ -56,6 +56,15 @@
       "provider": "gcp@10.2.0",
       "install": [],
       "compile": []
+    },
+    {
+      "name": "azure-yaml",
+      "project": "corpus-azure-yaml",
+      "language": "yaml",
+      "emulator": "floci-az",
+      "provider": "azure@6.10.0",
+      "install": [],
+      "compile": []
     }
   ]
 }

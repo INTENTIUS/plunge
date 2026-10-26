@@ -21,6 +21,7 @@ scripts. This file is for people.
 | `aws-yaml` | Pulumi YAML | floci | pulumi-aws 7.51.1 |
 | `aws-csharp` | C# | floci | pulumi-aws 7.51.1 |
 | `gcp-yaml` | Pulumi YAML | floci-gcp | pulumi-gcp 10.2.0 |
+| `azure-yaml` | Pulumi YAML | floci-az | pulumi-azure 6.10.0 |
 
 The five `aws-*` programs declare the same resources under the same logical
 names, so their previews line up step by step and a difference between
@@ -31,10 +32,10 @@ loop (its three worker queues are written out). Physical names carry a
 per-program prefix (`plc-ts`, `plc-go`, ...) so all five can run against one
 floci without colliding.
 
-No Azure program yet. Whether azure-native or azure classic run against
-floci-az is unknown, and floci-az needs TLS and a metadata host
-(choudoufu's `live/e2e/lib/floci-az.sh`), which is more wiring than this
-first cut takes on.
+`azure-yaml` uses pulumi-azure (Azure classic, bridged from azurerm), as
+ruled on INTENTIUS/plunge#16, so all three clouds go through the same bridged
+engine path. azure-native can follow once plunge reads its schema for
+markers (INTENTIUS/plunge#15).
 
 ## What each resource exercises
 
@@ -73,6 +74,15 @@ default one. pulumi-gcp adds its `goog-pulumi-provisioned` label by default;
 the program leaves that on, since it's what a stock stack does. Its purpose
 is to find out whether pulumi-gcp runs against floci-gcp at all.
 
+`azure-yaml` has a client-named resource group (`app-rg`) and an autonamed
+one (`scratch-rg`, no name, so the engine adds a random suffix), both with
+map `tags`; a virtual network and a network security group inside `app-rg`,
+client-named with `tags`, whose IDs are ARM resource IDs built from the group
+and the name; a subnet (untaggable, no `tags` argument); and an explicit
+provider (`west`) with its own floci-az wiring and a resource group through
+it. Like `gcp-yaml`, its first purpose is to find out whether pulumi-azure runs
+against floci-az at all.
+
 ## How the stacks reach the emulators
 
 The `aws-*` stack files set the default provider: `aws:endpoints` for every
@@ -91,8 +101,19 @@ pubsub, iambeta, resource manager, service usage and cloud billing endpoints
 at `http://localhost:4588`, with the paths choudoufu's
 `live/e2e/lib/gcp.sh` uses for hashicorp/google against the same emulator.
 
+`azure-yaml` sets `azure:metadataHost` to `localhost:4577`. With a metadata
+host set, azurerm reads every endpoint (ARM, the Entra login endpoint, the
+storage suffix) from floci-az's `/metadata/endpoints`, over TLS. The
+subscription, tenant and client IDs and the client secret are fakes (floci-az
+issues a token for any client), `useCli`, `useMsi`, `useOidc` and
+`useAksWorkloadIdentity` are off so nothing falls back to an `az login`, and
+`resourceProviderRegistrations: none`, since floci-az answers the providers
+listing with an empty list. This is the wiring choudoufu's
+`live/e2e/lib/floci-az.sh` gives hashicorp/azurerm.
+
 If an emulator listens on another port, change it in the stack file (both
-the provider endpoints and the `flociEndpoint` key).
+the provider endpoints and the `flociEndpoint` key; for `azure-yaml`,
+`azure:metadataHost` and `flociAzHost`, and `FLOCI_AZ_HOST` below).
 
 ## Compile checks
 
@@ -127,7 +148,21 @@ below are the stock half by hand, for recording `baseline/` in the tree.
    docker run -d --rm --name plunge-floci -p 127.0.0.1:4566:4566 "$(cat $CHDF/live/floci-image)"
    docker run -d --rm --name plunge-floci-gcp -p 127.0.0.1:4588:4588 \
      -e FLOCI_GCP_DEFAULT_PROJECT_ID=plc-corpus "$(cat $CHDF/live/floci-gcp-image)"
+   docker run -d --rm --name plunge-floci-az -p 127.0.0.1:4577:4577 \
+     -e FLOCI_AZ_TLS_ENABLED=true -e FLOCI_AZ_STORAGE_MODE=memory -e FLOCI_AZ_PARITY=azure \
+     -e FLOCI_AZ_STORAGE_SUFFIX=localhost:4577 "$(cat $CHDF/live/floci-az-image)"
    ```
+
+   floci-az generates its own CA when it starts with no certificate given.
+   On Linux that CA is enough: `scripts/plunge-baseline.sh` fetches it from
+   `http://localhost:4577/_floci/tls-cert` and exports it as `SSL_CERT_FILE`
+   for both engines. On macOS, Go ignores `SSL_CERT_FILE` and trusts only the
+   keychain, so make a certificate once with choudoufu's
+   `scripts/floci-az-mac-cert.sh`, trust it, and start floci-az with it
+   mounted (`-v ~/.config/choudoufu/floci-az-tls:/etc/floci-az-tls:ro -e
+   FLOCI_AZ_TLS_CERT_PATH=/etc/floci-az-tls/cert.pem -e
+   FLOCI_AZ_TLS_KEY_PATH=/etc/floci-az-tls/key.pem`), then pass
+   `FLOCI_AZ_CA_FILE=~/.config/choudoufu/floci-az-tls/cert.pem`.
 
 2. Set up a throwaway state directory and the shared passphrase, and clear
    anything that could reach a real cloud:
@@ -140,6 +175,17 @@ below are the stock half by hand, for recording `baseline/` in the tree.
    unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
    unset GOOGLE_APPLICATION_CREDENTIALS GOOGLE_OAUTH_ACCESS_TOKEN
    export AWS_ENDPOINT_URL=http://localhost:4566   # a second guard behind aws:endpoints
+   ```
+
+   For `azure-yaml`, also clear the real Azure credentials and give the
+   provider floci-az's CA and fakes, as `scripts/plunge-baseline.sh` does:
+
+   ```sh
+   for v in $(env | sed -n 's/^\(AZURE_[A-Z_]*\)=.*/\1/p;s/^\(ARM_[A-Z_]*\)=.*/\1/p'); do unset "$v"; done
+   curl -sf http://localhost:4577/_floci/tls-cert -o /tmp/floci-az-ca.pem   # or the macOS cert above
+   export SSL_CERT_FILE=/tmp/floci-az-ca.pem
+   export AZURE_CONFIG_DIR="$(mktemp -d)"   # no az login to fall back on
+   export ARM_METADATA_HOSTNAME=localhost:4577 ARM_USE_CLI=false ARM_USE_MSI=false ARM_USE_OIDC=false
    ```
 
    `pulumi login` changes the CLI's current backend for the whole user. To
@@ -167,7 +213,15 @@ below are the stock half by hand, for recording `baseline/` in the tree.
    `vpcParameterName` as unknown, and shows `dbPasswordValue` as a secret. The
    exit code alone isn't the verdict.
 
-Autonamed resources (`events`, `worker-*`, `docs-notify`, `app-sg`'s name)
+   For `azure-yaml`, a good baseline creates `app-rg`, `scratch-rg`,
+   `app-vnet`, `app-subnet`, `app-nsg`, the `west` provider and `west-rg`,
+   with the IDs unknown. Then run `scripts/plunge-baseline.sh azure-yaml`,
+   copy its `azure-yaml/compare.txt` to `baseline/plunge-compare.txt`, and add
+   its `VERDICT azure-yaml ...` line to `baseline-verdicts.txt`. Only
+   `scratch-rg`'s autonamed name may differ (`DIFF-INPUTS`).
+
+Autonamed resources (`events`, `worker-*`, `docs-notify`, `app-sg`'s name,
+`azure-yaml`'s `scratch-rg`)
 get a random suffix on every preview, so two baselines differ there even
 when nothing else does. A comparison masks those fields.
 
