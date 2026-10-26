@@ -37,7 +37,6 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optconfigset"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optconfigsetall"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optconvert"
-	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optdrift"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optenvchangerequestapply"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optenvchangerequestapprove"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/automation/optenvchangerequestclose"
@@ -1704,96 +1703,6 @@ func (a *API) Convert(
 	if len(args) > 0 {
 		final = append(final, "--")
 		final = append(final, args...)
-	}
-
-	return a.run(ctx, base.BaseOptions{
-		Cwd:           o.Cwd,
-		AdditionalEnv: o.AdditionalEnv,
-		Stdout:        o.Stdout,
-		Stderr:        o.Stderr,
-		Stdin:         o.Stdin,
-	}, final)
-}
-
-// Drift corresponds to `pulumi drift`.
-//
-// Read one resource's drift with one provider Read.
-//
-// Reads the resource's record and its provider's record from the plunge backend by key, without
-// assembling the stack's snapshot and without a stack-wide refresh, configures the provider from its
-// record, calls Read once, and compares the live outputs with the recorded ones. The program is not run,
-// so the program's inputs are not compared.
-//
-// With --stream the result is chant's drift record v1 NDJSON on stdout: a drift-start line, the
-// resource's drift-record line and a drift-settle line whose `reads` counts the record reads, the
-// provider Reads and the stack-wide refreshes (always 0). Needs a plunge+<url> backend.
-func (a *API) Drift(
-	ctx context.Context,
-	opts ...optdrift.Option,
-) (base.CommandResult, error) {
-	o := optdrift.Options{}
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	final := []string{"drift"}
-
-	if o.Color != "" {
-		final = append(final, "--color", fmt.Sprint(o.Color))
-	}
-
-	if o.DisableIntegrityChecking {
-		final = append(final, "--disable-integrity-checking")
-	}
-
-	if o.FullyQualifyStackNames {
-		final = append(final, "--fully-qualify-stack-names")
-	}
-
-	if o.Logflow {
-		final = append(final, "--logflow")
-	}
-
-	if o.Logtostderr {
-		final = append(final, "--logtostderr")
-	}
-
-	if o.Member != "" {
-		final = append(final, "--member", fmt.Sprint(o.Member))
-	}
-
-	if o.Memprofilerate != 0 {
-		final = append(final, "--memprofilerate", fmt.Sprint(o.Memprofilerate))
-	}
-
-	if o.OtelTraces != "" {
-		final = append(final, "--otel-traces", fmt.Sprint(o.OtelTraces))
-	}
-
-	if o.Profiling != "" {
-		final = append(final, "--profiling", fmt.Sprint(o.Profiling))
-	}
-
-	final = append(final, "--resource", fmt.Sprint(o.Resource))
-
-	if o.Stack != "" {
-		final = append(final, "--stack", fmt.Sprint(o.Stack))
-	}
-
-	if o.Stream {
-		final = append(final, "--stream")
-	}
-
-	if o.Tracing != "" {
-		final = append(final, "--tracing", fmt.Sprint(o.Tracing))
-	}
-
-	if o.TracingHeader != "" {
-		final = append(final, "--tracing-header", fmt.Sprint(o.TracingHeader))
-	}
-
-	if o.Verbose != 0 {
-		final = append(final, "--verbose", fmt.Sprint(o.Verbose))
 	}
 
 	return a.run(ctx, base.BaseOptions{
