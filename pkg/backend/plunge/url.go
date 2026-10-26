@@ -43,7 +43,8 @@ import (
 //	plunge+file:///path/to/dir        local records, one host only
 //	plunge+s3://bucket/prefix         S3 conditional writes (region, profile, endpoint, s3ForcePathStyle query keys)
 //	plunge+azblob://container/prefix  Azure Blob ETag conditions (storage_account query key or AZURE_STORAGE_ACCOUNT;
-//	                                  resource_group and subscription_id for the account-settings contract)
+//	                                  resource_group and subscription_id for the account-settings contract;
+//	                                  endpoint and metadata_host for an emulator, azblobstore.go)
 //	plunge+gs://bucket/prefix         GCS generation preconditions
 //	plunge+k8s://namespace/prefix     one Kubernetes Secret per record, resourceVersion preconditions (metadata,
 //	                                  kubeconfig, context, in_cluster and estate query keys)
@@ -205,15 +206,6 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 			return nil, fmt.Errorf("plunge: %q names no storage account: set the storage_account query key "+
 				"or AZURE_STORAGE_ACCOUNT", plungeURL)
 		}
-		cred, err := azidentity.NewDefaultAzureCredential(nil)
-		if err != nil {
-			return nil, fmt.Errorf("plunge: building an Azure credential for %q: %w", plungeURL, err)
-		}
-		endpoint := fmt.Sprintf("https://%s.blob.core.windows.net/%s", account, u.Host)
-		client, err := container.NewClient(endpoint, cred, nil)
-		if err != nil {
-			return nil, fmt.Errorf("plunge: building the container client for %q: %w", plungeURL, err)
-		}
 		resourceGroup := q.Get("resource_group")
 		if resourceGroup == "" {
 			resourceGroup = os.Getenv("AZURE_RESOURCE_GROUP")
@@ -222,6 +214,32 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 		if subscription == "" {
 			subscription = os.Getenv("AZURE_SUBSCRIPTION_ID")
 		}
+		var client *container.Client
+		var factory *armstorage.ClientFactory
+		unavailable := ""
+		if hasAzureCustomEndpoint(q) {
+			// An emulator's endpoints: never real Azure, never the shell's login (INTENTIUS/plunge#35).
+			client, factory, unavailable, err = azureCustomStore(ctx, plungeURL, account, u.Host, subscription, q)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			cred, err := azidentity.NewDefaultAzureCredential(nil)
+			if err != nil {
+				return nil, fmt.Errorf("plunge: building an Azure credential for %q: %w", plungeURL, err)
+			}
+			endpoint := fmt.Sprintf("https://%s.blob.core.windows.net/%s", account, u.Host)
+			client, err = container.NewClient(endpoint, cred, nil)
+			if err != nil {
+				return nil, fmt.Errorf("plunge: building the container client for %q: %w", plungeURL, err)
+			}
+			if resourceGroup != "" && subscription != "" {
+				factory, err = armstorage.NewClientFactory(subscription, cred, nil)
+				if err != nil {
+					return nil, fmt.Errorf("plunge: building the storage management client for %q: %w", plungeURL, err)
+				}
+			}
+		}
 		cfg := staterecord.AzureBlobConfig{
 			Container:     client,
 			Account:       account,
@@ -229,17 +247,16 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 			ResourceGroup: resourceGroup,
 			KeyPrefix:     keyPrefix,
 		}
-		if resourceGroup == "" || subscription == "" {
+		switch {
+		case unavailable != "":
+			cfg.ContractUnavailable = unavailable
+		case resourceGroup == "" || subscription == "":
 			// Without them the account's settings cannot be read, which the contract reports as unreadable
 			// for every setting, and the open below is refused naming each.
 			cfg.ContractUnavailable = fmt.Sprintf("the account's settings are read through ARM, which needs its "+
 				"resource group and subscription: set the resource_group and subscription_id query keys of %q "+
 				"(or AZURE_RESOURCE_GROUP and AZURE_SUBSCRIPTION_ID)", plungeURL)
-		} else {
-			factory, err := armstorage.NewClientFactory(subscription, cred, nil)
-			if err != nil {
-				return nil, fmt.Errorf("plunge: building the storage management client for %q: %w", plungeURL, err)
-			}
+		default:
 			cfg.Contract = staterecord.NewAzureContractAPI(factory, resourceGroup, account, u.Host)
 		}
 		store, err := staterecord.NewAzureBlobStore(cfg)

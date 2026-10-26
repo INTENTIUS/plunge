@@ -53,6 +53,32 @@ name (`ContractRefusedError`, with the fix for each). Naming the setting in
 the `allow_insecure` query key or `PLUNGE_ALLOW_INSECURE` proceeds past it; a
 lifecycle rule that deletes current records cannot be waived.
 
+Without an `endpoint` or `metadata_host` query key, `plunge+azblob://` is real
+Azure (`https://<account>.blob.core.windows.net`, azidentity's default
+credential chain). With either, it talks only to the endpoints the URL names
+and never falls back to the shell's Azure login (INTENTIUS/plunge#35):
+
+- `endpoint` is the account's blob service URL, for floci-az
+  `https://<account>.blob.localhost:<port>` under
+  `FLOCI_AZ_STORAGE_SUFFIX=localhost:<port>`; the container is appended.
+- `metadata_host` (`localhost:4577`) serves `/metadata/endpoints`, as the azure
+  provider's `metadataHost` does. It gives the storage suffix when `endpoint`
+  is unset, and ARM and the login endpoint for the settings check.
+- The blobs are signed with `ARM_ACCESS_KEY` (or `AZURE_STORAGE_KEY`), else
+  `ARM_SAS_TOKEN` (or `AZURE_STORAGE_SAS_TOKEN`), else a client secret
+  (`ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`) against the metadata
+  host's login endpoint. Secrets come from the environment only, since the
+  backend URL is saved and printed. With none of them the open is refused.
+- The settings check reads ARM, so it needs `metadata_host` and the client
+  secret, plus `resource_group` and `subscription_id`. Without them each
+  setting is reported unreadable with the reason, and the open is refused
+  unless `allow_insecure` names them.
+
+For example, against floci-az:
+`plunge+azblob://records?storage_account=devacct&resource_group=rg&subscription_id=<sub>&metadata_host=localhost:4577&endpoint=https://devacct.blob.localhost:4577`
+with `ARM_TENANT_ID`, `ARM_CLIENT_ID` and `ARM_CLIENT_SECRET` set to floci-az's
+fakes.
+
 `plunge+s3://` and `plunge+gs://` check their bucket the same way when they
 open it. S3: `versioning`, `lifecycle` (a rule that expires noncurrent
 versions under the records' prefix) and `public_access_block`; the
