@@ -12,13 +12,19 @@
 #      adds gets a push URL that can't work).
 #   2. Create upstream-merge/<UTC date>-<upstream short sha> off origin/$BASE, and merge upstream/master
 #      into it with a merge commit (--no-ff, no fast-forward, no squash).
-#   3. On a conflict: record the conflicted files, abort the merge, and stop with CONFLICT. A human
+#   3. Take upstream's generated Automation API (GENERATED_DIRS below: the Go package, and the nodejs and
+#      python interfaces) as it is at upstream/master, conflicted or not. Those files are upstream's
+#      generated output; plunge's own commands live in fork-owned files beside them (FORK_OWNED below:
+#      plunge_commands.go, optplunge*, nodejs automation/plunge.ts, python automation/plunge.py,
+#      INTENTIUS/plunge#21), which this step never touches. A conflict confined to the generated files is
+#      resolved this way and the merge goes on; the report lists the files it took.
+#      Any other conflict: record the conflicted files, abort the merge, and stop with CONFLICT. A human
 #      resolves it (the report says how to reproduce it).
 #   4. Move any workflow upstream added to .github/workflows into .github/upstream-workflows/, in its own
 #      commit, so nothing upstream schedules or publishes becomes live (the plunge-upstream-guard check
 #      would fail the branch otherwise).
-#   5. Rebuild: go build ./... in sdk and pkg, then bin/plunge with plunge's version stamp. A failure
-#      stops with BUILD-FAILED.
+#   5. Rebuild: go build ./... in sdk (which builds plunge_commands.go against upstream's regenerated
+#      package) and pkg, then bin/plunge with plunge's version stamp. A failure stops with BUILD-FAILED.
 #   6. With --push, push the branch to origin. Only upstream-merge/* branches are ever pushed; never main
 #      or $BASE. Merging the branch into $BASE is a human's call.
 #
@@ -35,7 +41,7 @@
 #     UPSTREAM-MERGE CONFLICT <branch> <upstream sha> <n>   n files conflict; nothing was committed
 #     UPSTREAM-MERGE BUILD-FAILED <branch> <upstream sha>   merged, but the build failed (see build.log)
 #     UPSTREAM-MERGE ERROR <reason>
-#   conflicts.txt, build.log, moved-workflows.txt as they apply
+#   conflicts.txt, generated-taken.txt, build.log, moved-workflows.txt as they apply
 #   branch.txt    the branch name
 #
 # Read verdict.txt, not the exit code. Exit codes: 0 UP-TO-DATE or MERGED, 1 CONFLICT or BUILD-FAILED,
@@ -80,6 +86,43 @@ fail() {
 
 report() {
   printf '%s\n' "$@" >> "${REPORT}"
+}
+
+# Upstream's generated Automation API, which plunge never edits (INTENTIUS/plunge#21, #24).
+GENERATED_DIRS=(
+  sdk/go/auto/automation
+  sdk/nodejs/automation/interface
+  sdk/python/lib/pulumi/automation/interface
+)
+# plunge's own files inside or beside GENERATED_DIRS. The generators never write these.
+FORK_OWNED='^sdk/go/auto/automation/(plunge_[^/]*\.go|optplunge[^/]*/.*)$'
+
+is_generated() {
+  local f="$1" d
+  if [[ "${f}" =~ ${FORK_OWNED} ]]; then
+    return 1
+  fi
+  for d in "${GENERATED_DIRS[@]}"; do
+    case "${f}" in "${d}"/*) return 0 ;; esac
+  done
+  return 1
+}
+
+# take_generated <rev>: make every generated file in the index and work tree what it is at <rev>.
+# Files <rev> lacks are removed; fork-owned files are left alone. Prints the paths it changed.
+take_generated() {
+  local rev="$1" f
+  while IFS= read -r f; do
+    if is_generated "${f}" && ! git cat-file -e "${rev}:${f}" 2> /dev/null; then
+      git rm -q --force -- "${f}"
+    fi
+  done < <(git ls-files -- "${GENERATED_DIRS[@]}" | sort -u)
+  for f in "${GENERATED_DIRS[@]}"; do
+    if git cat-file -e "${rev}:${f}" 2> /dev/null; then
+      git checkout "${rev}" -- "${f}"
+    fi
+  done
+  git diff --cached --name-only HEAD -- "${GENERATED_DIRS[@]}"
 }
 
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
@@ -132,8 +175,28 @@ msg="Merge pulumi/pulumi master ${up_short} into ${BASE}
 
 Scheduled upstream merge (scripts/plunge-upstream-merge.sh, INTENTIUS/plunge#5)."
 
-if ! git merge --no-ff --no-edit -m "${msg}" "${up_sha}" > "${OUT}/merge.log" 2>&1; then
+merged=1
+git merge --no-ff --no-edit -m "${msg}" "${up_sha}" > "${OUT}/merge.log" 2>&1 || merged=0
+if [ "${merged}" -eq 0 ]; then
   git diff --name-only --diff-filter=U | sort > "${OUT}/conflicts.txt"
+  other=0
+  while IFS= read -r f; do
+    is_generated "${f}" || other=1
+  done < "${OUT}/conflicts.txt"
+  if [ -s "${OUT}/conflicts.txt" ] && [ "${other}" -eq 0 ]; then
+    # Every conflict is in upstream's generated output: take upstream's and finish the merge.
+    take_generated "${up_sha}" > /dev/null
+    if [ -z "$(git diff --name-only --diff-filter=U)" ]; then
+      git commit -q --no-edit -m "${msg}"
+      merged=1
+      report "## Generated files taken from upstream" "" \
+        "These conflicted only because they are generated; upstream's versions were taken:" ""
+      sed 's/^/- /' "${OUT}/conflicts.txt" >> "${REPORT}"
+      report ""
+    fi
+  fi
+fi
+if [ "${merged}" -eq 0 ]; then
   n="$(wc -l < "${OUT}/conflicts.txt" | tr -d ' ')"
   git merge --abort || true
   git checkout -q --detach "${base_sha}"
@@ -152,6 +215,18 @@ if ! git merge --no-ff --no-edit -m "${msg}" "${up_sha}" > "${OUT}/merge.log" 2>
     "Resolve, then check .github/workflows (only plunge-* files may stay there), rebuild, and push the branch."
   verdict "CONFLICT ${BRANCH} ${up_short} ${n}"
   exit 1
+fi
+
+# A clean merge can still leave plunge's generated files apart from upstream's (a hand edit, or a file
+# upstream deleted that plunge changed). Bring them to upstream's in their own commit.
+taken="$(take_generated "${up_sha}")"
+if [ -n "${taken}" ]; then
+  echo "${taken}" > "${OUT}/generated-taken.txt"
+  git commit -q -m "Take upstream's generated Automation API at ${up_short}"
+  report "## Generated files brought to upstream's" "" \
+    "plunge's copies differed from upstream's generated output; upstream's were taken:" ""
+  sed 's/^/- /' "${OUT}/generated-taken.txt" >> "${REPORT}"
+  report ""
 fi
 
 # A workflow upstream added lands live in .github/workflows. Move it next to the others.
