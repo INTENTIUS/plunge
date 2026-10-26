@@ -343,6 +343,9 @@ func (b *plungeBackend) ImportDeployment(ctx context.Context, s backend.Stack, d
 	// The secrets record is immutable; importing a deployment with another secrets configuration is refused by
 	// the persister, by name.
 	p := newRecordPersister(ctx, b.store, l, Generation{}, false, nil)
+	// An import is the whole stack's state as the user gives it, pending operations included: removing a crashed
+	// run's pending operation from an export and importing it is how one is cleared.
+	p.authoritative = true
 	return p.Save(apitype.TypedDeployment{Deployment: v3, Version: d.Version, Features: d.Features})
 }
 
