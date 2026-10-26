@@ -158,7 +158,8 @@ func TestCloudControlIdentifierTranslation(t *testing.T) {
 	id, _ = tr.apply("f-1|i-1")
 	assert.Equal(t, "f-1/i-1", id)
 
-	// A server-assigned row has no grammar to translate into: the type stays unlisted, with the reason.
+	// A server-assigned row has no grammar to translate into. (aws_guardduty_ipset is translated by hand since
+	// INTENTIUS/plunge#19, ccid_hand.go; the grammar rule alone still gives the reason.)
 	_, reason = ccTerraformID("aws_guardduty_ipset", "AWS::GuardDuty::IPSet", []string{"Id", "DetectorId"})
 	assert.NotEmpty(t, reason)
 
@@ -174,7 +175,8 @@ const gcpMapping = `{
 }`
 
 // A covered GCP type is listed through its own service (Pub/Sub's projects/<p>/topics), two marked topics are a
-// collision naming both, one is bound, and the ownership entry names the consistent listing.
+// collision naming both, one is bound, and the ownership entry names the listing and says its consistency is
+// unmeasured.
 func TestGCPCoveredTypeListsThroughItsService(t *testing.T) {
 	t.Parallel()
 
@@ -216,9 +218,11 @@ func TestGCPCoveredTypeListsThroughItsService(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, resource.ID("projects/plc/topics/events"), id)
 	e, _ := marks.get(urn)
-	assert.Empty(t, e.Unlisted, "a per-service listing carries the collision claim")
+	// Only Cloud Storage's listing carries the collision claim (INTENTIUS/plunge#15, ruled 2026-10-26): Pub/Sub's
+	// binds, and the record says its consistency is unmeasured.
+	assert.Contains(t, e.Unlisted, "binds, consistency unmeasured")
 	assert.Contains(t, e.Listing, "pubsub.googleapis.com")
-	assert.Contains(t, e.Listing, "consistent per type")
+	assert.Contains(t, e.Listing, "binds, consistency unmeasured")
 	assert.Equal(t, []string{"/v1/projects/plc/topics"}, paths)
 
 	mu.Lock()
@@ -404,4 +408,71 @@ func TestMarkerDiagnosticsArriveAsEngineEvents(t *testing.T) {
 	has("w", diag.Warning, "no ownership marker")
 	has("unknown", diag.Warning, "not known yet")
 	has("known", diag.Info, "no marker bind or collision check")
+}
+
+// The C2 claims (INTENTIUS/plunge#15, ruled 2026-10-26): Cloud Storage's list and Cloud Control's carry the collision
+// claim; every other GCP service's list and ARM's bind with "binds, consistency unmeasured" as the coverage reason.
+func TestCollisionClaimIsCloudStorageAndCloudControlOnly(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, (&cloudControlLister{}).Consistent())
+
+	arm := &armLister{}
+	assert.False(t, arm.Consistent())
+	ok, why := arm.ConsistentFor(TypeInfo{Type: "azure-native:storage:StorageAccount", Family: FamilyAzureNative},
+		deploy.BindRequest{})
+	assert.False(t, ok)
+	assert.Contains(t, why, "binds, consistency unmeasured")
+
+	gcp := newGCPLister()
+	prov := resource.NewPropertyMapFromMap(map[string]any{"project": "plc"})
+	ok, why = gcp.ConsistentFor(TypeInfo{Type: "gcp:storage/bucket:Bucket", Family: FamilyGoogle,
+		TFType: "google_storage_bucket"}, deploy.BindRequest{ProviderInputs: prov})
+	assert.True(t, ok, why)
+	assert.Contains(t, gcp.Listing(TypeInfo{TFType: "google_storage_bucket"},
+		deploy.BindRequest{ProviderInputs: prov}), "strongly consistent")
+
+	ok, why = gcp.ConsistentFor(TypeInfo{Type: "gcp:pubsub/topic:Topic", Family: FamilyGoogle,
+		TFType: "google_pubsub_topic"}, deploy.BindRequest{ProviderInputs: prov})
+	assert.False(t, ok)
+	assert.Contains(t, why, "binds, consistency unmeasured")
+	assert.Contains(t, why, "pubsub.googleapis.com")
+}
+
+// The written-out Cloud Control translations (INTENTIUS/plunge#19, ccid_hand.go): each turns a listed identifier,
+// and for SageMaker the model's ARN, into the Terraform id the type is imported by. Budgets actions stay unlisted.
+func TestHandWrittenCloudControlTranslations(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		tfType, cfnType, identifier string
+		props                       map[string]any
+		want                        string
+	}{
+		{"aws_eip", "AWS::EC2::EIP", "203.0.113.7|eipalloc-0abc", nil, "eipalloc-0abc"},
+		{"aws_ecs_service", "AWS::ECS::Service",
+			"arn:aws:ecs:us-east-1:123456789012:service/main/web|arn:aws:ecs:us-east-1:123456789012:cluster/main",
+			nil, "main/web"},
+		{"aws_guardduty_ipset", "AWS::GuardDuty::IPSet", "ip1|det1", nil, "det1:ip1"},
+		{"aws_guardduty_threatintelset", "AWS::GuardDuty::ThreatIntelSet", "ti1|det1", nil, "det1:ti1"},
+		{"aws_guardduty_publishing_destination", "AWS::GuardDuty::PublishingDestination", "det1|pd1", nil,
+			"det1:pd1"},
+		{"aws_quicksight_folder", "AWS::QuickSight::Folder", "123456789012|f1", nil, "123456789012,f1"},
+		{"aws_sagemaker_space", "AWS::SageMaker::Space", "d-1|space1",
+			map[string]any{"SpaceArn": "arn:aws:sagemaker:us-east-1:123456789012:space/d-1/space1"},
+			"arn:aws:sagemaker:us-east-1:123456789012:space/d-1/space1"},
+	} {
+		tr, ok := ccHandTranslation(tc.tfType, tc.cfnType)
+		require.True(t, ok, tc.cfnType)
+		got, ok := tr.translate(tc.identifier, tc.props)
+		require.True(t, ok, tc.cfnType)
+		assert.Equal(t, tc.want, got, tc.cfnType)
+	}
+
+	tr, _ := ccHandTranslation("aws_sagemaker_app", "AWS::SageMaker::App")
+	assert.Equal(t, "AppArn", tr.needsModel())
+	_, ok := tr.translate("a|JupyterServer|d-1|u", nil)
+	assert.False(t, ok, "without the model's ARN there is no id")
+
+	_, ok = ccHandTranslation("aws_budgets_budget_action", "AWS::Budgets::BudgetsAction")
+	assert.False(t, ok, "a budgets action id needs the account ID, which Cloud Control does not carry")
 }

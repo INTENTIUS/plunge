@@ -48,6 +48,8 @@ type ccTranslation struct {
 	literals []string
 	index    []int
 	arity    int
+	// hand is a written-out translation (ccid_hand.go), used in place of literals and index.
+	hand *ccHand
 }
 
 func (t ccTranslation) apply(identifier string) (string, bool) {

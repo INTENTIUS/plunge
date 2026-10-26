@@ -100,3 +100,57 @@ func TestServerAssignedTypesListAtTheirCollection(t *testing.T) {
 	assert.False(t, ok)
 	assert.Contains(t, reason, "agent")
 }
+
+// TestHandwrittenTypesListAndNameByTheirTerraformID: Cloud SQL instances, GKE clusters and Assured Workloads
+// workloads (INTENTIUS/plunge#19) list at their collection, read their labels where the API keeps them, and are
+// named by their Terraform id.
+func TestHandwrittenTypesListAndNameByTheirTerraformID(t *testing.T) {
+	t.Parallel()
+	vars := func(name string) (string, bool) {
+		switch name {
+		case "project":
+			return "p1", true
+		case "organization":
+			return "123", true
+		case "region", "location":
+			return "us-central1", true
+		}
+		return "", false
+	}
+	for _, tc := range []struct {
+		tfType, path, body, name string
+		labels                   map[string]string
+	}{
+		{"google_sql_database_instance", "/sql/v1beta4/projects/p1/instances",
+			`{"items": [{"name": "db1", "selfLink": "https://sqladmin.googleapis.com/sql/v1beta4/projects/p1/instances/db1",
+			"settings": {"userLabels": {"plunge-stack": "s"}}}]}`,
+			"projects/p1/instances/db1", map[string]string{"plunge-stack": "s"}},
+		{"google_container_cluster", "/v1/projects/p1/locations/-/clusters",
+			`{"clusters": [{"name": "c1", "location": "us-central1-a", "resourceLabels": {"plunge-stack": "s"}}]}`,
+			"projects/p1/locations/us-central1-a/clusters/c1", map[string]string{"plunge-stack": "s"}},
+		{"google_assured_workloads_workload", "/v1/organizations/123/locations/us-central1/workloads",
+			`{"workloads": [{"name": "organizations/123/locations/us-central1/workloads/w1",
+			"labels": {"plunge-stack": "s"}}]}`,
+			"organizations/123/locations/us-central1/workloads/w1", map[string]string{"plunge-stack": "s"}},
+	} {
+		ty, reason, ok := Lookup(tc.tfType)
+		require.True(t, ok, reason)
+		assert.Empty(t, ty.Service.Consistency, "%s binds, consistency unmeasured", tc.tfType)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, tc.path, r.URL.Path, tc.tfType)
+			_, _ = w.Write([]byte(tc.body))
+		}))
+		root := srv.URL + "/v1/"
+		if tc.tfType == "google_sql_database_instance" {
+			root = srv.URL + "/sql/v1beta4/"
+		}
+		u, coll, err := ty.URL(ty.Root(root), vars)
+		require.NoError(t, err)
+		objs, err := ty.List(context.Background(), srv.Client(), u, coll)
+		srv.Close()
+		require.NoError(t, err, tc.tfType)
+		require.Len(t, objs, 1, tc.tfType)
+		assert.Equal(t, tc.name, ty.ImportID(objs[0]), tc.tfType)
+		assert.Equal(t, tc.labels, objs[0].Labels, tc.tfType)
+	}
+}

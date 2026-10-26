@@ -225,16 +225,30 @@ func AdvertisedNames(m deploy.MonitorFeatures) []string {
 // SupportsFeature answers false. An enum feature is missing when GetDeploymentInfo doesn't advertise it,
 // and is noted as unknown when plunge's proto has no such enum value at all (the SDK was built against a
 // newer proto than plunge's).
+//
+// One case is not a plunge gap: an SDK that asks SupportsFeature for an id upstream's engine never added
+// to its frozen list (LegacyIDs), for a feature upstream only advertises as an enum value through
+// GetDeploymentInfo. Upstream's engine answers false to that id too, so the verdict is SDK-LEGACY-ID, not
+// FEATURE-MISSING. dotnet 3.116.1 does this: Deployment_RegisterResource.cs asks
+// MonitorSupportsFeature("stateMigrations") and never calls GetDeploymentInfo, while upstream advertises
+// RESOURCE_MONITOR_FEATURE_STATE_MIGRATIONS only through GetDeploymentInfo (plunge#25).
 func Diff(lang, version string, asked Asked, monitor deploy.MonitorFeatures) []Verdict {
 	advertised := AdvertisedNames(monitor)
 	var out []Verdict
 	for _, id := range asked.Legacy {
 		has, known := monitor.Legacy[id]
+		enumEquivalent := EnumPrefix + screamingSnake(id)
 		switch {
 		case !known:
 			out = append(out, Verdict{"FEATURE-MISSING", lang, version, id, "SupportsFeature not asked"})
 		case has:
 			out = append(out, Verdict{"FEATURE-OK", lang, version, id, "SupportsFeature"})
+		case !slices.Contains(LegacyIDs, id) && slices.Contains(advertised, enumEquivalent):
+			out = append(out, Verdict{
+				"SDK-LEGACY-ID", lang, version, id,
+				"not a SupportsFeature id upstream's engine knows, so stock pulumi answers false too; " +
+					"advertised as " + enumEquivalent + " through GetDeploymentInfo",
+			})
 		default:
 			out = append(out, Verdict{"FEATURE-MISSING", lang, version, id, "SupportsFeature answers false"})
 		}

@@ -97,6 +97,9 @@ func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
 	case 1:
 		return nil, ""
 	}
+	if t, ok := ccHandTranslation(info.TFType, info.CFNType); ok {
+		return t, ""
+	}
 	t, reason := ccTerraformID(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
 	if reason != "" {
 		return nil, reason
@@ -132,8 +135,14 @@ func (l *cloudControlLister) ListMarked(
 	var objs []LiveObject
 	for _, d := range descs {
 		tags, ok := cfnTags(d.Properties)
+		if prop := translate.needsModel(); prop != "" {
+			// The id is read from a model property (an ARN), which a list handler may leave out.
+			if _, has := d.Properties[prop]; !has {
+				ok = false
+			}
+		}
 		if !ok {
-			// The list handler left the tags out: read the one resource.
+			// The list handler left the tags, or the property the id is read from, out: read the one resource.
 			full, err := cloudcontrol.GetResourceByIdentity(ctx, c, info.CFNType, d.Identifier)
 			if err != nil {
 				return nil, err
@@ -142,13 +151,14 @@ func (l *cloudControlLister) ListMarked(
 				continue
 			}
 			tags, _ = cfnTags(full.Properties)
+			d.Properties = full.Properties
 		}
 		id := d.Identifier
 		if translate != nil {
-			tfID, ok := translate.apply(d.Identifier)
+			tfID, ok := translate.translate(d.Identifier, d.Properties)
 			if !ok {
-				return nil, fmt.Errorf("the Cloud Control identifier %q of %s does not have the %d parts its "+
-					"primary identifier names", d.Identifier, info.CFNType, translate.arity)
+				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s's "+
+					"Terraform id (it should have %d parts)", d.Identifier, info.CFNType, info.TFType, translate.arity)
 			}
 			id = tfID
 		}
@@ -198,7 +208,15 @@ type armClient struct {
 // armAPIVersion is the Resources API version the list calls are made at.
 const armAPIVersion = "2021-04-01"
 
-func (l *armLister) Consistent() bool { return true }
+// Consistent is false: ARM's list consistency is unmeasured (ruled on INTENTIUS/plunge#15, 2026-10-26). An ARM
+// listing binds, and its silence is not taken as proof there is no duplicate, until the maintainer's measurement on
+// a real subscription says otherwise.
+func (l *armLister) Consistent() bool { return false }
+
+// ConsistentFor implements requestConsistency, for the coverage reason the record carries.
+func (l *armLister) ConsistentFor(TypeInfo, deploy.BindRequest) (bool, string) {
+	return false, "binds, consistency unmeasured: ARM's list consistency has not been measured"
+}
 
 func (l *armLister) Covers(info TypeInfo) (bool, string) { return true, "" }
 
@@ -396,10 +414,12 @@ func (l *kubeLister) ListMarked(
 	return filterMarked(out, want), nil
 }
 
-// gcpLister lists a covered Google Cloud type through its own service's list call (package gcplist), which reads
-// the store the create wrote to, so it carries the collision claim. A type gcplist does not cover, or one whose list
-// cannot be addressed from the resource's inputs and the provider's configuration, is searched through Asset
-// Inventory instead (assetLister), which binds but does not carry the claim; the ownership entry says which it was.
+// gcpLister lists a covered Google Cloud type through its own service's list call (package gcplist). Only Cloud
+// Storage, whose bucket listing Google documents as strongly consistent, carries the collision claim; every other
+// service's list binds, with its consistency unmeasured (ruled on INTENTIUS/plunge#15, 2026-10-26). A type gcplist
+// does not cover, or one whose list cannot be addressed from the resource's inputs and the provider's
+// configuration, is searched through Asset Inventory instead (assetLister), which binds but does not carry the
+// claim either; the ownership entry says which it was.
 type gcpLister struct {
 	asset   *assetLister
 	clients listerCache[http.Client]
@@ -488,6 +508,10 @@ func (l *gcpLister) ConsistentFor(info TypeInfo, req deploy.BindRequest) (bool, 
 	if p.fallback != "" {
 		return false, p.fallback + "; Cloud Asset Inventory binds it instead"
 	}
+	if p.t.Service.Consistency == "" {
+		return false, fmt.Sprintf("binds, consistency unmeasured: Google publishes no list consistency model for "+
+			"%s, and only Cloud Storage's is claimed", p.t.Service.Host)
+	}
 	return true, ""
 }
 
@@ -497,11 +521,11 @@ func (l *gcpLister) Listing(info TypeInfo, req deploy.BindRequest) string {
 	if p.fallback != "" {
 		return "gcp: Cloud Asset Inventory (eventually consistent)"
 	}
-	d := fmt.Sprintf("gcp: %s list of %s (consistent per type)", p.t.Service.Host, p.coll)
-	if p.t.Service.Consistency != "" {
-		d += "; Google documents that " + p.t.Service.Consistency
+	if p.t.Service.Consistency == "" {
+		return fmt.Sprintf("gcp: %s list of %s (binds, consistency unmeasured)", p.t.Service.Host, p.coll)
 	}
-	return d
+	return fmt.Sprintf("gcp: %s list of %s (strongly consistent); Google documents that %s", p.t.Service.Host,
+		p.coll, p.t.Service.Consistency)
 }
 
 func (l *gcpLister) ListMarked(

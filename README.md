@@ -49,6 +49,14 @@ a bare semver), `version` prints only the Pulumi-compatible version.
 
 plunge doesn't run upstream's update check, which would point at pulumi's releases and installers.
 
+The generated Automation API wrappers (`sdk/go/auto/automation`, `sdk/nodejs/automation/interface`,
+`sdk/python/lib/pulumi/automation/interface`) are upstream's, regenerated on each upstream merge.
+plunge's own commands, `drift` and `stack adopt`, are in hand-written files beside them: Go's
+`API.Drift` and `API.StackAdopt` in `sdk/go/auto/automation/plunge_commands.go` (options in
+`optplungedrift` and `optplungestackadopt`), and a `PlungeAPI` class, the generated API plus `drift`
+and `stackAdopt` / `stack_adopt`, in `sdk/nodejs/automation/plunge.ts` and
+`sdk/python/lib/pulumi/automation/plunge.py`.
+
 ## Building
 
 Tools come from `.mise.toml`, as upstream (see `CLAUDE.md`).
@@ -60,8 +68,22 @@ make plunge_language_hosts   # fetch the bundled dotnet and yaml hosts into bin/
 mise run plunge-build        # bin/plunge without make
 ```
 
-A plain `cd pkg && go build -o plunge ./cmd/pulumi` works too, but leaves both versions empty, which
-turns the version checks off, as on an upstream dev build.
+`make plunge` needs mise's protoc. On a fresh checkout it first runs `proto/generate.sh` (the
+`.make/proto` step), which looks protoc up with `mise where protoc` and also needs mise's
+protoc-gen-go, protoc-gen-go-grpc and the node protoc plugins. The generated protobuf code is
+committed, so building the binary itself doesn't need protoc. Without mise, build it directly:
+
+```sh
+go build -C pkg -o ../bin/plunge -ldflags "$(./scripts/plunge-version.sh ldflags)" ./cmd/pulumi
+```
+
+Dropping the `-ldflags` leaves both versions empty, which turns the version checks off, as on an
+upstream dev build.
+
+The language hosts are separate Go modules and build with a plain `go build`, for example
+`go build -C sdk/nodejs/cmd/pulumi-language-nodejs -o ../../../../bin/pulumi-language-nodejs .`.
+Build to `bin/` (ignored) or to `-o /dev/null`. A `go build` with no `-o` leaves the binary in the
+source directory; `.gitignore` covers those paths so one isn't committed by accident.
 
 ## Language hosts
 
