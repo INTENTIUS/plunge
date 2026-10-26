@@ -23,8 +23,10 @@ package plunge
 // the stack's marker alone (plunge-stack) and reports, by type and ID, every live object that carries it and that no
 // record of the stack names. It warns and never deletes: which of the two objects to keep is the operator's call.
 //
-// Only consistent listings are swept. An eventually consistent index (Cloud Asset Inventory) can still list an
-// object a record no longer names because it was deleted a moment ago, and a report from it would be a false one.
+// Every listing that reads the service's own store is swept: Cloud Control, ARM, Kubernetes and gcplist's service
+// lists, whether or not their consistency is claimed for C2 (INTENTIUS/plunge#15). A lagging index is not: Cloud
+// Asset Inventory can still list an object a record no longer names because it was deleted a moment ago, and a
+// report from it would be a false one.
 
 import (
 	"context"
@@ -137,11 +139,7 @@ func sweepUnrecorded(
 		if covered, _ := lister.Covers(t.info); !covered {
 			continue
 		}
-		consistent := lister.Consistent()
-		if rc, ok := lister.(requestConsistency); ok {
-			consistent, _ = rc.ConsistentFor(t.info, *req)
-		}
-		if !consistent {
+		if listsAnIndex(lister, t.info, *req) {
 			continue
 		}
 		listing := fmt.Sprintf("%s family lister", t.info.Family)
@@ -178,6 +176,18 @@ func sweepUnrecorded(
 		return found[i].ID < found[j].ID
 	})
 	return found, notes, nil
+}
+
+// listsAnIndex reports whether lister would list info's type through a lagging index rather than the service's own
+// store: Cloud Asset Inventory, the fallback for a Google Cloud type gcplist does not cover.
+func listsAnIndex(lister Lister, info TypeInfo, req deploy.BindRequest) bool {
+	switch l := lister.(type) {
+	case *assetLister:
+		return true
+	case *gcpLister:
+		return l.plan(info, req).fallback != ""
+	}
+	return false
 }
 
 // requestFromRecords builds the listing request for urn from its recorded state and its provider's: the inputs the

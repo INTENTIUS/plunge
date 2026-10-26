@@ -45,10 +45,9 @@
 // # Consistency
 //
 // Each list reads the service's own store. Cloud Storage documents bucket listing as strongly consistent
-// (https://cloud.google.com/storage/docs/consistency). The other services do not publish a list consistency model;
-// that their lists see a create the moment it returns is taken from their reading the store directly, the same
-// footing Cloud Control's ListResources is on for AWS, and is what the maintainer's create race on floci-gcp checks
-// (INTENTIUS/plunge#7, races C1 to C6).
+// (https://cloud.google.com/storage/docs/consistency), and it is the one service whose list carries the collision
+// claim C2. The other services publish no list consistency model, so their lists bind and their consistency is
+// unmeasured (ruled on INTENTIUS/plunge#15, 2026-10-26). A [Service] with a Consistency statement is a claimed one.
 package gcplist
 
 import (

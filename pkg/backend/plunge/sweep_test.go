@@ -101,8 +101,9 @@ func TestSweepReportsTheObjectOfARacesLostRecordWrite(t *testing.T) {
 	assert.Len(t, cloud.objs, 2)
 }
 
-// A marked object the records name is not reported, and a type whose listing is not consistent is not swept.
-func TestSweepSkipsRecordedObjectsAndInconsistentListings(t *testing.T) {
+// A marked object the records name is not reported, a listing whose consistency is unmeasured is swept, and a type
+// listed through Cloud Asset Inventory is not.
+func TestSweepSkipsRecordedObjectsAndIndexListings(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	store := newCountingStore(t)
@@ -127,16 +128,26 @@ func TestSweepSkipsRecordedObjectsAndInconsistentListings(t *testing.T) {
 	assert.Empty(t, notes)
 
 	found, _, err = sweepUnrecorded(ctx, store, testKeys, marks,
-		map[Family]Lister{FamilyAWS: inconsistentLister{objs: []LiveObject{{ID: "logs-9", Tags: want}}}})
+		map[Family]Lister{FamilyAWS: unmeasuredLister{objs: []LiveObject{{ID: "logs-9", Tags: want}}}})
 	require.NoError(t, err)
-	assert.Empty(t, found, "an eventually consistent listing is not swept")
+	require.Len(t, found, 1, "a listing of the service's own store is swept, its consistency claimed or not")
+	assert.Equal(t, resource.ID("logs-9"), found[0].ID)
+
+	gcpURN := resource.NewURN("test", "test", "", "gcp:x/y:Y", "thing")
+	gcpMarks := newLedger()
+	gcpMarks.noteMarked(gcpURN, TypeInfo{Type: "gcp:x/y:Y", Family: FamilyGoogle, TFType: "google_not_a_type",
+		Property: "labels", Shape: ShapeMap}, &deploy.BindRequest{URN: gcpURN, Type: "gcp:x/y:Y"})
+	found, notes, err = sweepUnrecorded(ctx, store, testKeys, gcpMarks, map[Family]Lister{FamilyGoogle: newGCPLister()})
+	require.NoError(t, err)
+	assert.Empty(t, found, "Cloud Asset Inventory is not swept")
+	assert.Empty(t, notes, "and nothing was listed")
 }
 
-type inconsistentLister struct{ objs []LiveObject }
+type unmeasuredLister struct{ objs []LiveObject }
 
-func (inconsistentLister) Covers(TypeInfo) (bool, string) { return true, "" }
-func (inconsistentLister) Consistent() bool               { return false }
-func (f inconsistentLister) ListMarked(
+func (unmeasuredLister) Covers(TypeInfo) (bool, string) { return true, "" }
+func (unmeasuredLister) Consistent() bool               { return false }
+func (f unmeasuredLister) ListMarked(
 	_ context.Context, _ TypeInfo, _ deploy.BindRequest, want map[string]string,
 ) ([]LiveObject, error) {
 	return filterMarked(f.objs, want), nil
