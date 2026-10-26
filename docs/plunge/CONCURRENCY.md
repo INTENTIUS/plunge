@@ -95,6 +95,31 @@ with the reason when it does not (`ownership.autoname`: `by`, `name`, `c1`,
 family lister covers them, a duplicate create is caught by the marker listing
 instead.
 
+## C2: the listings behind the collision check
+
+Before a create, the bind phase lists the type's live objects carrying the
+resource's markers. One object is bound; two or more are refused by name
+(`CollisionError`, naming every ID). The refusal proves there is no duplicate
+only when the listing sees a create the moment it returns, so each family lists
+through the service's own store:
+
+| Family | Listing |
+|---|---|
+| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (`pkg/backend/plunge/ccid.go`) |
+| pulumi-azure, azure-native | ARM's own list, filtered by the `plunge-urn` tag |
+| pulumi-kubernetes | a LIST of the kind by label selector |
+| pulumi-gcp | the type's own service list (`pkg/backend/plunge/gcplist`): the parent collection of the Asset name choudoufu's `pkg/identity` gives the type, `projects/<project>/topics` for a topic. 143 types across 28 services at choudoufu's pkg/identity pin, listed by `gcplist.Covered()` |
+
+A pulumi-gcp type outside `gcplist.Covered()`, or one whose list path cannot be
+filled from the resource's inputs and the provider's project, region and zone,
+is searched through Cloud Asset Inventory. That index lags its services, so it
+binds and does not back the collision check.
+
+Each resource record says which listing ran when it was created
+(`ownership.listing`, for example `gcp: pubsub.googleapis.com list of
+projects/plc/topics (consistent per type)`), and `ownership.unlisted` holds the
+reason when the collision check does not cover it.
+
 ## Reading a stack
 
 The snapshot is assembled from the records on every read, in an order where

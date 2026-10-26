@@ -23,9 +23,9 @@ package plunge
 //   - aws-native serves nothing over the wire; its committed metadata.json at the provider's version tag says the
 //     tags property, its style and whether it is create-only (package awsnative).
 //   - Kubernetes objects all carry metadata.labels.
-//   - azure-native's schema is not read here (the provider's GetSchema is the whole ARM surface, far too large to
-//     load per run). A type is marked only where the program already sets its tags map, which proves the type
-//     has one; elsewhere it is recorded as unknown.
+//   - azure-native's schema is read once per provider version and distilled to each type's tags shape, which is
+//     cached on disk (azurenative.go, INTENTIUS/plunge#15). When it cannot be read, a type is marked only where the
+//     program already sets its tags map, which proves the type has one; elsewhere it is recorded as unknown.
 //
 // Map-style tags are the shape written. aws-native's key/value arrays are written too, since they are that
 // provider's usual shape. Any other shape is recorded and left alone, never guessed at.
@@ -124,6 +124,10 @@ type TypeInfo struct {
 
 	// Autoname is what plunge knows about the type's autonamed property (autoname.go).
 	Autoname AutonameInfo
+
+	// azureNativeFallback reports that azure-native's schema could not be read, so a program-set tags map is the
+	// only evidence the type has one.
+	azureNativeFallback bool
 }
 
 // AutonameInfo is what the schema says about a type's autonamed property.
@@ -147,14 +151,17 @@ func (i TypeInfo) Encoding() markers.Encoding { return i.Family.encoding() }
 
 // catalog answers TypeInfo per type, reading each provider's schema once.
 type catalog struct {
-	awsNative *awsnative.Loader
+	awsNative       *awsnative.Loader
+	azureNativeTags *azureNativeLoader
 
 	mu       sync.Mutex
 	mappings map[string]*bridgeMapping // by provider name and version
 }
 
 func newCatalog() *catalog {
-	return &catalog{awsNative: awsnative.Default, mappings: map[string]*bridgeMapping{}}
+	return &catalog{
+		awsNative: awsnative.Default, azureNativeTags: newAzureNativeLoader(), mappings: map[string]*bridgeMapping{},
+	}
 }
 
 // lookup returns what is known about t. prov is the plugin that manages t, nil when it is not loaded.
@@ -168,8 +175,7 @@ func (c *catalog) lookup(ctx context.Context, prov plugin.Provider, t tokens.Typ
 	case info.Family == FamilyKubernetes:
 		kubernetesInfo(&info)
 	case info.Family == FamilyAzureNative:
-		info.Property, info.Shape = "tags", ShapeUnknown
-		info.Reason = "azure-native's schema is not read; a marker is written only where the program sets the tags map"
+		c.azureNative(ctx, prov, &info)
 	default:
 		info.Shape = ShapeUnknown
 		info.Reason = fmt.Sprintf("plunge has no marker placement for the %q provider family", t.Package())
