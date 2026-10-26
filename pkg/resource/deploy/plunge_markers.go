@@ -60,6 +60,9 @@ type MarkerRequest struct {
 	// Properties are the inputs after every transform ran.
 	Properties resource.PropertyMap
 	DryRun     bool
+	// Diag is the deployment's diagnostic sink. A policy's warnings sent here reach the engine's event stream as
+	// diagnostic events on URN (INTENTIUS/plunge#15).
+	Diag diag.Sink
 }
 
 // MarkerBinder binds a planned create to the live object already carrying its markers.
@@ -82,6 +85,9 @@ type BindRequest struct {
 	// Inputs are the resource's inputs, markers included.
 	Inputs resource.PropertyMap
 	DryRun bool
+	// Diag is the deployment's diagnostic sink, for the binder's notes on coverage (an unlisted type, a listing
+	// that is not consistent), which then arrive as engine diagnostic events.
+	Diag diag.Sink
 }
 
 // injectMarkers is the resource monitor's call into Target.Markers. It is a no-op without a policy and for
@@ -109,6 +115,7 @@ func (rm *resmon) injectMarkers(
 		ProviderRef: providerRef.String(),
 		Properties:  props,
 		DryRun:      rm.opts.DryRun,
+		Diag:        rm.diagnostics,
 	})
 }
 
@@ -148,6 +155,7 @@ func (sg *stepGenerator) bindMarkers(
 		Provider: prov,
 		Inputs:   new.Inputs,
 		DryRun:   sg.deployment.opts.DryRun,
+		Diag:     sg.deployment.Diag(),
 	}
 	if goal.Provider != "" {
 		if ref, err := sdkproviders.ParseReference(goal.Provider); err == nil {
