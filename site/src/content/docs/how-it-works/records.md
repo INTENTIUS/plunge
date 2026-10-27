@@ -7,8 +7,8 @@ prompt: |
 ---
 
 A plunge stack's state is a set of records in a store with conditional
-writes. The store is choudoufu's `staterecord`, vendored at
-`pkg/backend/plunge/staterecord`.
+writes. The store is choudoufu's public `staterecord` package
+(`github.com/intentius/choudoufu/pkg/staterecord`), which plunge imports as a module.
 
 ## What a record is
 

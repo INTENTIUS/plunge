@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/intentius/choudoufu/pkg/registry"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/registry"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"

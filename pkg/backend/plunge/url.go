@@ -31,9 +31,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/intentius/choudoufu/pkg/kubesweep"
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/kubesweep"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 )
 
 // URLPrefix marks a plunge backend URL: "plunge+" ahead of a DIY backend URL. The DIY URL after it keeps the

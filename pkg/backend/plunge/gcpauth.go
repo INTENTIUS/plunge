@@ -52,7 +52,7 @@ import (
 	iamcredentials "google.golang.org/api/iamcredentials/v1"
 	"google.golang.org/api/option"
 
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcpsweep"
+	"github.com/intentius/choudoufu/pkg/gcpsweep"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 )
 

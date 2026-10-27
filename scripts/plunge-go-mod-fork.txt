@@ -18,11 +18,8 @@ pkg go
 pkg require github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage
 pkg require github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
 pkg require github.com/intentius/choudoufu
-pkg require github.com/mitchellh/go-homedir
-pkg require k8s.io/api
 pkg require k8s.io/apimachinery
 pkg require k8s.io/client-go
-pkg require sigs.k8s.io/structured-merge-diff/v6
 
 tests go
 sdk/pcl go

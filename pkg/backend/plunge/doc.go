@@ -14,7 +14,7 @@
 
 // Package plunge is plunge's per-resource state backend (INTENTIUS/plunge#6).
 //
-// A stack's state is a set of records in a store with conditional writes (the vendored staterecord package):
+// A stack's state is a set of records in a store with conditional writes (choudoufu's public staterecord package):
 // one per URN, one per root Stack output, one immutable secrets configuration, one per snippet and extension. A
 // run writes only the records it changed, each conditioned on the version it read, and holds no stack lock. The
 // snapshot the engine sees is assembled from the records on every read, sorted so each resource follows what it
