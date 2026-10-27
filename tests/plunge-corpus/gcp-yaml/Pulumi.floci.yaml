@@ -4,7 +4,12 @@
 # The endpoint paths are the ones choudoufu's live/e2e/lib/gcp.sh uses for
 # hashicorp/google against the same emulator. A service account's client is
 # the iambeta product, so it reads iamBetaCustomEndpoint, not iamCustomEndpoint
-# (gcp.sh's own note). Services this program doesn't call keep their default
+# (gcp.sh's own note). skipRegionValidation is on because pulumi-gcp's region
+# lookup, made when the provider configures, ignores the custom endpoints and
+# went to compute.googleapis.com (a 401 with the fake token,
+# INTENTIUS/plunge#42). This key covers the default provider only; the
+# explicit europe provider has no such property and reads
+# PULUMI_GCP_SKIP_REGION_VALIDATION, which scripts/plunge-baseline.sh exports. Services this program doesn't call keep their default
 # endpoints; the fake token fails against googleapis.com. Change the port in
 # both places if floci-gcp listens somewhere other than localhost:4588.
 # encryptionsalt is added by `pulumi stack init floci --secrets-provider
@@ -20,6 +25,7 @@ config:
   gcp:cloudBillingCustomEndpoint: http://localhost:4588/v1/
   gcp:resourceManagerCustomEndpoint: http://localhost:4588/v1/
   gcp:serviceUsageCustomEndpoint: http://localhost:4588/v1/
+  gcp:skipRegionValidation: true
   corpus-gcp-yaml:flociGcpEndpoint: http://localhost:4588
   corpus-gcp-yaml:prefix: plc-gcp
 encryptionsalt: v1:d9UJOOSVfVM=:v1:fhS3KMtiN225lpBz:FNOqTB6P7IIATKm7ah+M/tvI2wflkQ==
