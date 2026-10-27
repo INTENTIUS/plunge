@@ -64,6 +64,10 @@ type Target struct {
 	// `pulumi:autonaming` config, and may force delete-before-replace (plunge_autonaming.go, INTENTIUS/plunge#7). Nil
 	// keeps upstream's behaviour.
 	Autonames AutonamePolicy
+
+	// Timings, when set, times every provider call and record write per resource and puts them on the resource's
+	// outputs or failure event (plunge_timings.go, INTENTIUS/plunge#55). Nil keeps upstream's behaviour.
+	Timings *Timings
 }
 
 const (

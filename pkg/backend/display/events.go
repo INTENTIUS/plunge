@@ -328,6 +328,8 @@ func convertStepEventMetadata(md engine.StepEventMetadata, showSecrets bool) api
 		DetailedDiff: detailedDiff,
 		Logical:      md.Logical,
 		Provider:     md.Provider,
+
+		PlungeTimings: md.PlungeTimings, // INTENTIUS/plunge#55
 	}
 }
 
@@ -604,6 +606,8 @@ func convertJSONStepEventMetadata(md apitype.StepEventMetadata) engine.StepEvent
 		DetailedDiff: detailedDiff,
 		Logical:      md.Logical,
 		Provider:     md.Provider,
+
+		PlungeTimings: md.PlungeTimings, // INTENTIUS/plunge#55
 	}
 }
 
