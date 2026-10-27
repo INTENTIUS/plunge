@@ -75,10 +75,34 @@ and never falls back to the shell's Azure login (INTENTIUS/plunge#35):
   setting is reported unreadable with the reason, and the open is refused
   unless `allow_insecure` names them.
 
+- The stack metadata half is the DIY backend's go-cloud bucket
+  (`gocloud.dev/blob/azureblob`), which builds its own client and refuses query
+  keys it does not know. The backend rewrites the metadata URL before opening
+  it (`pkg/backend/plunge/azblobmeta.go`): plunge's own keys are dropped, and
+  the endpoint is spelled in go-cloud's `domain`, `protocol`, `cdn` and
+  `localemu` keys so that go-cloud's service URL is exactly the record store's
+  endpoint. go-cloud signs with `AZURE_STORAGE_ACCOUNT` plus
+  `AZURE_STORAGE_KEY`, or `AZURE_STORAGE_SAS_TOKEN`; it does not read
+  `ARM_ACCESS_KEY` or `ARM_SAS_TOKEN`. With neither it would use
+  `AZURE_STORAGE_CONNECTION_STRING`, whose own endpoint replaces the URL's, or
+  build `DefaultAzureCredential`, so the open is refused by name in both cases.
+  It is also refused when the endpoint (or the blob URL a `metadata_host`'s
+  storage suffix gives) is not local (`localhost`, `*.localhost` or a loopback
+  address), when `AZURE_STORAGE_ACCOUNT` names another account than the URL,
+  and for an endpoint go-cloud cannot spell: on `127.0.0.1` or `localhost` it
+  puts the account in the path, so Azurite's form is
+  `http://127.0.0.1:10000/<account>`.
+- Without `endpoint` or `metadata_host`, go-cloud's own `domain`, `protocol`,
+  `cdn` and `localemu` keys, and `AZURE_STORAGE_DOMAIN`,
+  `AZURE_STORAGE_PROTOCOL`, `AZURE_STORAGE_IS_CDN` and
+  `AZURE_STORAGE_IS_LOCAL_EMULATOR`, are refused: they would move the stack
+  metadata while the records stayed on real Azure.
+
 For example, against floci-az:
 `plunge+azblob://records?storage_account=devacct&resource_group=rg&subscription_id=<sub>&metadata_host=localhost:4577&endpoint=https://devacct.blob.localhost:4577`
 with `ARM_TENANT_ID`, `ARM_CLIENT_ID` and `ARM_CLIENT_SECRET` set to floci-az's
-fakes.
+fakes, and `AZURE_STORAGE_ACCOUNT=devacct` with `AZURE_STORAGE_KEY` set to the
+account's key for the stack metadata.
 
 `plunge+s3://` and `plunge+gs://` check their bucket the same way when they
 open it. S3: `versioning`, `lifecycle` (a rule that expires noncurrent

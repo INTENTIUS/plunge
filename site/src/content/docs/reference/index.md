@@ -30,7 +30,7 @@ Refused on a plunge stack by name (`UnsupportedOnRecordsError`):
 | `plunge+azblob://container/prefix` | `storage_account`, `resource_group`, `subscription_id`, `endpoint`, `metadata_host`, `allow_insecure` |
 | `plunge+k8s://namespace/prefix` | `metadata` (required), `kubeconfig`, `context`, `in_cluster`, `estate` |
 
-Source: `pkg/backend/plunge/url.go`, `azblobstore.go`, `localstores.go`. A `plunge+gs://` URL takes its
+Source: `pkg/backend/plunge/url.go`, `azblobstore.go`, `azblobmeta.go`, `localstores.go`. A `plunge+gs://` URL takes its
 emulator from `STORAGE_EMULATOR_HOST`, not a query key.
 
 ## Environment variables
@@ -47,6 +47,7 @@ emulator from `STORAGE_EMULATOR_HOST`, not a query key.
 | `PLUNGE_AWS_NATIVE_METADATA` | an aws-native `metadata.json` to read in place of the embedded one |
 | `AZURE_STORAGE_ACCOUNT`, `AZURE_RESOURCE_GROUP`, `AZURE_SUBSCRIPTION_ID` | `plunge+azblob://` defaults for the query keys |
 | `ARM_ACCESS_KEY`, `ARM_SAS_TOKEN`, `ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET` | `plunge+azblob://` credentials against an emulator, and ARM listings through a `metadataHost` |
+| `AZURE_STORAGE_KEY` (with `AZURE_STORAGE_ACCOUNT`), `AZURE_STORAGE_SAS_TOKEN` | `plunge+azblob://` credentials against an emulator: the stack metadata needs one, and the record store takes them after the `ARM_` names |
 
 ## Exit codes
 
