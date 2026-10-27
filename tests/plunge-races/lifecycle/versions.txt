@@ -1,0 +1,5 @@
+plunge: /Users/alex/Documents/checkouts/intentius/engine-wt/plunge-minimal-estate/bin/plunge
+  plunge v0.1.0-dev.0
+  pulumi v3.272.0
+floci:  http://localhost:4566
+tree:   f6dae0ff5de775859302195beb796b4382df1e46

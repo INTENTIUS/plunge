@@ -1,0 +1,7 @@
+VERDICT L lifecycle-preview PASS preview plans the two queue creates
+VERDICT L lifecycle-up PASS up created both queues, and queue-a carries its plunge-urn marker
+VERDICT C5 lifecycle-disjoint PASS two concurrent updates on disjoint resources both land (a=7200, b=1800), no lock object seen
+VERDICT P6 lifecycle-export PASS the export assembles with integrity checking on, holds a=7200 and b=1800, and the store has one resource record per URN
+VERDICT P6 lifecycle-older-run PASS an older program's run keeps queue-b and warns naming it and both stamps
+VERDICT L lifecycle-drift PASS drift --resource reports queue-a drifted and queue-b in sync (drifted/{"providerReads": 1, "recordKeys": 3, "recordListCalls": 0, "recordsRead": 3, "stackRefreshes": 0} in-sync/{"providerReads": 1, "recordKeys": 3, "recordListCalls": 0, "recordsRead": 3, "stackRefreshes": 0})
+VERDICT L lifecycle-destroy PASS destroy removed both queues and their records

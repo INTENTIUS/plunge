@@ -1,0 +1,36 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+Previewing update (race):
+    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+@ previewing update....
+ +  aws:sqs:Queue queue-a create 
+ +  aws:sqs:Queue queue-b create 
+ +  pulumi:pulumi:Stack plunge-races-race create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+Resources:
+    + 3 to create
+
+Updating (race):
+    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race creating (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+@ updating....
+ +  aws:sqs:Queue queue-b creating (0s) 
+ +  aws:sqs:Queue queue-a creating (0s) 
+@ updating............................
+ +  aws:sqs:Queue queue-b created (25s) 
+ +  aws:sqs:Queue queue-a created (25s) 
+ +  pulumi:pulumi:Stack plunge-races-race created (26s) 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+Resources:
+    + 3 created
+
+Duration: 27s
+

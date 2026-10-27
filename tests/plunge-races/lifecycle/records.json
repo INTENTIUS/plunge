@@ -1,0 +1,13 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race/secrets",
+            "LastModified": "2026-10-27T19:16:08+00:00",
+            "ETag": "\"fb2338ad4effb19b5a959b5ea7897f05\"",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}
