@@ -17,6 +17,7 @@ site: site-install
 # Serve the docs site locally with live reload at
 # http://127.0.0.1:<port>/plunge/. `just site-serve 4322` picks another port,
 # which is what you want when another checkout or worktree is already serving.
+# Astro 7 runs the dev server in the background; `just site-stop` stops it.
 site-serve port="4321": site-install
     cd site && npm run dev -- --host 127.0.0.1 --port {{port}}
 
@@ -24,6 +25,10 @@ site-serve port="4321": site-install
 # http://127.0.0.1:<port>/plunge/.
 site-preview port="4321": site
     cd site && npm run preview -- --host 127.0.0.1 --port {{port}}
+
+# Stop the background dev server that site-serve started.
+site-stop:
+    cd site && npx astro dev stop
 
 # The site's prose lint (the same rules as choudoufu's site).
 site-lint:
