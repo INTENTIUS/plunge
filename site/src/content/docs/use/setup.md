@@ -42,7 +42,14 @@ With an `endpoint` or `metadata_host` query key, `plunge+azblob://` talks
 only to the endpoints the URL names and never falls back to the shell's Azure
 login ([#35](https://github.com/INTENTIUS/plunge/issues/35)). It signs with
 `ARM_ACCESS_KEY`, a SAS token, or a client secret, all from the environment
-only, since the backend URL is saved and printed.
+only, since the backend URL is saved and printed. The stack metadata in the
+same container goes through the DIY backend's go-cloud driver, which reads
+only `AZURE_STORAGE_ACCOUNT` with `AZURE_STORAGE_KEY`, or
+`AZURE_STORAGE_SAS_TOKEN`. Without one of those the open is refused, since
+go-cloud would otherwise build Azure's default credential chain. The endpoint
+must be local (`localhost`, `*.localhost` or a loopback address); on
+`127.0.0.1` or `localhost` name it with the account in the path, as
+`http://127.0.0.1:10000/<account>`.
 
 S3 and GCS follow the same rule against an emulator
 ([#50](https://github.com/INTENTIUS/plunge/issues/50)). These stores never build

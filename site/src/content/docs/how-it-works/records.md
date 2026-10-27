@@ -76,7 +76,10 @@ credential chain, so an emulator run asks no metadata server, SSO, STS or OAuth
 host for a credential. With none set, the open is refused by name
 ([#35](https://github.com/INTENTIUS/plunge/issues/35),
 [#50](https://github.com/INTENTIUS/plunge/issues/50)). The variables are on
-[Setup](../../use/setup/#credentials).
+[Setup](../../use/setup/#credentials). The stack metadata beside the records
+is checked the same way before the DIY backend opens it: on Azure Blob it is
+sent to the record store's own endpoint, which must be local, with
+`AZURE_STORAGE_KEY` or `AZURE_STORAGE_SAS_TOKEN`.
 
 ## How a stack is read
 
