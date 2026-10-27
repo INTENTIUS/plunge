@@ -1,0 +1,70 @@
+name: Deploy docs site
+
+# Builds the Astro + Starlight site in site/ and deploys it to GitHub Pages at
+# https://intentius.io/plunge (INTENTIUS/plunge#44). Adapted from choudoufu's
+# .github/workflows/pages.yml. `npm run build` runs check-rooms, check-links and
+# check-contrast after astro build.
+#
+# This file is parked in site/workflows/, where GitHub never runs it. To turn
+# it on, the maintainer moves it to .github/workflows/pages.yml, sets the
+# repository's Pages source to "GitHub Actions", and runs it by hand. It has
+# no push trigger; add `push: branches: [main]` beside workflow_dispatch to
+# deploy on every merge, as choudoufu does.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+      - name: Install
+        run: npm ci
+      - name: Lint prose
+        run: npm run lint:prose
+      - name: Build the site
+        env:
+          PUBLIC_POSTHOG_KEY: '${{ vars.PUBLIC_POSTHOG_KEY }}'
+        run: npm run build
+      - name: Upload the artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: site/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: '${{ steps.deployment.outputs.page_url }}'
+    steps:
+      - id: deployment
+        name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346

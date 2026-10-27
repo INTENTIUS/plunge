@@ -1,0 +1,25 @@
+---
+// The home page: the hero and the picker. A Starlight page rather than an MDX
+// file in the docs collection, so the build bundles no MDX module (whose
+// component imports each raise a Vite MODULE_LEVEL_DIRECTIVE warning).
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import Landing from '../components/Landing.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<StarlightPage
+	frontmatter={{
+		title: 'plunge',
+		description: 'plunge is Pulumi that tags each resource with the stack that owns it and keeps one record per resource, with no stack lock.',
+		template: 'splash',
+		hero: {
+			title: 'plunge',
+			tagline: 'Pulumi that tags each resource with its owning stack and keeps one record per resource, with no stack lock.',
+			image: {
+				html: `<img class="pl-hero-diver" src="${base}/brand/plunge-160.png" width="256" height="256" alt="The plunge diver, a pixel-art cliff diver over the sea" />`,
+			},
+		},
+	}}
+>
+	<Landing />
+</StarlightPage>

@@ -1,0 +1,48 @@
+---
+// Starlight's footer, with a small diver and the wordmark under it on every page,
+// and a privacy note on a build that loads analytics. Adapted from choudoufu's
+// site.
+import Default from '@astrojs/starlight/components/Footer.astro';
+import Diver from "./Diver.astro";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+// Said only on a build that loads analytics (see Head.astro).
+const analytics = Boolean(import.meta.env.PUBLIC_POSTHOG_KEY);
+---
+<Default />
+<p class="pl-foot not-content">
+	<a href={`${base}/`}><Diver size={32} /><span>plunge</span></a>
+</p>
+{analytics && (
+	<p class="pl-privacy not-content">
+		These docs count page views and clicks with PostHog. They set no cookies, store nothing in your browser, and send nothing when your browser asks not to be tracked.
+	</p>
+)}
+
+<style>
+	.pl-foot {
+		margin: 2rem 0 1rem;
+		text-align: center;
+	}
+	.pl-foot a {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
+		font-family: var(--pl-display);
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		color: var(--sl-color-gray-3);
+		text-decoration: none;
+	}
+	.pl-foot a:hover {
+		color: var(--sl-color-white);
+	}
+	.pl-privacy {
+		margin: 0 auto 1rem;
+		max-width: 40rem;
+		text-align: center;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+</style>

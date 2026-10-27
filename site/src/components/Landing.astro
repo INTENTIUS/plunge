@@ -1,0 +1,37 @@
+---
+// The home page under the hero and its lead: the picker, then a link to the
+// claims.
+import Picker from './Picker.astro';
+
+const CLAIMS = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/claims/`;
+---
+<div class="pl-landing not-content">
+	<Picker />
+	<p class="claims"><a href={CLAIMS}>What has been run, and what waits for a run</a></p>
+</div>
+
+<style>
+	.pl-landing {
+		display: grid;
+		gap: 2.5rem;
+		max-width: 64rem;
+		margin: 0 auto;
+		font-size: var(--sl-text-sm);
+		line-height: 1.55;
+		overflow-wrap: anywhere;
+	}
+	.pl-landing :global(.pl-picker) {
+		margin: 0;
+	}
+	.claims {
+		margin: 0;
+		text-align: center;
+	}
+	.claims a {
+		color: var(--pl-accent);
+		text-decoration-color: color-mix(in srgb, var(--pl-accent) 35%, transparent);
+	}
+	.claims a:hover {
+		text-decoration-color: var(--pl-sand);
+	}
+</style>
