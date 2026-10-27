@@ -116,9 +116,13 @@ plunge's own marker listings follow the same configuration
 give every service one URL, so Cloud Control is listed there with
 `PLUNGE_CLOUDCONTROL_ENDPOINT` unset; set the variable to send it somewhere
 else. In `gcp-yaml` the storage and pubsub lists go to floci-gcp; any other
-service's list, and Asset Inventory, has no endpoint there, and `azure-yaml`
-reads its endpoints from a metadata host, so plunge skips those listings with
-a warning naming the stack and makes no call to Google or Azure.
+service's list, and Asset Inventory, has no endpoint there, so plunge skips
+those listings with a warning naming the stack and makes no call to Google.
+`azure-yaml`'s ARM listings go to floci-az through its metadata host, signed
+in with the fake client secret from `ARM_TENANT_ID`, `ARM_CLIENT_ID` and
+`ARM_CLIENT_SECRET` in the environment (`scripts/plunge-baseline.sh` exports
+them); without those three they are skipped
+with the same warning, and nothing calls Azure.
 
 If an emulator listens on another port, change it in the stack file (both
 the provider endpoints and the `flociEndpoint` key; for `azure-yaml`,
@@ -195,6 +199,9 @@ below are the stock half by hand, for recording `baseline/` in the tree.
    export SSL_CERT_FILE=/tmp/floci-az-ca.pem
    export AZURE_CONFIG_DIR="$(mktemp -d)"   # no az login to fall back on
    export ARM_METADATA_HOSTNAME=localhost:4577 ARM_USE_CLI=false ARM_USE_MSI=false ARM_USE_OIDC=false
+   # the stack's fakes, which plunge's ARM lister reads from the environment only
+   export ARM_TENANT_ID=00000000-0000-0000-0000-0000000071e7 ARM_CLIENT_ID=00000000-0000-0000-0000-00000000c11e
+   export ARM_CLIENT_SECRET=floci-az-does-not-check-this
    ```
 
    `pulumi login` changes the CLI's current backend for the whole user. To

@@ -73,14 +73,30 @@ type azureMetadata struct {
 	Suffixes        map[string]string `json:"suffixes"`
 }
 
-// readAzureMetadata reads host's /metadata/endpoints over TLS, as azurerm and choudoufu do.
+// readAzureMetadata reads host's /metadata/endpoints over TLS, as azurerm and choudoufu do, for the store, which
+// needs every field.
 func readAzureMetadata(ctx context.Context, host string) (*azureMetadata, error) {
+	md, err := fetchAzureMetadata(ctx, host, azureTransport())
+	if err != nil {
+		return nil, err
+	}
+	if md.Suffixes["storage"] == "" || md.ResourceManager == "" || md.Authentication.LoginEndpoint == "" ||
+		len(md.Authentication.Audiences) == 0 {
+		return nil, fmt.Errorf("the metadata host %s names no storage suffix, resource manager, login endpoint "+
+			"or audience", host)
+	}
+	return md, nil
+}
+
+// fetchAzureMetadata reads host's /metadata/endpoints over TLS through transport. The store (readAzureMetadata) and
+// the ARM lister (armendpoints.go) each check the fields they need.
+func fetchAzureMetadata(ctx context.Context, host string, transport policy.Transporter) (*azureMetadata, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://"+host+"/metadata/endpoints?api-version=2023-11-01", nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := azureTransport().Do(req)
+	resp, err := transport.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("reading the endpoints from the metadata host %s: %w", host, err)
 	}
@@ -91,11 +107,6 @@ func readAzureMetadata(ctx context.Context, host string) (*azureMetadata, error)
 	var md azureMetadata
 	if err := json.NewDecoder(resp.Body).Decode(&md); err != nil {
 		return nil, fmt.Errorf("decoding the metadata host %s's endpoints: %w", host, err)
-	}
-	if md.Suffixes["storage"] == "" || md.ResourceManager == "" || md.Authentication.LoginEndpoint == "" ||
-		len(md.Authentication.Audiences) == 0 {
-		return nil, fmt.Errorf("the metadata host %s names no storage suffix, resource manager, login endpoint "+
-			"or audience", host)
 	}
 	return &md, nil
 }

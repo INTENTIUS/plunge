@@ -248,12 +248,19 @@ provider's `endpoints` (`aws:endpoints` on a default provider): its
 `AWS_ENDPOINT_URL`, then the one URL every entry shares (a stack pointing
 every service at floci). A Google Cloud list uses the service's
 `<service>CustomEndpoint` input or its `GOOGLE_*_CUSTOM_ENDPOINT` variable, and
-Asset Inventory uses `cloudAssetCustomEndpoint`.
+Asset Inventory uses `cloudAssetCustomEndpoint`. An ARM list for an azure
+provider with a `metadataHost` (or `ARM_METADATA_HOSTNAME`) goes to the ARM
+endpoint that host's `/metadata/endpoints` names, with a token from the login
+endpoint and audience it names. The token comes from a client secret in the
+environment only (`ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`),
+never azidentity's default chain; without the three the listing is skipped.
+When the metadata host is local, an ARM or login endpoint it names that is not
+local skips the listing too.
 
 When the configuration names custom endpoints and none that the listing can
 use (an `aws:endpoints` with several URLs and no `cloudcontrol` entry, a google
-provider with custom endpoints for other services, an azure provider with a
-`metadataHost`, which the ARM lister does not resolve), the listing is
+provider with custom endpoints for other services, an azure provider with
+custom endpoints other than a `metadataHost`), the listing is
 skipped. plunge warns once, naming the stack and the service, records the
 reason in `ownership.unlisted`, and runs no bind or collision check for those
 creates. It never falls back to the cloud's public endpoint. The sweep for

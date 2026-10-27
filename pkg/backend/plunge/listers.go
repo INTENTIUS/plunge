@@ -207,6 +207,8 @@ type armClient struct {
 	endpoint string
 	scope    string
 	cred     azcore.TokenCredential
+	// do sends the list calls; nil is http.DefaultClient.
+	do policy.Transporter
 }
 
 // armAPIVersion is the Resources API version the list calls are made at.
@@ -228,12 +230,6 @@ func (l *armLister) ListMarked(
 	ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string,
 ) ([]LiveObject, error) {
 	in := req.ProviderInputs
-	if host := azureMetadataHost(in); host != "" {
-		// The provider reads every endpoint from the metadata host (an emulator such as floci-az). The lister does
-		// not resolve one, and without it the call would go to the public cloud's ARM.
-		return nil, skipped(req.URN, "ARM", "the azure provider takes its endpoints from the metadata host %s, "+
-			"which plunge's ARM lister does not resolve", host)
-	}
 	sub := providerString(in, "subscriptionId")
 	if sub == "" {
 		sub = firstEnv("ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID")
@@ -241,24 +237,45 @@ func (l *armLister) ListMarked(
 	if sub == "" {
 		return nil, fmt.Errorf("no subscription: the provider sets no subscriptionId and ARM_SUBSCRIPTION_ID is unset")
 	}
-	a := azsweep.Attrs{
-		Provider:       azsweep.ProviderAzureRM,
-		SubscriptionID: sub,
-		TenantID:       providerString(in, "tenantId"),
-		ClientID:       providerString(in, "clientId"),
-		ClientSecret:   providerString(in, "clientSecret"),
-		Environment:    providerString(in, "environment"),
-	}
-	c, err := l.creds.get(sub+"|"+a.TenantID+"|"+a.ClientID+"|"+a.Environment, func() (*armClient, error) {
-		cred, ep, _, err := a.Credential(ctx, "plunge's marker bind")
+	var c *armClient
+	var err error
+	if host := azureMetadataHost(in); host != "" {
+		// The provider reads every endpoint from the metadata host (an emulator such as floci-az), and so does the
+		// lister, with a client secret from the environment and never the default credential chain
+		// (armendpoints.go, INTENTIUS/plunge#41).
+		c, err = l.creds.get("metadata|"+host+"|"+sub, func() (*armClient, error) {
+			mc, skip, err := armMetadataHostClient(ctx, req.URN, host)
+			if skip != nil {
+				return nil, skip
+			}
+			return mc, err
+		})
 		if err != nil {
 			return nil, err
 		}
-		return &armClient{endpoint: strings.TrimSuffix(ep.ResourceManager, "/"), scope: azsweep.Scope(ep.Audience),
-			cred: cred}, nil
-	})
-	if err != nil {
-		return nil, err
+	} else {
+		if skip := armCustomEndpointSkip(req.URN, in); skip != nil {
+			return nil, skip
+		}
+		a := azsweep.Attrs{
+			Provider:       azsweep.ProviderAzureRM,
+			SubscriptionID: sub,
+			TenantID:       providerString(in, "tenantId"),
+			ClientID:       providerString(in, "clientId"),
+			ClientSecret:   providerString(in, "clientSecret"),
+			Environment:    providerString(in, "environment"),
+		}
+		c, err = l.creds.get(sub+"|"+a.TenantID+"|"+a.ClientID+"|"+a.Environment, func() (*armClient, error) {
+			cred, ep, _, err := a.Credential(ctx, "plunge's marker bind")
+			if err != nil {
+				return nil, err
+			}
+			return &armClient{endpoint: strings.TrimSuffix(ep.ResourceManager, "/"), scope: azsweep.Scope(ep.Audience),
+				cred: cred}, nil
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	// ARM filters on one tag; the first URN chunk narrows it, and filterMarked checks every marker.
 	filter := fmt.Sprintf("tagName eq '%s' and tagValue eq '%s'", markers.TagURN,
@@ -299,7 +316,11 @@ func (c *armClient) get(ctx context.Context, u string) (*armPage, error) {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+tok.Token)
-	resp, err := http.DefaultClient.Do(req)
+	var do policy.Transporter = http.DefaultClient
+	if c.do != nil {
+		do = c.do
+	}
+	resp, err := do.Do(req)
 	if err != nil {
 		return nil, err
 	}
