@@ -13,7 +13,9 @@ as stock Pulumi, and changes where a stack's state lives and how a run decides w
 - `plunge stack adopt` moves a stock stack onto records; `plunge drift --resource` reads one resource's
   drift with one provider Read.
 
-plunge is to Pulumi what choudoufu is to OpenTofu, and chant drives either. The plan is in
+The ownership model comes from chant, whose identity markers decide what a deployment owns. plunge
+carries it into Pulumi as choudoufu carries it into OpenTofu. Both are engines for chant (a chant
+workspace runs a plunge stack as a member), and each also works standalone. The plan is in
 INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
 
 Documentation: https://intentius.io/plunge. Its [claims page](https://intentius.io/plunge/claims/) lists
