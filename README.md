@@ -25,6 +25,17 @@ The documentation at https://intentius.io/plunge is built from `site/`, and its
 `just site-preview` (the built site) serve http://127.0.0.1:4321/plunge/, or another port given as an
 argument; `just site` builds it with its link and contrast checks.
 
+## Differences from stock Pulumi
+
+- The backend URL gains a `plunge+` prefix, and each taggable resource gets `plunge-stack` and
+  `plunge-urn` tags.
+- A new unnamed resource gets its name plus seven hex digits, the same on every run.
+- A delete, `plunge destroy` included, is refused when a taggable object has lost its markers.
+- `plunge preview` and `plunge up` refresh from the cloud first. `PLUNGE_REFRESH=false` turns that off.
+- No stack history or checkpoint backups. Bucket versioning keeps earlier versions of each record.
+- Replacing a resource whose name plunge chose deletes the old object before creating the new one
+  ([#12](https://github.com/INTENTIUS/plunge/issues/12)).
+
 ## Install
 
 plunge `v0.1.0` (Pulumi-compatible `3.272.0`) is on the

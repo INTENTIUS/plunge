@@ -30,12 +30,10 @@ const issue = (n: number) => `https://github.com/INTENTIUS/plunge/issues/${n}`;
  * picker, the rooms and /use/migrate/ show this list; keep them in step.
  */
 export const DIFFERS: string[] = [
-	'Replacing a resource whose name plunge chose deletes the old object before it creates the new one, so for a short window neither exists (#12).',
-	'plunge keeps no stack history and no checkpoint backups. Bucket versioning keeps earlier versions of each record.',
-	'plunge preview and plunge up refresh from the cloud first, by default. PLUNGE_REFRESH=false turns that off.',
-	'A new resource the program leaves unnamed gets a fixed name, its name plus seven hex digits, in place of a random suffix.',
-	'A delete, plunge destroy included, is refused when a taggable object has lost its plunge-stack and plunge-urn markers.',
-	'The backend URL gains a plunge+ prefix, and each taggable resource gets plunge-stack and plunge-urn tags.',
+	'A plunge+ backend URL, and two marker tags on each resource.',
+	'Unnamed resources get a fixed name in place of a random suffix.',
+	'Deletes check the markers first.',
+	'No stack history; bucket versioning keeps each record\'s versions.',
 ];
 
 const cloudDiffers = 'Your hosted stacks stay where they are until you adopt one. Issue #8 lists each Pulumi Cloud feature and how chant works next to it.';
