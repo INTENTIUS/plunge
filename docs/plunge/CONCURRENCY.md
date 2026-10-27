@@ -299,6 +299,53 @@ lagging index can still list an object that was just deleted. A type with no lis
 run created a moment ago and has not recorded yet is reported too, so check
 with a second run before deleting anything.
 
+## Deletes: the marker decides
+
+plunge implements per-resource records that hold the full state, with
+ownership markers binding creates and, since INTENTIUS/plunge#37, vetting
+deletes. A record is never read as permission to delete, the same rule as
+choudoufu's `internal/live/doc.go`. Before any delete step exists, every
+object the run would delete is checked against its live marker. This
+includes `destroy`, which the program-stamp guard above exempts.
+
+| The live object | Outcome |
+|---|---|
+| Carries this stack's `plunge-stack` and `plunge-urn` markers | Deleted |
+| Has a marker naming another stack, or another resource of this stack | The run is refused |
+| Is of a type that takes markers, but carries none | The run is refused. Tags stripped by hand are not consent to delete |
+| Is of a type that carries no marker | Deleted on the record's word; the record's `ownership` entry says `"by": "record"` and why |
+| Is gone | Nothing to delete, as before |
+
+The refusal (`DeleteRefusedError`) names each URN, its object ID, what its
+marker says (another stack's name, or nothing), its record key and the
+command that removes the record (`plunge state delete '<urn>'`). No delete
+runs. Ruled 2026-10-26: refuse, like choudoufu, for both cases.
+
+Record-owned types are the ones whose ownership only the record can carry:
+a type with no tags (labels) argument, a tags property of a shape plunge does
+not write, a type whose schema could not be read, and a type `pkg/identity`
+classes markerless (choudoufu's record-backed types). The injector writes
+the `ownership` entry for each when the resource is created or updated. A
+record with no entry (written before entries, or with `PLUNGE_MARKERS=false`)
+is classed from the provider's schema at delete time.
+
+Where the marker comes from: with refresh on (the default for update and
+preview), the refreshed outputs hold the tags or labels, so the check makes
+no provider call. With refresh off (`PLUNGE_REFRESH=false`, or a `destroy`
+without `--refresh`), each marked object is read once through its provider's
+Read, the call a refresh makes under the stack's provider configuration, so
+it goes only to the endpoints the stack names (INTENTIUS/plunge#27).
+
+When it refuses: in `destroy`, before any step but the refresh. In `up`,
+deletes are generated after the program's registrations, so the refusal
+comes after its creates and updates and before any delete. `plunge up`
+previews first and the preview runs the same check, so without
+`--skip-preview` the run is refused at the preview. `PLUNGE_MARKERS=false`
+turns markers off, the check included.
+
+Pending deletes left by a replacement are not checked: they finish replacing
+this stack's own resource.
+
 ## Pending operations
 
 A run marks each operation it begins on a custom resource as a pending
