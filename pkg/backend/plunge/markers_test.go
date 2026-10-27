@@ -139,6 +139,8 @@ type runConfig struct {
 	persist bool              // write records through the record persister
 	base    *deploy.Snapshot  // the snapshot to run against in place of the records' (a stock back-out run)
 	marks   *ledger           // receives the run's ledger, when set
+	vet     bool              // set Target.DeleteVetter, as the plunge backend does (deletevet.go)
+	destroy bool              // run a destroy in place of an update
 }
 
 // run is one engine run against the records in store, returning the engine's events.
@@ -182,11 +184,15 @@ func run(
 		target.Binder = newBinder(cat, marks, listers)
 		target.Autonames = newAutonamePolicy(cat, marks)
 	}
+	if cfg.vet {
+		target.DeleteVetter = newDeleteVetter(newCatalog(), l)
+	}
 
 	var manager *backend.SnapshotManager
 	if cfg.persist && !cfg.dryRun {
 		sm := b64.NewBase64SecretsManager()
-		persister := newRecordPersister(ctx, store, l, Generation{Commit: "c1", Time: 100}, true, sm.Decrypter())
+		persister := newRecordPersister(ctx, store, l, Generation{Commit: "c1", Time: 100}, !cfg.destroy,
+			sm.Decrypter())
 		persister.ownership = marks
 		manager = backend.NewSnapshotManager(persister, sm, snap, nil)
 	}
@@ -223,7 +229,12 @@ func run(
 			return host, nil
 		},
 	}
-	_, _, updateErr := engine.Update(lt.NewUpdateInfo(project, target), engineCtx, opts, cfg.dryRun)
+	var updateErr error
+	if cfg.destroy {
+		_, _, updateErr = engine.Destroy(lt.NewUpdateInfo(project, target), engineCtx, opts, cfg.dryRun)
+	} else {
+		_, _, updateErr = engine.Update(lt.NewUpdateInfo(project, target), engineCtx, opts, cfg.dryRun)
+	}
 	var closeErr error
 	if manager != nil {
 		closeErr = manager.Close()

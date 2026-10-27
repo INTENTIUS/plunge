@@ -33,7 +33,9 @@ package plunge
 // delete only records that carry no stamp either, so mixing stamped and unstamped runs errs towards keeping.
 //
 // Destroy is exempt: `destroy` is an explicit request to remove the stack's resources, not a judgement drawn from a
-// program's registrations, so the backend sets no guard for it.
+// program's registrations, so the backend sets no generation guard for it. Destroy is not exempt from the marker
+// check: every delete, a destroy's included, is vetted against the live object's marker first (deletevet.go,
+// INTENTIUS/plunge#37).
 
 import (
 	"context"

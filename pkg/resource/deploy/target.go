@@ -43,6 +43,10 @@ type Target struct {
 	// (INTENTIUS/plunge#6). Nil keeps upstream's behaviour.
 	DeleteGuard func(res *pkgresource.State) string
 
+	// DeleteVetter, when set, is handed every object a run would delete, destroy included, before any delete step
+	// exists, and may refuse the run (plunge_deletevet.go, INTENTIUS/plunge#37). Nil keeps upstream's behaviour.
+	DeleteVetter DeleteVetter
+
 	// Markers, when set, injects ownership markers into every custom, non-provider resource's inputs after the
 	// stack transforms run, and vets every provider's configuration (plunge_markers.go, INTENTIUS/plunge#7). Nil
 	// keeps upstream's behaviour.

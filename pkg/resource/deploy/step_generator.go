@@ -2516,6 +2516,10 @@ func (sg *stepGenerator) GenerateDeletes(targetsOpt UrnTargets, excludesOpt UrnT
 
 	// Resources the target's DeleteGuard keeps, with everything they need to stay valid in the snapshot.
 	guarded := sg.guardedFromDelete(isTargeted)
+	// plunge (INTENTIUS/plunge#37): the live marker, not the record, decides each delete; a refusal stops the run.
+	if err := sg.vetPlungeDeletes(isTargeted, guarded); err != nil {
+		return nil, nil, err
+	}
 
 	// Doesn't matter what order we build this list of steps in as we'll sort them in ScheduleDeletes.
 	deleteSteps := []Step{}

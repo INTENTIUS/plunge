@@ -465,13 +465,17 @@ func (b *plungeBackend) apply(
 	// autonaming policy (autoname.go, claim C1) runs before each resource's Check.
 	var marks *ledger
 	var listers map[Family]Lister
+	cat := newCatalog()
 	if programDriven(kind) && markersEnabled() {
 		marks = newLedger()
-		cat := newCatalog()
 		listers = b.listers()
 		target.Markers = newMarkerPolicy(cat, snap, marks, b.d)
 		target.Binder = newBinder(cat, marks, listers)
 		target.Autonames = newAutonamePolicy(cat, marks)
+	}
+	// The delete vet (deletevet.go, INTENTIUS/plunge#37): the live marker decides every delete, destroy included.
+	if (programDriven(kind) || kind == apitype.DestroyUpdate) && markersEnabled() {
+		target.DeleteVetter = newDeleteVetter(cat, l)
 	}
 	update := engine.UpdateInfo{Root: op.Root, Project: op.Proj, Target: target}
 
