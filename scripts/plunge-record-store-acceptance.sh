@@ -17,8 +17,9 @@
 #   BUCKET      the bucket, for the default URL                  (default: plunge-acceptance)
 #   OUT         output directory                                 (default: plunge-acceptance-out/<UTC timestamp>)
 #   PULUMI_CONFIG_PASSPHRASE                                     (default: plunge-acceptance)
-#   STORAGE_EMULATOR_HOST  floci-gcp as host:port, for a plunge+gs:// STORE_URL (loopback only; the GCS client
-#                          and the DIY backend then send no credentials)
+#   STORAGE_EMULATOR_HOST  floci-gcp as host:port, for a plunge+gs:// STORE_URL (loopback only; the script then
+#                          sets GOOGLE_OAUTH_ACCESS_TOKEN to a fake static token, which plunge requires against an
+#                          emulator since INTENTIUS/plunge#50 and floci-gcp accepts)
 #   GCS_PROJECT            the project a new GCS bucket is created in        (default: plc-corpus)
 #   PLUNGE_ACCEPTANCE_REAL_STORE=yes  allow a store that is not on loopback (a real bucket; it costs money)
 #
@@ -126,6 +127,12 @@ if [ "${PLUNGE_ACCEPTANCE_REAL_STORE:-}" != "yes" ]; then
   done
   export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1
   export AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null AWS_EC2_METADATA_DISABLED=true
+  # Against STORAGE_EMULATOR_HOST, plunge refuses to open a plunge+gs:// store without GOOGLE_OAUTH_ACCESS_TOKEN or
+  # GOOGLE_CREDENTIALS, so the metadata store never falls back to ADC (INTENTIUS/plunge#50). floci-gcp takes any
+  # token. Only the loopback emulator leg gets it; a real store keeps the maintainer's own credentials.
+  case "${STORE_URL}" in
+    plunge+gs://*) store_is_local && export GOOGLE_OAUTH_ACCESS_TOKEN=floci-gcp-fake ;;
+  esac
 fi
 export PULUMI_SKIP_UPDATE_CHECK=true PULUMI_SKIP_CONFIRMATIONS=true
 unset PULUMI_ACCESS_TOKEN
