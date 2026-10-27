@@ -80,6 +80,9 @@ type adoptionRecord struct {
 	CheckpointDigest string            `json:"checkpointDigest"`
 	AdoptedAt        string            `json:"adoptedAt"`
 	Resources        []adoptedResource `json:"resources"`
+	// Index is the index version an adoption from an adoption file read (adoptindex.go); CheckpointDigest then
+	// holds the adoption file's digest.
+	Index *adoptionIndex `json:"index,omitempty"`
 }
 
 // adoptedResource is one resource as adoption classed it.
@@ -91,6 +94,11 @@ type adoptedResource struct {
 	Reason    string       `json:"reason,omitempty"`
 	// Marked reports that the checkpoint's inputs already carry this stack's markers.
 	Marked bool `json:"marked,omitempty"`
+	// Node, ImportID and MarkerWrite are an index adoption's: the index node adopted, the ID it was imported by,
+	// and the marker write the first `plunge up` makes.
+	Node        string       `json:"node,omitempty"`
+	ImportID    resource.ID  `json:"importId,omitempty"`
+	MarkerWrite *MarkerWrite `json:"markerWrite,omitempty"`
 }
 
 // AdoptOptions are the inputs to an adoption.
@@ -103,6 +111,9 @@ type AdoptOptions struct {
 	Confirmed bool
 	// SecretsProvider decrypts the checkpoint's secrets.
 	SecretsProvider secrets.Provider
+	// Index, when set, adopts the objects an adoption file selects from an index version instead of a checkpoint
+	// (INTENTIUS/plunge#52, adoptindex.go). Checkpoint and Source are then unused.
+	Index *IndexAdoptOptions
 }
 
 // AdoptResult is what an adoption did, or would do.
@@ -115,6 +126,8 @@ type AdoptResult struct {
 	Source    string
 	Digest    string
 	Resources []AdoptedResource
+	// Index is the index version an index adoption read; nil for a checkpoint.
+	Index *AdoptedIndex
 }
 
 // AdoptedResource is one resource in an AdoptResult.
@@ -124,8 +137,13 @@ type AdoptedResource struct {
 	ID        resource.ID
 	Ownership Ownership
 	Reason    string
-	// Marked reports that the checkpoint's inputs already carry this stack's markers.
+	// Marked reports that the checkpoint's inputs (for an index adoption, the live object) already carry this
+	// stack's markers.
 	Marked bool
+	// Node, ImportID and MarkerWrite are an index adoption's (adoptedResource).
+	Node        string
+	ImportID    resource.ID
+	MarkerWrite *MarkerWrite
 }
 
 // AdoptRefusalCode names why an adoption was refused. The codes are part of `plunge stack adopt --json`'s v1
@@ -222,6 +240,9 @@ func checkpointDigest(d *apitype.UntypedDeployment) (string, error) {
 
 // Adopt implements Adopter.
 func (b *plungeBackend) Adopt(ctx context.Context, s backend.Stack, opts AdoptOptions) (*AdoptResult, error) {
+	if opts.Index != nil {
+		return b.adoptIndex(ctx, s, opts)
+	}
 	ref := s.Ref()
 	keys, err := keysFor(ref)
 	if err != nil {
@@ -329,7 +350,10 @@ func (b *plungeBackend) Adopt(ctx context.Context, s backend.Stack, opts AdoptOp
 
 // result is the resource as an AdoptResult reports it.
 func (r adoptedResource) result() AdoptedResource {
-	return AdoptedResource{URN: r.URN, Type: r.Type, ID: r.ID, Ownership: r.Ownership, Reason: r.Reason, Marked: r.Marked}
+	return AdoptedResource{
+		URN: r.URN, Type: r.Type, ID: r.ID, Ownership: r.Ownership, Reason: r.Reason, Marked: r.Marked,
+		Node: r.Node, ImportID: r.ImportID, MarkerWrite: r.MarkerWrite,
+	}
 }
 
 // classify classes every resource of a stock deployment for adoption, offline, and returns the reasons it refuses.
