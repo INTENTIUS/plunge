@@ -69,6 +69,15 @@ Naming a setting in the `allow_insecure` query key or `PLUNGE_ALLOW_INSECURE`
 proceeds past it. A lifecycle rule that deletes current records cannot be
 waived. [Record store bucket](../../use/bucket/) gives the commands.
 
+A store URL that names an emulator (an `endpoint` key on S3 or Azure Blob,
+`metadata_host` on Azure Blob, `STORAGE_EMULATOR_HOST` for GCS) signs only with
+credentials from the environment and never builds the SDK's default
+credential chain, so an emulator run asks no metadata server, SSO, STS or OAuth
+host for a credential. With none set, the open is refused by name
+([#35](https://github.com/INTENTIUS/plunge/issues/35),
+[#50](https://github.com/INTENTIUS/plunge/issues/50)). The variables are on
+[Setup](../../use/setup/#credentials).
+
 ## How a stack is read
 
 The snapshot is assembled from the records on every read, each resource after

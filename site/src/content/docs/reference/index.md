@@ -30,7 +30,8 @@ Refused on a plunge stack by name (`UnsupportedOnRecordsError`):
 | `plunge+azblob://container/prefix` | `storage_account`, `resource_group`, `subscription_id`, `endpoint`, `metadata_host`, `allow_insecure` |
 | `plunge+k8s://namespace/prefix` | `metadata` (required), `kubeconfig`, `context`, `in_cluster`, `estate` |
 
-Source: `pkg/backend/plunge/url.go`, `azblobstore.go`.
+Source: `pkg/backend/plunge/url.go`, `azblobstore.go`, `localstores.go`. A `plunge+gs://` URL takes its
+emulator from `STORAGE_EMULATOR_HOST`, not a query key.
 
 ## Environment variables
 

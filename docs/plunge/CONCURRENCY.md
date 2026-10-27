@@ -89,6 +89,32 @@ versions under the records' prefix) and `public_access_block`; the
 `list_isolation`, which warns and never refuses. The names are the ones
 `allow_insecure` takes.
 
+Against an emulator, `plunge+s3://` and `plunge+gs://` follow plunge#35's
+rule and never build the SDK's default credential chain, which can reach the
+EC2 instance metadata service (169.254.169.254), SSO, STS, the GCE metadata
+server (metadata.google.internal) or oauth2.googleapis.com
+(INTENTIUS/plunge#50, `pkg/backend/plunge/localstores.go`):
+
+- `plunge+s3://` with an `endpoint` query key, or with `AWS_ENDPOINT_URL_S3` or
+  `AWS_ENDPOINT_URL` set, builds its client by hand with `AWS_ACCESS_KEY_ID`,
+  `AWS_SECRET_ACCESS_KEY` and an optional `AWS_SESSION_TOKEN`. A missing key,
+  or a `profile` query key (a profile outranks the environment's keys in the
+  SDK and can resolve through SSO or an assumed role), refuses the open.
+- `plunge+gs://` with `STORAGE_EMULATOR_HOST` set sends
+  `GOOGLE_OAUTH_ACCESS_TOKEN` as a static bearer token, else no credential.
+  The client is built with no credential lookup.
+- The stack metadata half is the DIY backend's go-cloud bucket, which builds
+  its own clients. The backend checks the metadata URL (the URL inside
+  `plunge+`, or `plunge+k8s://`'s `metadata` key) before opening it: an s3 URL
+  with a custom endpoint needs the two AWS keys (go-cloud's chain then takes
+  them and resolves nothing else), and a gs URL under `STORAGE_EMULATOR_HOST`
+  needs `GOOGLE_OAUTH_ACCESS_TOKEN` or `GOOGLE_CREDENTIALS`, which the DIY
+  backend reads before falling back to application default credentials.
+  go-cloud follows only `STORAGE_EMULATOR_HOST` and refuses query keys it does
+  not know, so a `plunge+gs://` `endpoint` key is refused by name.
+
+URLs naming none of these use the SDKs' default chains, as before.
+
 ## Races
 
 | Race | Outcome |

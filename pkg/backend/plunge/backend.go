@@ -95,6 +95,11 @@ func New(ctx context.Context, d diag.Sink, plungeURL string, project *workspace.
 	if err != nil {
 		return nil, err
 	}
+	// Refused before the DIY backend's go-cloud bucket builds a default credential chain for an emulator's
+	// endpoint (INTENTIUS/plunge#50).
+	if err := refuseDefaultChains(plungeURL, meta); err != nil {
+		return nil, err
+	}
 	inner, err := diy.New(ctx, d, meta, project)
 	if err != nil {
 		return nil, err
