@@ -9,7 +9,7 @@ site-install:
     cd site && npm ci
 
 # Build the docs site (Astro + Starlight) into site/dist/, as
-# site/workflows/pages.yml does. The build also runs the room, link and
+# .github/workflows/plunge-pages.yml does. The build also runs the room, link and
 # contrast checks, so a broken link or a token below WCAG AA fails it.
 site: site-install
     cd site && npm run build

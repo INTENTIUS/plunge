@@ -5,12 +5,14 @@ name: Deploy docs site
 # .github/workflows/pages.yml. `npm run build` runs check-rooms, check-links and
 # check-contrast after astro build.
 #
-# This file is parked in site/workflows/, where GitHub never runs it. To turn
-# it on, the maintainer moves it to .github/workflows/pages.yml, sets the
-# repository's Pages source to "GitHub Actions", and runs it by hand. It has
-# no push trigger; add `push: branches: [main]` beside workflow_dispatch to
-# deploy on every merge, as choudoufu does.
+# Deploys on every push to main that touches site/, and by hand (workflow_dispatch),
+# as choudoufu's pages.yml does.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/plunge-pages.yml'
   workflow_dispatch: {}
 
 permissions:
