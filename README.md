@@ -19,6 +19,9 @@ INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
 Documentation: https://intentius.io/plunge. Its [claims page](https://intentius.io/plunge/claims/) lists
 the runs recorded so far and the issue holding each run still to come. The site's source is in
 `site/`, and the design details are in `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`.
+To preview the site locally, run `just site-serve` (live reload) or `just site-preview` (the built
+site as it will be published); both serve http://127.0.0.1:4321/plunge/ and take another port as an
+argument. `just site` only builds it, with its link and contrast checks.
 
 ## Fork point
 
