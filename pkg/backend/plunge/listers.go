@@ -76,8 +76,9 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 		return false, fmt.Sprintf("Cloud Control cannot list %s without a parent's input", info.CFNType)
 	}
 	if info.Family == FamilyAWS {
-		// pulumi-aws's ID is the Terraform id. A single-part Cloud Control identifier is it; a multi-part one is
-		// translated through the type's import id grammar (ccid.go).
+		// pulumi-aws's ID is the Terraform id. A single-part Cloud Control identifier is it for most types, and
+		// is translated for the rest (ccid_single.go); a multi-part one is translated through the type's import
+		// id grammar (ccid.go) or a written-out translation (ccid_hand.go).
 		if _, reason := awsIDTranslation(info); reason != "" {
 			return false, reason
 		}
@@ -85,8 +86,7 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 	return true, ""
 }
 
-// awsIDTranslation is how a pulumi-aws type's Cloud Control identifiers become Terraform ids: nil for a single-part
-// identifier, which is the id as it is.
+// awsIDTranslation is how a pulumi-aws type's Cloud Control identifiers become Terraform ids.
 func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
 	roster, err := registry.Embedded()
 	if err != nil {
@@ -96,7 +96,7 @@ func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
 	case 0:
 		return nil, fmt.Sprintf("the registry has no primary identifier for %s", info.CFNType)
 	case 1:
-		return nil, ""
+		return ccSingleTranslation(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType)[0])
 	}
 	if t, ok := ccHandTranslation(info.TFType, info.CFNType); ok {
 		return t, ""
@@ -139,11 +139,9 @@ func (l *cloudControlLister) ListMarked(
 	var objs []LiveObject
 	for _, d := range descs {
 		tags, ok := cfnTags(d.Properties)
-		if prop := translate.needsModel(); prop != "" {
-			// The id is read from a model property (an ARN), which a list handler may leave out.
-			if _, has := d.Properties[prop]; !has {
-				ok = false
-			}
+		if translate.wantsModel(d.Identifier, d.Properties) {
+			// The id is read from a model property (an ARN, a name, an ID), which a list handler may leave out.
+			ok = false
 		}
 		if !ok {
 			// The list handler left the tags, or the property the id is read from, out: read the one resource.
@@ -161,8 +159,8 @@ func (l *cloudControlLister) ListMarked(
 		if translate != nil {
 			tfID, ok := translate.translate(d.Identifier, d.Properties)
 			if !ok {
-				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s's "+
-					"Terraform id (it should have %d parts)", d.Identifier, info.CFNType, info.TFType, translate.arity)
+				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s",
+					d.Identifier, info.CFNType, translate.describe(info.TFType))
 			}
 			id = tfID
 		}
