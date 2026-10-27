@@ -6,7 +6,9 @@
 #   scripts/plunge-version.sh pulumi   the Pulumi-compatible version
 #   scripts/plunge-version.sh ldflags  the -X flags that stamp both into the binary
 #
-# plunge's version comes from PLUNGE_VERSION, else .plunge-version with "-dev.0" appended.
+# plunge's version comes from PLUNGE_VERSION, else .plunge-version with "-dev.0" appended. PLUNGE_VERSION
+# may be a release tag: plunge-vX.Y.Z (the form plunge-release.yml triggers on, INTENTIUS/plunge#33), or
+# vX.Y.Z or X.Y.Z; the prefix is dropped either way.
 #
 # The Pulumi-compatible version is the newest upstream pulumi/pulumi release merged into this tree. It
 # comes from PULUMI_VERSION, else the top "## X.Y.Z" heading of CHANGELOG.md, which upstream writes on
@@ -19,7 +21,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 plunge_version() {
   if [ -n "${PLUNGE_VERSION:-}" ]; then
-    echo -n "${PLUNGE_VERSION#v}"
+    local v="${PLUNGE_VERSION#plunge-}"
+    echo -n "${v#v}"
   else
     echo -n "$(tr -d '[:space:]' < "${ROOT}/.plunge-version")-dev.0"
   fi

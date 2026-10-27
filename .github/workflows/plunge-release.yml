@@ -1,10 +1,15 @@
 # plunge's release (INTENTIUS/plunge#13; tag-triggered, as ruled there).
 #
-# Pushing a tag vX.Y.Z builds every archive in .goreleaser.plunge.yml and publishes a GitHub release on
-# INTENTIUS/plunge: plunge-vX.Y.Z-<os>-<arch> archives holding the plunge CLI, the language hosts it builds,
-# and the dotnet and yaml hosts that scripts/prep-for-goreleaser.sh bundles under bin/<os>-<arch>/. The
-# tag (without its v) is plunge's own version; the Pulumi-compatible version comes from CHANGELOG.md
-# (scripts/plunge-version.sh). Windows binaries are unsigned: the signing hook needs pulumi's credentials.
+# Pushing a tag plunge-vX.Y.Z builds every archive in .goreleaser.plunge.yml and publishes a GitHub
+# release on INTENTIUS/plunge: plunge-vX.Y.Z-<os>-<arch> archives holding the plunge CLI, the language
+# hosts it builds, and the dotnet and yaml hosts that scripts/prep-for-goreleaser.sh bundles under
+# bin/<os>-<arch>/. The tag without its plunge-v prefix is plunge's own version; the Pulumi-compatible
+# version comes from CHANGELOG.md (scripts/plunge-version.sh). Windows binaries are unsigned: the signing
+# hook needs pulumi's credentials.
+#
+# The plunge- prefix is what keeps upstream's tags out (INTENTIUS/plunge#33): this tree carries
+# pulumi's v3.* tags once upstream is fetched, and a bare v*.*.* trigger would publish a plunge release
+# named after pulumi's version if one of them were pushed to origin. No upstream tag starts with plunge-.
 #
 # Nothing else triggers it. To see the artifact list without publishing, run a snapshot locally:
 #
@@ -17,7 +22,7 @@ name: plunge-release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "plunge-v*.*.*"
 
 permissions:
   contents: write # create the release and upload its archives
@@ -46,9 +51,14 @@ jobs:
         run: |
           plunge="$(PLUNGE_VERSION="${GITHUB_REF_NAME}" ./scripts/plunge-version.sh plunge)"
           pulumi="$(./scripts/plunge-version.sh pulumi)"
-          echo "plunge=${plunge}" >> "$GITHUB_OUTPUT"
-          echo "pulumi=${pulumi}" >> "$GITHUB_OUTPUT"
-          echo "plunge ${plunge}, Pulumi-compatible ${pulumi}"
+          # The previous plunge tag for goreleaser's changelog, so it never picks an upstream v3.* tag.
+          previous="$(git tag -l 'plunge-v*.*.*' --merged HEAD --sort=-v:refname | grep -vxF "${GITHUB_REF_NAME}" | head -n 1 || true)"
+          {
+            echo "plunge=${plunge}"
+            echo "pulumi=${pulumi}"
+            echo "previous=${previous}"
+          } >> "$GITHUB_OUTPUT"
+          echo "plunge ${plunge}, Pulumi-compatible ${pulumi}, previous tag ${previous:-(none)}"
       - name: Prepare bin dir for goreleaser
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -63,6 +73,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           # The pushed tag, so goreleaser never picks an upstream tag on the same commit.
+          # It isn't semver with its prefix; goreleaser warns and goes on, and the archive names come from
+          # PLUNGE_VERSION, not the tag.
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
+          GORELEASER_PREVIOUS_TAG: ${{ steps.versions.outputs.previous }}
           PLUNGE_VERSION: ${{ steps.versions.outputs.plunge }}
           PULUMI_VERSION: ${{ steps.versions.outputs.pulumi }}
