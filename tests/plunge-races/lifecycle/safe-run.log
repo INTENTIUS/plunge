@@ -1,0 +1,24 @@
+plunge-safe-run: 2026-10-27T19:16:05Z in /Users/alex/Documents/checkouts/intentius/engine-wt/plunge-minimal-estate
+plunge-safe-run: command: scripts/plunge-races/races.sh lifecycle
+plunge-safe-run: PULUMI_BACKEND_URL=file:///private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/e4d508e6-97ff-47af-af61-46bcbd1f5d30/scratchpad/rec2/safe/env.WJI37V/state CLOUDSDK_CONFIG=/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/e4d508e6-97ff-47af-af61-46bcbd1f5d30/scratchpad/rec2/safe/env.WJI37V/gcloud AZURE_CONFIG_DIR=/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/e4d508e6-97ff-47af-af61-46bcbd1f5d30/scratchpad/rec2/safe/env.WJI37V/azure
+== lifecycle: bucket plr-lifecycle-191607957, prefix plrlifecycle191607957
+VERDICT L lifecycle-preview PASS preview plans the two queue creates
+VERDICT L lifecycle-up PASS up created both queues, and queue-a carries its plunge-urn marker
+concurrent updates: exits a=0 b=0; live a=7200 b=1800; lock-like keys seen 0
+VERDICT C5 lifecycle-disjoint PASS two concurrent updates on disjoint resources both land (a=7200, b=1800), no lock object seen
+resources urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-a 5459
+resources urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b 5459
+resources urn:pulumi:race::plunge-races::pulumi:providers:aws::default_7_51_1 1855
+resources urn:pulumi:race::plunge-races::pulumi:pulumi:Stack::plunge-races-race 2431
+stacks/plunge-races/race/secrets 138
+export: exit 0; a=7200 b=1800 resources=4 records=4 one-per-urn=yes
+VERDICT P6 lifecycle-export PASS the export assembles with integrity checking on, holds a=7200 and b=1800, and the store has one resource record per URN
+older run: exit 0; live b=1800
+VERDICT P6 lifecycle-older-run PASS an older program's run keeps queue-b and warns naming it and both stamps
+drift: exits 0; drifted/{"providerReads": 1, "recordKeys": 3, "recordListCalls": 0, "recordsRead": 3, "stackRefreshes": 0} in-sync/{"providerReads": 1, "recordKeys": 3, "recordListCalls": 0, "recordsRead": 3, "stackRefreshes": 0}
+VERDICT L lifecycle-drift PASS drift --resource reports queue-a drifted and queue-b in sync (drifted/{"providerReads": 1, "recordKeys": 3, "recordListCalls": 0, "recordsRead": 3, "stackRefreshes": 0} in-sync/{"providerReads": 1, "recordKeys": 3, "recordListCalls": 0, "recordsRead": 3, "stackRefreshes": 0})
+stacks/plunge-races/race/secrets 138
+destroy: exit 0; live queues 0; queue records left 0
+VERDICT L lifecycle-destroy PASS destroy removed both queues and their records
+results in /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/e4d508e6-97ff-47af-af61-46bcbd1f5d30/scratchpad/rec2/out
+plunge-safe-run: CLEAN (command exited 0; log /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/e4d508e6-97ff-47af-af61-46bcbd1f5d30/scratchpad/rec2/out/safe-run.log)

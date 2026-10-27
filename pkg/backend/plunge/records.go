@@ -267,13 +267,31 @@ func resourceContent(r *resourceRecord, ignoreTimes bool) any {
 		Ownership *ownershipEntry `json:",omitempty"`
 		Views     []resource.URN  `json:",omitempty"`
 	}
-	if !ignoreTimes {
-		return content{r.States, r.Pending, r.Ownership, r.Views}
+	return content{comparableStates(r.States, ignoreTimes), r.Pending, r.Ownership, r.Views}
+}
+
+// comparableStates is states as a record comparison sees them. A property dependency key with no URNs says nothing,
+// and a refresh drops such keys (pkg/backend/journal.go, rebuildDependencies) where an update keeps them, so they are
+// left out; otherwise every refreshing run would rewrite the record of every resource it did not change. With
+// ignoreTimes, the creation and modification times are left out too.
+func comparableStates(states []apitype.ResourceV3, ignoreTimes bool) []apitype.ResourceV3 {
+	out := make([]apitype.ResourceV3, len(states))
+	for i, s := range states {
+		if ignoreTimes {
+			s.Created, s.Modified = nil, nil
+		}
+		var deps map[resource.PropertyKey][]resource.URN
+		for k, v := range s.PropertyDependencies {
+			if len(v) == 0 {
+				continue
+			}
+			if deps == nil {
+				deps = map[resource.PropertyKey][]resource.URN{}
+			}
+			deps[k] = v
+		}
+		s.PropertyDependencies = deps
+		out[i] = s
 	}
-	states := make([]apitype.ResourceV3, len(r.States))
-	for i, s := range r.States {
-		s.Created, s.Modified = nil, nil
-		states[i] = s
-	}
-	return content{states, r.Pending, r.Ownership, r.Views}
+	return out
 }

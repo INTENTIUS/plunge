@@ -1,0 +1,49 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+Previewing update (race):
+    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-b refreshing 
+ ~  aws:sqs:Queue queue-b refresh 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+@ previewing update....
+ ~  aws:sqs:Queue queue-b update [diff: ~messageRetentionSeconds]
+    aws:sqs:Queue queue-a  
+    pulumi:pulumi:Stack plunge-races-race  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    2 unchanged
+
+Updating (race):
+    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue queue-b refreshing (0s) 
+ ~  aws:sqs:Queue queue-b refresh (0.01s) 
+ ~  aws:sqs:Queue queue-a refresh (0.01s) 
+    pulumi:pulumi:Stack plunge-races-race running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+@ updating....
+ ~  aws:sqs:Queue queue-b updating (0s) [diff: ~messageRetentionSeconds]
+    aws:sqs:Queue queue-a  
+@ updating............................
+ ~  aws:sqs:Queue queue-b updated (25s) [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+
+Resources:
+    ~ 1 updated
+    2 unchanged
+
+Duration: 27s
+

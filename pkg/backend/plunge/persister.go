@@ -394,11 +394,11 @@ func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired,
 			p.operated[urn] = true
 		}
 		if k := p.known[key]; !p.operated[urn] && k != nil && k.resource != nil {
-			mine, err := p.crypto.canonical(p.ctx, r.States)
+			mine, err := p.crypto.canonical(p.ctx, comparableStates(r.States, false))
 			if err != nil {
 				return nil, err
 			}
-			theirs, err := p.crypto.canonical(p.ctx, k.resource.States)
+			theirs, err := p.crypto.canonical(p.ctx, comparableStates(k.resource.States, false))
 			if err != nil {
 				return nil, err
 			}
