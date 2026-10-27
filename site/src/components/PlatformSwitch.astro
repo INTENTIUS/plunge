@@ -11,9 +11,11 @@ const sides = [
 	{ key: 'gcp', label: 'GCP' },
 	{ key: 'azure', label: 'Azure' },
 ];
+// Kubernetes has no proof page: it has no recorded run.
+const shown = sides.filter((s) => !(slot === 'proof' && s.key === 'kubernetes'));
 ---
 <p class="pl-switch not-content">
-	{sides.map((s) =>
+	{shown.map((s) =>
 		s.key === platform ? (
 			<span aria-current="page">{s.label}</span>
 		) : (

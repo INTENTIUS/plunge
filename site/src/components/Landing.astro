@@ -1,7 +1,6 @@
 ---
-// The home page under the hero: plunge in plain words, its status, the
-// picker, then a link to the claims. The status box here and the one on
-// /use/start/ say the same; keep them in step.
+// The home page under the hero: plunge in plain words, the picker, then a
+// link to the claims.
 import Picker from './Picker.astro';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -16,13 +15,6 @@ const G = `${base}/glossary/`;
 			So two runs that change different resources of one stack do not wait for each other, and every delete first checks that the object's tags name this stack.
 		</p>
 	</section>
-	<aside class="status" aria-label="Status">
-		<p class="h">Status</p>
-		<p>
-			plunge v0.1.0 was released on 2026-10-27, and it is early. All proof so far comes from local emulators, chiefly <a href={`${G}#floci`}>floci</a>, a free AWS emulator that runs in Docker.
-			Nothing has run on a real cloud yet, so keep plunge away from production for now.
-		</p>
-	</aside>
 	<Picker />
 	<p class="claims"><a href={CLAIMS}>Claims and runs</a></p>
 </div>
@@ -47,25 +39,7 @@ const G = `${base}/glossary/`;
 		font-size: var(--sl-text-base);
 		color: var(--sl-color-gray-2);
 	}
-	.status {
-		display: grid;
-		gap: 0.35rem;
-		padding: 0.9rem 1.1rem;
-		background: var(--pl-panel);
-		border: 1px solid var(--pl-rule);
-		border-left: 3px solid var(--pl-sand);
-		border-radius: 0.6rem;
-		color: var(--sl-color-gray-2);
-	}
-	.status .h {
-		font-size: 0.68rem;
-		font-weight: 600;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--sl-color-gray-3);
-	}
 	.about a,
-	.status a,
 	.claims a {
 		color: var(--pl-accent);
 		text-decoration-color: color-mix(in srgb, var(--pl-accent) 35%, transparent);

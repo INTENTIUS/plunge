@@ -1,6 +1,6 @@
 ---
 title: CI/CD
-description: Run plunge from a pipeline. Serialize updates to one stack anyway.
+description: Run plunge from a pipeline, with a saved plan checked against the records it read.
 prompt: |
   Follow https://intentius.io/plunge/use/cicd/ and draft a pipeline for this repository: a preview job that saves a plan on pull requests, and an update job that applies it after approval. Show me the file; do not commit it.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
@@ -31,7 +31,8 @@ shallow clone works. Without a git checkout, set `PLUNGE_PROGRAM_COMMIT` and
 `PLUNGE_PROGRAM_TIME`. An unstamped run deletes only unstamped records, and
 keeps resources a stamped run created, with a warning.
 
-## One update at a time
+## Parallel jobs
 
-Serialize updates to one stack in CI anyway, where the real mutex has always
-been; separate stacks need no serializing.
+Jobs that change different resources of one stack run together, with no
+stack lock. Two jobs that touch the same record are refused by name
+([Resource-level concurrency](../../how-it-works/concurrency/)).

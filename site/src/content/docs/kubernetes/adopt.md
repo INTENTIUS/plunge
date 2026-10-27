@@ -16,11 +16,6 @@ labels to `metadata.labels` in place ([Migrate](/plunge/use/migrate/)).
 Helm releases and YAML and Kustomize resources have no metadata of their own
 and stay unmarked. A provider setting hiding `plunge-` labels is refused by name.
 
-## Recorded runs
-
-No corpus program uses pulumi-kubernetes, so none. Adoption is unit-tested
-on other families; the corpus run waits on [#7](https://github.com/INTENTIUS/plunge/issues/7).
-
 ## Leaving
 
 [Back out](/plunge/use/migrate/#back-out) with `plunge stack export` and a

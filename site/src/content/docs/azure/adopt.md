@@ -13,8 +13,3 @@ plunge stack adopt --json --yes --stack dev  # adopt
 Each resource keeps its ID and gets a record; the next `plunge up` adds the
 tags ([Adopt an existing stack](/plunge/use/migrate/)). A type with no tags
 argument, such as a subnet, is record-owned.
-
-## Recorded runs
-
-None on Azure. Adoption is unit-tested; the corpus run waits on
-[#7](https://github.com/INTENTIUS/plunge/issues/7).

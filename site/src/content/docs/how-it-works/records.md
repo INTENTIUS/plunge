@@ -90,11 +90,3 @@ stack history or backups and refuses `plunge stack history`,
 ## Recorded runs
 
 The local store ran in the recorded `aws-ts` runs ([Claims and runs](../../claims/)).
-The S3, GCS, Azure Blob and Kubernetes stores are unit-tested; their emulator
-runs wait on [#6](https://github.com/INTENTIUS/plunge/issues/6) and
-[#14](https://github.com/INTENTIUS/plunge/issues/14). On 2026-10-27
-choudoufu's store conformance suite passed on scratch emulators for `file`,
-`gs` and `azblob`, and 16 of 18 for `s3`: floci ignores `If-Match` on
-`DeleteObject` ([lex00/floci#263](https://github.com/lex00/floci/issues/263)),
-so its two conditional-delete cases fail there. These are tested, not
-recorded.

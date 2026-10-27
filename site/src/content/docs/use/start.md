@@ -6,13 +6,6 @@ prompt: |
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-:::note[Status]
-plunge v0.1.0 was released on 2026-10-27, and it is early. All proof so far
-comes from local emulators, chiefly [floci](../../glossary/#floci), a free AWS
-emulator that runs in Docker. Nothing has run on a real cloud yet, so keep
-plunge away from production for now ([Claims and runs](../../claims/)).
-:::
-
 ## Quickstart
 
 This takes about five minutes. It needs neither a cloud account nor Docker,
@@ -179,14 +172,3 @@ aws resourcegroupstaggingapi get-resources \
 
 On GCP and Kubernetes the label holds a digest in place of the name
 ([Identity](../../how-it-works/identity/)).
-
-## Recorded runs
-
-The local store has recorded runs on floci. The S3, GCS, Azure Blob and
-Kubernetes stores wait for theirs
-([#6](https://github.com/INTENTIUS/plunge/issues/6),
-[#14](https://github.com/INTENTIUS/plunge/issues/14)). choudoufu's store
-conformance suite passed against scratch emulators on 2026-10-27 for
-`plunge+file://`, `plunge+gs://` and `plunge+azblob://`; `plunge+s3://` passed
-16 of 18, since floci ignores `If-Match` on `DeleteObject`
-([lex00/floci#263](https://github.com/lex00/floci/issues/263)).

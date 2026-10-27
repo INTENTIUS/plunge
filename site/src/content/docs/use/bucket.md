@@ -38,10 +38,3 @@ gcloud storage buckets update gs://$B --versioning --lifecycle-file lifecycle.js
 Enable blob versioning, add a lifecycle rule deleting previous versions, and
 disable anonymous blob access. The store reads these through ARM using the
 URL's `storage_account`, `resource_group` and `subscription_id`.
-
-## Recorded runs
-
-None yet. The commands come from `scripts/plunge-races/lib.sh` and
-`scripts/plunge-record-store-acceptance.sh`, the scripts for
-[#6](https://github.com/INTENTIUS/plunge/issues/6) and
-[#34](https://github.com/INTENTIUS/plunge/issues/34), which wait for their run.

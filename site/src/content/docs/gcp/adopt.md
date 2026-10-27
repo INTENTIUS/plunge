@@ -18,8 +18,3 @@ would hide or override the `plunge-` keys, and leaves pulumi-gcp's
 `goog-pulumi-provisioned` label alone.
 
 A type with no labels argument, such as a service account, is record-owned.
-
-## Recorded runs
-
-None on Google Cloud. Adoption is unit-tested; its corpus run waits on
-[#7](https://github.com/INTENTIUS/plunge/issues/7).

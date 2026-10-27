@@ -35,9 +35,6 @@ On 2026-10-26 a stock pulumi v3.272.0 `aws-ts` stack on floci gave
 `adopted-from-another-checkpoint` ([Claims and runs](/plunge/claims/)). With no
 provider schema loaded, every resource was `pending`.
 
-The first `plunge up` after adoption and the back-out to stock wait on
-[#7](https://github.com/INTENTIUS/plunge/issues/7).
-
 ## Leaving
 
 [Back out](/plunge/use/migrate/#back-out) with `plunge stack export` and a

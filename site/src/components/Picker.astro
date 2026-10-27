@@ -37,7 +37,6 @@ const [platform] = platforms;
 				<Diver size={24} />
 				<b>{p.label}</b>
 				<small>{p.blurb}</small>
-				<span class:list={['status', { none: p.status === 'Not run yet' }]}>{p.status}</span>
 			</button>
 		))}
 	</div>
@@ -146,20 +145,6 @@ const [platform] = platforms;
 	.tile small {
 		font-size: var(--sl-text-xs);
 		line-height: 1.35;
-		color: var(--sl-color-gray-3);
-	}
-	.status {
-		justify-self: start;
-		margin-top: 0.15rem;
-		padding: 0.05rem 0.45rem;
-		font-size: 0.68rem;
-		font-weight: 600;
-		color: var(--sl-color-white);
-		border: 1px solid var(--pl-accent);
-		border-radius: 999px;
-	}
-	.status.none {
-		border-color: var(--pl-rule);
 		color: var(--sl-color-gray-3);
 	}
 	.tile:hover {

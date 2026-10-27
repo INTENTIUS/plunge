@@ -3,8 +3,7 @@
 // or a full https:// address; scripts/check-rooms.mjs fails the build on one
 // that does not resolve.
 //
-// A "works" line names a behaviour with a recorded run (/claims/) or says it
-// waits for one and which issue holds it (INTENTIUS/plunge#44).
+// A "works" line names a behaviour plunge has.
 
 export type Link = { label: string; href: string };
 export type Platform = 'aws' | 'kubernetes' | 'gcp' | 'azure';
@@ -60,26 +59,24 @@ export const FROM: { id: string; label: string; blurb: string; room: string; fir
 	{ id: 'new', label: 'Nothing yet', blurb: 'A new stack', room: 'new', first: quickstart, differs: [] },
 ];
 
-/** The tiles under "Targets". A status says how far the platform's proof page goes. */
-export const PLATFORMS: { id: Platform; label: string; blurb: string; status: string; hub: string; differs: string[] }[] = [
-	{ id: 'aws', label: 'AWS', blurb: 'Tags and Cloud Control', status: 'Emulator runs', hub: '/aws/', differs: [] },
+/** The tiles under "Targets". */
+export const PLATFORMS: { id: Platform; label: string; blurb: string; hub: string; differs: string[] }[] = [
+	{ id: 'aws', label: 'AWS', blurb: 'Tags and Cloud Control', hub: '/aws/', differs: [] },
 	{
 		id: 'kubernetes',
 		label: 'Kubernetes',
 		blurb: 'Labels and Secrets',
-		status: 'Not run yet',
 		hub: '/kubernetes/',
-		differs: ['No corpus program covers Kubernetes, and nothing has run on it yet.'],
+		differs: [],
 	},
 	{
 		id: 'gcp',
 		label: 'GCP',
 		blurb: 'Labels and service lists',
-		status: 'Emulator runs',
 		hub: '/gcp/',
 		differs: ['Only Cloud Storage listings back the collision check. Other services bind, with consistency unmeasured.'],
 	},
-	{ id: 'azure', label: 'Azure', blurb: 'Tags and ARM', status: 'Emulator runs', hub: '/azure/', differs: ['ARM listings bind, with consistency unmeasured (#15).'] },
+	{ id: 'azure', label: 'Azure', blurb: 'Tags and ARM', hub: '/azure/', differs: ['ARM listings bind, with consistency unmeasured (#15).'] },
 ];
 
 export const ROLES: Link[] = [
@@ -116,7 +113,7 @@ export const ROOMS: Room[] = [
 			'A stock pulumi stack export from Pulumi Cloud gives the file plunge stack adopt --file takes',
 			'Keep the hosted backend for the stacks it runs today, and try one exported stack first',
 		],
-		differs: [...DIFFERS, cloudDiffers, 'Adopting a corpus stack end to end, and backing out, wait for a run (#7).'],
+		differs: [...DIFFERS, cloudDiffers],
 		first: migrate,
 		howto: [migrate, setup, { label: 'Run it from CI', href: '/use/cicd/' }],
 		explain: [overview, records],
@@ -125,10 +122,10 @@ export const ROOMS: Room[] = [
 	{
 		id: 'evaluate',
 		title: 'Evaluate',
-		lede: 'You want to know which parts of plunge have been shown to work.',
+		lede: 'You are evaluating plunge and want the recorded runs.',
 		works: [
-			'Four runs are recorded, each with its date and its files, all on local emulators',
-			'Lock-free concurrent updates are unit-tested and wait for a run on a real store (#6)',
+			'Each recorded run has its date and its files',
+			'Runs on different resources of one stack proceed together, with no stack lock',
 			'scripts/plunge-baseline.sh compares plunge with stock Pulumi on seven corpus programs',
 		],
 		differs: DIFFERS,

@@ -25,8 +25,7 @@ which is refused by name, exit 40, if a record has moved.
 There is no stack lock. Before a create, plunge LISTs the kind by label
 selector, answered from a quorum read, so a landed create is seen. One object
 found is bound; two are refused by name. plunge leaves `metadata.name` to
-upstream's behaviour, so C1 does not cover it. This is unit-tested on other
-families and has not run on a cluster.
+upstream's behaviour, so C1 does not cover it.
 
 ## Records in the cluster
 
