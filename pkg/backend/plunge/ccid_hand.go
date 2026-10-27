@@ -19,8 +19,10 @@ package plunge
 // identifier's parts alone: it has no row, or its row is an ARN with the region and account in it, or it names the
 // object by a part of an ARN. Each translation is written out from the Terraform provider's importer for the type.
 //
-// AWS::Budgets::BudgetsAction (aws_budgets_budget_action) is left untranslated: its Terraform id starts with the
-// account ID ("account_id:action_id:budget_name"), which neither the identifier nor the Cloud Control model carries.
+// AWS::Budgets::BudgetsAction (aws_budgets_budget_action) has a Terraform id that starts with the account ID
+// ("account_id:action_id:budget_name"), which neither the identifier nor the Cloud Control model carries. The
+// listing reads it with STS on the stack's own endpoint (accountid.go, INTENTIUS/plunge#31) and skips with a warning
+// when the stack names custom endpoints and none for STS.
 
 import (
 	"fmt"
@@ -36,6 +38,8 @@ type ccHand struct {
 	prop  string
 	arity int
 	build func(parts []string, prop string) (string, bool)
+	// account reports that build is given the account ID the provider runs as in place of prop.
+	account bool
 }
 
 // ccHands are the written-out translations, by CloudFormation type.
@@ -68,6 +72,12 @@ var ccHands = map[string]ccHand{
 	// aws_quicksight_folder is imported as "<account id>,<folder id>"; the identifier is "AwsAccountId|FolderId".
 	"AWS::QuickSight::Folder": {tfType: "aws_quicksight_folder", arity: 2,
 		build: func(p []string, _ string) (string, bool) { return p[0] + "," + p[1], true }},
+	// aws_budgets_budget_action is imported as "<account id>:<action id>:<budget name>"; the identifier is
+	// "ActionId|BudgetName", and the account ID comes from STS (accountid.go).
+	"AWS::Budgets::BudgetsAction": {tfType: "aws_budgets_budget_action", arity: 2, account: true,
+		build: func(p []string, account string) (string, bool) {
+			return account + ":" + p[0] + ":" + p[1], account != "" && !strings.Contains(p[1], ":")
+		}},
 	// The SageMaker domain children are imported by their ARN, which pkg/identity spells with the region and the
 	// account; the model carries the ARN itself.
 	"AWS::SageMaker::App":   {tfType: "aws_sagemaker_app", prop: "AppArn", arity: 4, build: arnProp},
@@ -95,6 +105,18 @@ func (t *ccTranslation) needsModel() string {
 		return ""
 	}
 	return t.hand.prop
+}
+
+// needsAccount reports whether t needs the account ID the provider runs as (withAccount).
+func (t *ccTranslation) needsAccount() bool {
+	return t != nil && t.hand != nil && t.hand.account
+}
+
+// withAccount is t with the account ID its translation reads.
+func (t *ccTranslation) withAccount(account string) *ccTranslation {
+	c := *t
+	c.account = account
+	return &c
 }
 
 // wantsModel reports whether the listing should read the resource before translating identifier, because the list
@@ -138,7 +160,10 @@ func (t *ccTranslation) translate(identifier string, props map[string]any) (stri
 		}
 	}
 	prop := ""
-	if t.hand.prop != "" {
+	switch {
+	case t.hand.account:
+		prop = t.account
+	case t.hand.prop != "":
 		prop, _ = props[t.hand.prop].(string)
 	}
 	return t.hand.build(parts, prop)

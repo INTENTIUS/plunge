@@ -52,6 +52,8 @@ type ccTranslation struct {
 	hand *ccHand
 	// single is a single-part identifier's translation (ccid_single.go), used in place of all of the above.
 	single *ccSingle
+	// account is the account ID the provider runs as, for a hand translation that needs it (accountid.go).
+	account string
 }
 
 func (t ccTranslation) apply(identifier string) (string, bool) {

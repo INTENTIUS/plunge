@@ -63,7 +63,8 @@ func firstEnv(names ...string) string {
 // the consistent per-type listing choudoufu binds with; the Resource Groups Tagging API is not used here, because its
 // index lags.
 type cloudControlLister struct {
-	clients listerCache[cloudcontrol.Client]
+	clients  listerCache[cloudcontrol.Client]
+	accounts accountIDs
 }
 
 func (l *cloudControlLister) Consistent() bool { return true }
@@ -125,16 +126,25 @@ func (l *cloudControlLister) ListMarked(
 	if err != nil {
 		return nil, err
 	}
-	descs, err := c.ListResources(ctx, info.CFNType)
-	if err != nil {
-		return nil, err
-	}
 	var translate *ccTranslation
 	if info.Family == FamilyAWS {
 		var reason string
 		if translate, reason = awsIDTranslation(info); reason != "" {
 			return nil, errors.New(reason)
 		}
+	}
+	if translate.needsAccount() {
+		// The id starts with the account ID, read with STS on the stack's own endpoint (accountid.go). A stack
+		// that names custom endpoints and none for STS skips the listing, as it would for Cloud Control.
+		account, err := l.accounts.get(ctx, req.URN, req.ProviderInputs, region)
+		if err != nil {
+			return nil, err
+		}
+		translate = translate.withAccount(account)
+	}
+	descs, err := c.ListResources(ctx, info.CFNType)
+	if err != nil {
+		return nil, err
 	}
 	var objs []LiveObject
 	for _, d := range descs {

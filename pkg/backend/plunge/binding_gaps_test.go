@@ -440,7 +440,8 @@ func TestCollisionClaimIsCloudStorageAndCloudControlOnly(t *testing.T) {
 }
 
 // The written-out Cloud Control translations (INTENTIUS/plunge#19, ccid_hand.go): each turns a listed identifier,
-// and for SageMaker the model's ARN, into the Terraform id the type is imported by. Budgets actions stay unlisted.
+// and for SageMaker the model's ARN, into the Terraform id the type is imported by. Budgets actions take the account
+// ID from STS.
 func TestHandWrittenCloudControlTranslations(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -473,6 +474,14 @@ func TestHandWrittenCloudControlTranslations(t *testing.T) {
 	_, ok := tr.translate("a|JupyterServer|d-1|u", nil)
 	assert.False(t, ok, "without the model's ARN there is no id")
 
-	_, ok = ccHandTranslation("aws_budgets_budget_action", "AWS::Budgets::BudgetsAction")
-	assert.False(t, ok, "a budgets action id needs the account ID, which Cloud Control does not carry")
+	// A budgets action id needs the account ID, which Cloud Control does not carry: the listing reads it from STS
+	// (accountid.go, INTENTIUS/plunge#31) and the translation is given it.
+	tr, ok = ccHandTranslation("aws_budgets_budget_action", "AWS::Budgets::BudgetsAction")
+	require.True(t, ok)
+	assert.True(t, tr.needsAccount())
+	_, ok = tr.translate("act-1|monthly", nil)
+	assert.False(t, ok, "without the account ID there is no id")
+	got, ok := tr.withAccount("123456789012").translate("act-1|monthly", nil)
+	require.True(t, ok)
+	assert.Equal(t, "123456789012:act-1:monthly", got)
 }
