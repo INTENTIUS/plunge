@@ -1,6 +1,6 @@
 ---
 title: Gate
-description: An admission policy on the plunge-stack label can fence writes by stack. Not yet written for plunge.
+description: An admission policy on the plunge-stack label can fence writes by stack.
 prompt: |
   Follow https://intentius.io/plunge/kubernetes/gate/. Compute the plunge-stack digest for this stack and draft the admission policy match for it. Show it to me; apply nothing.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.

@@ -35,9 +35,3 @@ plunge stack import --file state.json
 
 An import writes the whole stack state as given; run it only with no other
 run in flight on the stack.
-
-## Recorded runs
-
-The refusal is unit-tested
-(`TestDependentOfAnotherRunsInFlightResourceIsRefused`). A crash and re-run on
-floci, race C6, waits on [#7](https://github.com/INTENTIUS/plunge/issues/7).

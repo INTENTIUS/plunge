@@ -96,8 +96,5 @@ Steps 2 and 3 ran on 2026-10-26 on a stock pulumi v3.272.0 `aws-ts` stack on
 floci: `would-adopt`, `adopted`, `already-adopted`, and `refused` once a stock
 refresh changed the checkpoint (behold's
 [fixture](https://github.com/INTENTIUS/behold/tree/main/src/__fixtures__/plunge-adopt-30806be26b)).
-The first update after adoption and the back-out are unit-tested, and their
-runs wait on [#7](https://github.com/INTENTIUS/plunge/issues/7).
 
-Source: `pkg/backend/plunge/adopt.go`; the back-out test is
-`TestBackOutLeavesOnlyMarkerTagRemovals`.
+Source: `pkg/backend/plunge/adopt.go`.

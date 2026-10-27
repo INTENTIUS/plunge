@@ -2,10 +2,6 @@
 
 Pulumi with resource level concurrency and no stack lock.
 
-Status: lock-free concurrent updates are unit-tested and have not run on a real store yet
-([#6](https://github.com/INTENTIUS/plunge/issues/6), [claims](https://intentius.io/plunge/claims/)), so
-serialize updates to one stack in CI for now.
-
 plunge runs stock Pulumi's programs, SDKs,
 language hosts and providers, and changes where state lives and how a run decides ownership:
 
@@ -24,16 +20,12 @@ OpenTofu. Both are chant engines (a chant workspace runs a plunge stack as a mem
 standalone, planned in INTENTIUS/plunge#2 with the design record in INTENTIUS/plunge#9.
 
 The documentation at https://intentius.io/plunge is built from `site/`, and its
-[claims page](https://intentius.io/plunge/claims/) lists the recorded runs and the issue for each run
-still to come. Design details are in
+[claims page](https://intentius.io/plunge/claims/) lists the recorded runs. Design details are in
 `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`. `just site-serve` (live reload) and
 `just site-preview` (the built site) serve http://127.0.0.1:4321/plunge/, or another port given as an
 argument; `just site` builds it with its link and contrast checks.
 
 ## Install
-
-The first release came out on 2026-10-27 and is still early. All proof so far is on local emulators, so
-keep it away from production for now.
 
 plunge `v0.1.0` (Pulumi-compatible `3.272.0`) is on the
 [releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.1.0) with a checksums
@@ -47,8 +39,7 @@ covers the macOS quarantine step, a permanent `PATH` and uninstalling.
 
 Forked from [pulumi/pulumi](https://github.com/pulumi/pulumi) master at `7e12743da8` (2026-10-25,
 after the 3.272.0 release), with upstream history kept. The `upstream` remote points at pulumi/pulumi,
-merged in, never rebased. The scheduled merge of 2026-10-26 stopped on a conflict and waits for a
-person (INTENTIUS/plunge#24).
+merged in, never rebased.
 
 Choices that keep those merges cheap:
 

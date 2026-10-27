@@ -57,9 +57,7 @@ Source: `pkg/backend/plunge/backend.go`.
 
 ## Recorded runs
 
-The behaviour above is coded and unit-tested. Four runs are recorded, all on
-local emulators; [Claims and runs](../claims/) lists them and the issue for
-each other run.
+[Claims and runs](../claims/) lists the recorded runs.
 
 ## Lineage
 

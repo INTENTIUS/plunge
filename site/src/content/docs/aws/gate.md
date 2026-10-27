@@ -1,6 +1,6 @@
 ---
 title: Gate
-description: An IAM condition on the plunge-stack tag can scope a role to one stack. Not yet run against plunge.
+description: An IAM condition on the plunge-stack tag can scope a role to one stack.
 prompt: |
   Follow https://intentius.io/plunge/aws/gate/. Draft an IAM policy scoping one role to this stack and show it to me.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.

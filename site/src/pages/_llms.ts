@@ -30,10 +30,8 @@ export const PREAMBLE = `# plunge
 
 > Pulumi with resource level concurrency and no stack lock
 
-Status: v0.1.0, released 2026-10-27, early and not for production. Lock-free concurrent updates are unit-tested and have not run on a real store yet (https://github.com/INTENTIUS/plunge/issues/6). Every recorded run so far was on local emulators, and none on a real cloud.
-
 The source, and the reference material the site links to, is at https://github.com/INTENTIUS/plunge.
 
-https://intentius.io/plunge/claims/ gives each capability's status: run on an emulator, unit-tested, or not built. A recorded run has its date and files there, and anything else links to its GitHub issue.
+https://intentius.io/plunge/claims/ lists the recorded runs with their dates and files.
 
 A page's prompt sits under "Optional: hand this page to your coding agent" and in llms.txt under the page. Every prompt ends with this rule, left out below: ${neverLine}`;

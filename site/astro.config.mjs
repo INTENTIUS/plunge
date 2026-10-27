@@ -136,7 +136,7 @@ export default defineConfig({
 							{ label: 'Gate', slug: `${p}/gate` },
 							{ label: 'Operate', slug: `${p}/operate` },
 							{ label: 'Compatibility', slug: `${p}/compatibility` },
-							{ label: 'Proof', slug: `${p}/proof` },
+							...(p === 'kubernetes' ? [] : [{ label: 'Proof', slug: `${p}/proof` }]),
 						],
 					};
 				}),

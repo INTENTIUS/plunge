@@ -21,10 +21,8 @@ are the only preview difference on the AWS and Azure corpus programs.
 ## C1: two creates of one resource
 
 The cloud refuses a second create of one name, and the loser's next run
-binds the winner's object by its markers. This claim, C1
-in [CONCURRENCY.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/CONCURRENCY.md),
-has a unit test (`TestRacingCreateLoserBindsTheWinnerOnReRun`), and its floci
-race waits on [#10](https://github.com/INTENTIUS/plunge/issues/10).
+binds the winner's object by its markers.
+This is C1 in [CONCURRENCY.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/CONCURRENCY.md).
 
 A type is covered when its schema shows the name is unique, it carries
 markers, and a lister finds it (or its import ID is its name alone):

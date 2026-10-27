@@ -2,7 +2,7 @@
 title: Resource-level concurrency
 description: Each record write in plunge is conditional, so runs on different resources of one stack proceed together and a clash is refused by name.
 prompt: |
-  Read https://intentius.io/plunge/how-it-works/concurrency/ and say how our CI serializes updates to one stack. Change no files.
+  Read https://intentius.io/plunge/how-it-works/concurrency/ and say which of our CI jobs can update one stack together. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
@@ -24,14 +24,6 @@ The stock DIY backend orders these runs with its stack lock. On plunge:
 | A run changes a resource that depends on one another run has in flight | Refused before the provider is called (`InFlightDependencyError`, naming both resources) |
 | A run killed part way | Leaves pending operations on the resources it touched ([Pending operations](../../use/pending/)) |
 
-Rows one, four and five are unit-tested
-(`TestTwoConcurrentUpdatesOnDisjointResourcesBothLand`,
-`TestTwoFirstRunsConvergeOnOneDefaultProvider`,
-`TestDependentOfAnotherRunsInFlightResourceIsRefused`); floci races wait on
-[#6](https://github.com/INTENTIUS/plunge/issues/6) and
-[#7](https://github.com/INTENTIUS/plunge/issues/7). The recorded `aws-ts` run's
-two providers have v5 UUID IDs.
-
 ## Older programs and deletes
 
 Each record carries its last writer's program stamp (commit and commit time,
@@ -46,8 +38,7 @@ marker is checked too ([Deletes](../deletes/)).
 read. `plunge up --plan` refuses a plan whose records moved or that has no
 stamp (`PlanMovedError`, `UnstampedPlanError`) and exits 40. choudoufu and
 chant use 3 for a moved plan, which stock Pulumi uses for an authentication
-error, so a driver maps 40 to its own code
-(`TestMovedPlanIsRefusedWithExitCode40`).
+error, so a driver maps 40 to its own code.
 
 ## C2: the listing behind the collision check
 
@@ -64,10 +55,9 @@ at once, so the claim is per family:
 | pulumi-gcp, other services | the service's own list (`gcplist`, 156 types) | binds, consistency unmeasured |
 | pulumi-azure, azure-native | ARM's list, filtered by the `plunge-urn` tag | binds, consistency unmeasured ([#15](https://github.com/INTENTIUS/plunge/issues/15)) |
 
-"Claimed" rests on the service's documented consistency; no race has
-measured it. Listers call the endpoints in the stack's provider configuration,
+"Claimed" rests on the service's documented consistency. Listers call the endpoints in the stack's provider configuration,
 never a public cloud fallback
-([#27](https://github.com/INTENTIUS/plunge/issues/27), unit-tested).
+([#27](https://github.com/INTENTIUS/plunge/issues/27)).
 
 After `up` and `preview`, plunge lists each type the run marked and warns,
 without deleting, about live objects with this stack's marker that no record
@@ -75,5 +65,5 @@ names (`unrecorded marked object`).
 
 ## In CI
 
-Serialize updates to one stack in CI anyway, where the real mutex has
-always been. Two stacks need none.
+Jobs that change different resources of one stack run together. Each
+saved plan is checked against the records it read ([CI/CD](../../use/cicd/)).

@@ -26,6 +26,4 @@ record's earlier versions. Restore one with the cloud's own tools, then run
 
 ## The whole store is lost
 
-plunge cannot yet rebuild records from the live objects' markers
-([#48](https://github.com/INTENTIUS/plunge/issues/48)). If a stock checkpoint
-of the stack exists, adopt it again ([Adopt an existing stack](../migrate/)).
+If a stock checkpoint of the stack exists, adopt it again ([Adopt an existing stack](../migrate/)).
