@@ -17,6 +17,11 @@ Files modified for plunge (each stays MPL-2.0):
               tofu-estate and tofu-address. plunge's label values are
               digests (pkg/backend/plunge/markers), so the estate and
               address a caller passes are those digests.
-  plunge.go   new: the marker key binding above.
+  plunge.go   new: the marker key binding above; HTTPClient for the
+              per-service listers; and, for INTENTIUS/plunge#42,
+              NewWithHTTPClient, RefusedMarks and SourceCaller, so plunge
+              can hand the sweep a client whose credential it built (no
+              token source that reaches Google's auth endpoints when the
+              stack names emulator endpoints).
 
 Not carried: every _test.go file. The testdata README is not carried.

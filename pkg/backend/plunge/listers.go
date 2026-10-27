@@ -573,8 +573,19 @@ func (l *gcpLister) ListMarked(
 	if err := gcpImpersonationEndpoint(req, a); err != nil {
 		return nil, err
 	}
-	key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
-	c, err := l.clients.get(key, func() (*http.Client, error) { return gcpsweep.HTTPClient(ctx, a) })
+	// A stack naming custom endpoints gets a client whose credential never fetches a token from a non-local host
+	// (INTENTIUS/plunge#42, gcpauth.go); any other keeps the provider's own credential chain.
+	local, isLocal, err := gcpLocalAuthFor(req, a, p.t.Service.Host)
+	if err != nil {
+		return nil, err
+	}
+	var c *http.Client
+	if isLocal {
+		c, err = l.clients.get(local.cacheKey(), func() (*http.Client, error) { return local.client(ctx) })
+	} else {
+		key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
+		c, err = l.clients.get(key, func() (*http.Client, error) { return gcpsweep.HTTPClient(ctx, a) })
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -624,9 +635,28 @@ func (l *assetLister) ListMarked(
 	if a.Project == "" {
 		return nil, fmt.Errorf("no project: the provider sets no project and GOOGLE_PROJECT is unset")
 	}
-	c, err := l.clients.get(a.Project+"|"+a.ImpersonateServiceAccount, func() (*gcpsweep.Client, error) {
-		return gcpsweep.New(ctx, a)
-	})
+	local, isLocal, err := gcpLocalAuthFor(req, a, "cloudasset.googleapis.com")
+	if err != nil {
+		return nil, err
+	}
+	var c *gcpsweep.Client
+	if isLocal {
+		// INTENTIUS/plunge#42: the Cloud Asset client goes over plunge's own client, never the copy's credential
+		// lookup (gcpauth.go).
+		c, err = l.clients.get(a.Project+"|"+local.cacheKey(), func() (*gcpsweep.Client, error) {
+			hc, err := local.client(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return gcpsweep.NewWithHTTPClient(ctx, a, hc, gcpsweep.Credentials{
+				Source: gcpsweep.SourceCaller, Impersonate: local.impersonate,
+			})
+		})
+	} else {
+		c, err = l.clients.get(a.Project+"|"+a.ImpersonateServiceAccount, func() (*gcpsweep.Client, error) {
+			return gcpsweep.New(ctx, a)
+		})
+	}
 	if err != nil {
 		return nil, err
 	}
