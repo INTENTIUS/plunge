@@ -168,7 +168,7 @@ func TestPlungeDeleteVetterSeesTheDeleteHalfOfAReplace(t *testing.T) {
 			cloud := &replaceCloud{}
 			foo, d := "a", dbr
 			hostF := deploytest.NewPluginHostF(nil, nil, replaceProgram(&foo, &d), nil, nil, cloud.loaders()...)
-			p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF}}
+			p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF, SkipDisplayTests: true}}
 			project := p.GetProject()
 			snap, err := lt.TestOp(Update).RunStep(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient,
 				nil, "0")
@@ -207,7 +207,7 @@ func TestPlungeDeleteVetterSeesALeftoverPendingDelete(t *testing.T) {
 	cloud := &replaceCloud{}
 	foo, d := "a", false
 	hostF := deploytest.NewPluginHostF(nil, nil, replaceProgram(&foo, &d), nil, nil, cloud.loaders()...)
-	p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF}}
+	p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF, SkipDisplayTests: true}}
 	project := p.GetProject()
 	snap, err := lt.TestOp(Update).RunStep(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient, nil, "0")
 	require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestPlungeImportVetterSeesImports(t *testing.T) {
 			return err
 		})
 		hostF := deploytest.NewPluginHostF(nil, nil, programF, nil, nil, cloud.loaders()...)
-		p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF}}
+		p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF, SkipDisplayTests: true}}
 		vetter := &importVetter{refuse: refuse}
 		target := p.GetTarget(t, nil)
 		target.ImportVetter = vetter

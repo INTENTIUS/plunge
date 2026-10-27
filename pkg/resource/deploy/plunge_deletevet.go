@@ -22,7 +22,6 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
 	sdkproviders "github.com/pulumi/pulumi/sdk/v3/go/common/providers"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/result"
 )
 
 // The delete vet (INTENTIUS/plunge#37). A record is never read as permission to delete: before the step generator
@@ -122,8 +121,10 @@ func (sg *stepGenerator) plungeDeleteCandidate(
 	return c, true, nil
 }
 
-// askPlungeDeleteVetter hands deletes to Target.DeleteVetter. A refusal is reported on the deployment's diagnostic
-// sink and returned as a bail.
+// askPlungeDeleteVetter hands deletes to Target.DeleteVetter. A refusal is returned as a plain error, not a bail:
+// every caller's executor reports a plain error once and fails the run, while the post-step path that runs
+// GenerateDeletes drops a bail without failing the run (deploymentExecutor.Execute), which let a refused
+// `up` delete succeed (INTENTIUS/plunge#37).
 func (sg *stepGenerator) askPlungeDeleteVetter(deletes []DeleteCandidate) error {
 	if len(deletes) == 0 {
 		return nil
@@ -139,8 +140,7 @@ func (sg *stepGenerator) askPlungeDeleteVetter(deletes []DeleteCandidate) error 
 		Diag:      sg.deployment.Diag(),
 	})
 	if err != nil {
-		sg.deployment.Diag().Errorf(diag.RawMessage("", err.Error()))
-		return result.BailError(err)
+		return err
 	}
 	return nil
 }
@@ -190,8 +190,7 @@ func (sg *stepGenerator) vetPlungeReplaced(old *pkgresource.State, dependents []
 }
 
 // vetPlungeDeletes is the step generator's call into Target.DeleteVetter, from GenerateDeletes. guarded is what
-// DeleteGuard keeps. A refusal is reported on the deployment's diagnostic sink and returned as a bail, so no
-// delete step is generated.
+// DeleteGuard keeps. A refusal is returned as an error, so no delete step is generated and the run fails.
 func (sg *stepGenerator) vetPlungeDeletes(
 	isTargeted func(*pkgresource.State) bool, guarded map[*pkgresource.State]bool,
 ) error {

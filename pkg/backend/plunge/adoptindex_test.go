@@ -177,7 +177,7 @@ func TestIndexAdoptionIsGatedAndWritesNoMarker(t *testing.T) {
 	assert.Equal(t, want, r.MarkerWrite.Tags)
 
 	// The view lists it as tags only, with the index version.
-	view, err := NewAdoptView("organization/test/test", nil, err)
+	view, err := NewAdoptView("organization/test/test", nil, unconfirmed)
 	require.NoError(t, err)
 	assert.Equal(t, AdoptWouldAdopt, view.Status)
 	require.NotNil(t, view.Index)
