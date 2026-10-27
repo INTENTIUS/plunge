@@ -618,7 +618,7 @@ func (e *eventEmitter) resourceOperationFailedEvent(
 	contract.Requiref(e != nil, "e", "!= nil")
 
 	e.sendEvent(NewEvent(ResourceOperationFailedPayload{
-		Metadata: withPlungeTimings(makeStepEventMetadata(step.Op(), step, debug, showSecrets), step),
+		Metadata: makeStepEventMetadata(step.Op(), step, debug, showSecrets),
 		Status:   status,
 		Steps:    steps,
 		Awaited:  awaited,
@@ -631,7 +631,7 @@ func (e *eventEmitter) resourceOutputsEvent(
 	contract.Requiref(e != nil, "e", "!= nil")
 
 	e.sendEvent(NewEvent(ResourceOutputsEventPayload{
-		Metadata: withPlungeTimings(makeStepEventMetadata(op, step, debug, showSecrets), step),
+		Metadata: makeStepEventMetadata(op, step, debug, showSecrets),
 		Planning: planning,
 		Debug:    debug,
 		Internal: internal,

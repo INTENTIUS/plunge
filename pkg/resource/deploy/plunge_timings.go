@@ -145,3 +145,9 @@ func StepTimings(step Step) *Timings {
 	}
 	return d.target.Timings
 }
+
+// NewTimedDeploymentForTest returns a bare deployment whose target records into timings, for tests outside this
+// package that drive a step's events without running a deployment.
+func NewTimedDeploymentForTest(timings *Timings) *Deployment {
+	return &Deployment{target: &Target{Timings: timings}}
+}

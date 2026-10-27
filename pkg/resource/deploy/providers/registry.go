@@ -364,7 +364,7 @@ type Registry struct {
 	// wrap, when set, wraps every provider GetProvider hands out (plunge_timings.go, INTENTIUS/plunge#55).
 	wrap func(plugin.Provider) plugin.Provider
 
-	pctx     *plugin.Context
+	pctx      *plugin.Context
 	isPreview bool
 	providers map[providers.Reference]plugin.Provider
 	builtins  plugin.Provider
