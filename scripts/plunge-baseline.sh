@@ -75,6 +75,11 @@ export PULUMI_SKIP_UPDATE_CHECK=true PULUMI_SKIP_CONFIRMATIONS=true
 unset PULUMI_ACCESS_TOKEN PULUMI_BACKEND_URL
 
 mkdir -p "${OUT}"
+# The scrub above unset CLOUDSDK_CONFIG too, which would send gcloud's library back to ~/.config/gcloud and its
+# application-default credentials. An empty directory instead: no ADC in reach of any GCP call. The same for the
+# Azure CLI's login, for every program (azure_setup below names the same directory).
+mkdir -p "${OUT}/.gcloud-no-login" "${OUT}/.azure-no-login"
+export CLOUDSDK_CONFIG="${OUT}/.gcloud-no-login" AZURE_CONFIG_DIR="${OUT}/.azure-no-login"
 VERDICTS="${OUT}/verdicts.txt"
 : > "${VERDICTS}"
 

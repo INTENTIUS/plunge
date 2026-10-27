@@ -143,6 +143,207 @@ cd aws-csharp && dotnet build -nologo
 The YAML programs have no compile step. `aws-go` is its own Go module, so the
 repo's `tests` module doesn't build it.
 
+## Running against the emulators
+
+Two scripts make a run repeatable: one starts the emulators at fixed
+images, the other runs a command with no real cloud credentials in reach
+and checks afterwards that nothing it ran talked to a real cloud.
+
+`tests/plunge-corpus/emulator-images` pins the three images by digest. They
+are copies of choudoufu's `live/floci-image`, `live/floci-gcp-image` and
+`live/floci-az-image`, so both repos measure against the same emulators.
+Check them against a choudoufu checkout before a run, and after either side
+moves a pin:
+
+```sh
+scripts/check-emulator-images.sh ../choudoufu origin/integration/consolidation-graph
+# last line: emulator-images: SAME (3 images)
+```
+
+Start them, check them, stop them:
+
+```sh
+scripts/plunge-emulators.sh up        # floci 4566, floci-gcp 4588, floci-az 4577; waits until each is ready
+scripts/plunge-emulators.sh status
+scripts/plunge-emulators.sh down
+```
+
+Name some to act on only those (`up floci-az`). The containers are
+`plunge-floci`, `plunge-floci-gcp` and `plunge-floci-az`, published on
+127.0.0.1 only. `PLUNGE_FLOCI_NAME`, `PLUNGE_FLOCI_PORT` and the `_GCP_`
+and `_AZ_` variants move them; the stack files name the default ports, so
+a run on other ports also needs the stack file edits in "How the stacks
+reach the emulators". floci-gcp gets
+`FLOCI_GCP_DEFAULT_PROJECT_ID=plc-corpus`. floci-az runs with TLS and
+`FLOCI_AZ_STORAGE_SUFFIX=localhost:<port>`, serving the certificate in
+`FLOCI_AZ_TLS_DIR` (default `~/.config/choudoufu/floci-az-tls`, made once
+by choudoufu's `scripts/floci-az-mac-cert.sh` and trusted in the keychain).
+On macOS that certificate is required; on Linux, without one, floci-az
+makes its own CA and `up` saves it and prints the path. `up` prints the
+`FLOCI_AZ_HOST` and `FLOCI_AZ_CA_FILE` to export for the Azure program.
+
+Each container the script starts carries the label
+`io.intentius.plunge-emulators=<emulator>`. `up` reuses a running
+container only when it has that label, runs the pinned image and is
+published on the expected port; `down` stops only a labelled one. A
+container of the same name started any other way, by hand or by another
+harness, is refused by name and left running.
+
+Then run the command through `scripts/plunge-safe-run.sh`:
+
+```sh
+scripts/plunge-safe-run.sh [--log FILE] [--scan DIR]... [--azure-fakes] [-e NAME=VALUE]... -- <command...>
+```
+
+It unsets every `AWS_*`, `AZURE_*`, `ARM_*`, `GOOGLE_*`, `CLOUDSDK_*` and
+`GCE_*` variable (`AWS_PROFILE` and `GOOGLE_APPLICATION_CREDENTIALS`
+included), then sets `test`/`test` static AWS keys, points
+`AWS_CONFIG_FILE`, `AWS_SHARED_CREDENTIALS_FILE`, `CLOUDSDK_CONFIG` and
+`AZURE_CONFIG_DIR` at empty files and directories in a scratch directory,
+unsets `PULUMI_ACCESS_TOKEN` and sets `PULUMI_SKIP_UPDATE_CHECK=true`. A
+`PULUMI_BACKEND_URL` you give is kept only when it is local (`file://`,
+`plunge+file://`, or a plunge bucket store on a loopback emulator);
+without one the run gets a scratch `file://` backend. `-e` exports a
+variable after the scrub, and `--azure-fakes` exports floci-az's fake ARM
+identity.
+
+The output is teed to a log (`--log`, default `<scratch>/run.log`). After
+the command exits, the log and every `--scan` directory are searched for
+`UnrecognizedClientException`, `InvalidClientTokenId`, `invalid_grant`,
+`AADSTS`, `CREDENTIALS_MISSING` and a 401 on a line naming
+`googleapis.com`, `amazonaws.com`, `azure.com` or `windows.net`. An
+emulator never answers any of those, so a hit means a call left this
+machine: the script prints the lines, ends with `plunge-safe-run:
+REAL-CLOUD CALL` and exits 3 whatever the command returned. Treat that as a
+stop: find the endpoint that wasn't pointed at an emulator, and don't use
+the run's results. A clean run ends with `plunge-safe-run: CLEAN` and the
+command's own exit status, and each `--scan` directory gets a
+`safe-run-verdict.txt` reading `CLEAN`.
+
+`--scan` is for commands that write their output to files rather than the
+terminal: `scripts/plunge-baseline.sh` writes each engine's stderr under its
+`OUT`, so its runs pass `--scan "$OUT"`.
+
+### The store conformance legs
+
+`pkg/backend/plunge/conformance_test.go` runs choudoufu's record-store suite
+against each plunge store. The `plunge+file://` leg always runs; the bucket
+legs skip unless their variable names a store on a loopback emulator:
+
+| Variable | Emulator | Also needs |
+|---|---|---|
+| `PLUNGE_CONFORMANCE_S3_URL` | floci | the static AWS keys (plunge-safe-run sets them) |
+| `PLUNGE_CONFORMANCE_GS_URL` | floci-gcp | `STORAGE_EMULATOR_HOST=localhost:4588` |
+| `PLUNGE_CONFORMANCE_AZBLOB_URL` | floci-az | `ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET` (`--azure-fakes`), and floci-az's CA trusted (`SSL_CERT_FILE` on Linux, the keychain on macOS) |
+
+Opening a bucket store checks its settings (INTENTIUS/plunge#20), so each
+bucket or container needs versioning, a lifecycle rule deleting noncurrent
+versions, and its public access settings closed, the same settings
+`scripts/plunge-record-store-acceptance.sh` puts on its bucket. Its setup
+is inline in that script, not in functions another script can source, so
+here it is for the three stores, run once per emulator start (each starts
+empty):
+
+```sh
+# floci S3 (aws CLI; the keys are floci's)
+export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1
+S3="--endpoint-url http://localhost:4566"
+aws $S3 s3api create-bucket --bucket plunge-conformance
+aws $S3 s3api put-bucket-versioning --bucket plunge-conformance --versioning-configuration Status=Enabled
+aws $S3 s3api put-bucket-lifecycle-configuration --bucket plunge-conformance --lifecycle-configuration \
+  '{"Rules":[{"ID":"records-noncurrent","Status":"Enabled","Filter":{"Prefix":""},"NoncurrentVersionExpiration":{"NoncurrentDays":30}}]}'
+aws $S3 s3api put-public-access-block --bucket plunge-conformance --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+# floci-gcp GCS (its JSON API, no credentials)
+curl -fsS -X POST -H 'Content-Type: application/json' \
+  'http://localhost:4588/storage/v1/b?project=plc-corpus' -d '{"name":"plunge-conformance",
+   "versioning":{"enabled":true},
+   "lifecycle":{"rule":[{"action":{"type":"Delete"},"condition":{"daysSinceNoncurrentTime":30}}]},
+   "iamConfiguration":{"uniformBucketLevelAccess":{"enabled":true},"publicAccessPrevention":"enforced"}}'
+
+# floci-az (ARM over TLS, with a token floci-az issues to the fake client)
+CA="$FLOCI_AZ_CA_FILE"; AZ=https://localhost:4577
+SUB=00000000-0000-0000-0000-00000000c0de; TENANT=00000000-0000-0000-0000-0000000071e7
+TOKEN="$(curl -fsS --cacert "$CA" "$AZ/$TENANT/oauth2/v2.0/token" -d grant_type=client_credentials \
+  -d client_id=00000000-0000-0000-0000-00000000c11e -d client_secret=floci-az-does-not-check-this \
+  -d scope=https://management.azure.com/.default | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
+arm() { curl -fsS --cacert "$CA" -X PUT -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' "$AZ$1" -d "$2"; echo; }
+RG=/subscriptions/$SUB/resourceGroups/plunge-conformance-rg
+ACCT=$RG/providers/Microsoft.Storage/storageAccounts/plungeconf
+arm "$RG?api-version=2021-04-01" '{"location":"eastus"}'
+arm "$ACCT?api-version=2023-05-01" '{"location":"eastus","kind":"StorageV2","sku":{"name":"Standard_LRS"},"properties":{"allowBlobPublicAccess":false}}'
+arm "$ACCT/blobServices/default?api-version=2023-05-01" '{"properties":{"isVersioningEnabled":true}}'
+arm "$ACCT/managementPolicies/default?api-version=2023-05-01" '{"properties":{"policy":{"rules":[{"enabled":true,"name":"records-noncurrent","type":"Lifecycle","definition":{"actions":{"version":{"delete":{"daysAfterCreationGreaterThan":30}}},"filters":{"blobTypes":["blockBlob"]}}}]}}}'
+arm "$ACCT/blobServices/default/containers/records?api-version=2023-05-01" '{"properties":{"publicAccess":"None"}}'
+```
+
+Then the legs, each through the wrapper:
+
+```sh
+LOGS="$(mktemp -d)"
+scripts/plunge-safe-run.sh --log "$LOGS/conformance-s3.log" \
+  -e 'PLUNGE_CONFORMANCE_S3_URL=plunge+s3://plunge-conformance/conf?endpoint=http://localhost:4566&region=us-east-1&s3ForcePathStyle=true' \
+  -- go test -C pkg -count=1 -run 'TestPlungeS3StoreConformance' -v ./backend/plunge/
+scripts/plunge-safe-run.sh --log "$LOGS/conformance-gs.log" \
+  -e STORAGE_EMULATOR_HOST=localhost:4588 -e PLUNGE_CONFORMANCE_GS_URL=plunge+gs://plunge-conformance/conf \
+  -- go test -C pkg -count=1 -run 'TestPlungeGSStoreConformance' -v ./backend/plunge/
+scripts/plunge-safe-run.sh --log "$LOGS/conformance-azblob.log" --azure-fakes -e "SSL_CERT_FILE=$FLOCI_AZ_CA_FILE" \
+  -e 'PLUNGE_CONFORMANCE_AZBLOB_URL=plunge+azblob://records/conf?storage_account=plungeconf&resource_group=plunge-conformance-rg&subscription_id=00000000-0000-0000-0000-00000000c0de&metadata_host=localhost:4577' \
+  -- go test -C pkg -count=1 -run 'TestPlungeAzblobStoreConformance' -v ./backend/plunge/
+```
+
+Read each leg's `--- PASS`/`--- SKIP` lines as well as the wrapper's last
+line: a leg that skipped didn't run. Each leg refuses, before opening
+anything, a URL whose endpoint isn't loopback.
+
+## Re-recording the baseline
+
+The committed baseline is each program's `baseline/preview.json` (stock
+`pulumi preview --json`), `baseline/plunge-compare.txt` (plunge against
+stock), `baseline/pulumi-version.txt`, and `baseline-verdicts.txt`, one
+`VERDICT` line per program. Re-record it after any change that can move a
+preview:
+
+- a corpus change: a program, its stack file or its dependency pins;
+- a provider change: a pulumi-aws, pulumi-gcp or pulumi-azure version;
+- a stock pulumi change (the fork point moves);
+- an emulator pin change in `emulator-images`.
+
+Re-record only the programs the change touches. A plunge-only change
+needs no re-record: run `scripts/plunge-baseline.sh` and compare its
+verdicts with `baseline-verdicts.txt`.
+
+Baseline files are never hand-edited. They are copied from one run by
+`scripts/plunge-baseline-record.sh`, which refuses a run the safe-run
+check didn't pass, and a program whose verdict is `ERROR` or
+`DIFF-STEPS`. If a recorded file looks wrong, fix the program, the
+provider or the engine and record again.
+
+```sh
+scripts/check-emulator-images.sh ../choudoufu origin/integration/consolidation-graph
+scripts/plunge-emulators.sh up
+export OUT="$PWD/plunge-baseline-out/$(date -u +%Y%m%dT%H%M%SZ)" PULUMI=/path/to/stock/pulumi
+mkdir -p "$OUT"
+scripts/plunge-safe-run.sh --log "$OUT/safe-run.log" --scan "$OUT" -- scripts/plunge-baseline.sh [program ...]
+#   last line: plunge-safe-run: CLEAN (command exited 0; ...)
+scripts/plunge-baseline-record.sh "$OUT"
+scripts/plunge-emulators.sh down
+git diff --stat -- tests/plunge-corpus
+```
+
+`plunge-baseline.sh` does its own scrub as well (it unsets the cloud
+variables, uses its own file backends and floci-az's fakes), so the
+wrapper's part is the empty config locations and the log check. Read
+`$OUT/verdicts.txt` and each `compare.txt` before committing, and the
+"Recording the stock baseline" checks below (a good baseline has no
+`error` diagnostics and the expected `create` steps). `DIFF-INPUTS` is
+expected where a resource is autonamed: the random suffix differs between
+the two engines' previews. Commit the baseline files together with the
+change that made them move, and say in the commit message which run
+produced them: the images, the stock pulumi and plunge versions (from
+`$OUT/versions.txt`) and the `plunge-safe-run: CLEAN` line.
+
 ## Recording the stock baseline
 
 The maintainer runs this by hand. A baseline is stock `pulumi preview`
@@ -151,31 +352,26 @@ Pulumi Cloud.
 
 `scripts/plunge-baseline.sh` (P-L0) does steps 2 and 3 for stock pulumi and
 plunge side by side, each on its own copy of the program and its own file
-backend, and writes a `VERDICT <program> ...` line per program. The steps
-below are the stock half by hand, for recording `baseline/` in the tree.
+backend, and writes a `VERDICT <program> ...` line per program. The
+committed `baseline/` comes from that script's run, copied by
+`scripts/plunge-baseline-record.sh` ("Re-recording the baseline" above).
+The steps below are the stock half by hand, for looking into one program's
+preview; what they write is not committed.
 
-1. Start the emulators at choudoufu's pinned images:
+1. Start the emulators at the pinned images (above, "Running against the
+   emulators"):
 
    ```sh
-   CHDF=/path/to/choudoufu
-   docker run -d --rm --name plunge-floci -p 127.0.0.1:4566:4566 "$(cat $CHDF/live/floci-image)"
-   docker run -d --rm --name plunge-floci-gcp -p 127.0.0.1:4588:4588 \
-     -e FLOCI_GCP_DEFAULT_PROJECT_ID=plc-corpus "$(cat $CHDF/live/floci-gcp-image)"
-   docker run -d --rm --name plunge-floci-az -p 127.0.0.1:4577:4577 \
-     -e FLOCI_AZ_TLS_ENABLED=true -e FLOCI_AZ_STORAGE_MODE=memory -e FLOCI_AZ_PARITY=azure \
-     -e FLOCI_AZ_STORAGE_SUFFIX=localhost:4577 "$(cat $CHDF/live/floci-az-image)"
+   scripts/plunge-emulators.sh up
    ```
 
-   floci-az generates its own CA when it starts with no certificate given.
-   On Linux that CA is enough: `scripts/plunge-baseline.sh` fetches it from
-   `http://localhost:4577/_floci/tls-cert` and exports it as `SSL_CERT_FILE`
-   for both engines. On macOS, Go ignores `SSL_CERT_FILE` and trusts only the
-   keychain, so make a certificate once with choudoufu's
-   `scripts/floci-az-mac-cert.sh`, trust it, and start floci-az with it
-   mounted (`-v ~/.config/choudoufu/floci-az-tls:/etc/floci-az-tls:ro -e
-   FLOCI_AZ_TLS_CERT_PATH=/etc/floci-az-tls/cert.pem -e
-   FLOCI_AZ_TLS_KEY_PATH=/etc/floci-az-tls/key.pem`), then pass
-   `FLOCI_AZ_CA_FILE=~/.config/choudoufu/floci-az-tls/cert.pem`.
+   On macOS, floci-az needs the certificate from choudoufu's
+   `scripts/floci-az-mac-cert.sh`, trusted in the keychain, since Go there
+   ignores `SSL_CERT_FILE`; pass it as
+   `FLOCI_AZ_CA_FILE=~/.config/choudoufu/floci-az-tls/cert.pem`. On Linux
+   `scripts/plunge-baseline.sh` fetches floci-az's CA from
+   `http://localhost:4577/_floci/tls-cert` and exports it as
+   `SSL_CERT_FILE` for both engines.
 
 2. Set up a throwaway state directory and the shared passphrase, and clear
    anything that could reach a real cloud:
@@ -214,16 +410,17 @@ below are the stock half by hand, for recording `baseline/` in the tree.
    cd tests/plunge-corpus/<program>
    # install: npm ci | pulumi install | go mod download | dotnet restore | nothing for YAML
    pulumi stack init floci --secrets-provider passphrase
-   mkdir -p baseline
-   pulumi version > baseline/pulumi-version.txt
-   pulumi preview --stack floci --json > baseline/preview.json
+   pulumi version > "$STATE/pulumi-version.txt"
+   pulumi preview --stack floci --json > "$STATE/preview.json"
    ```
 
-   `pulumi stack init` writes an `encryptionsalt` into `Pulumi.floci.yaml`.
-   Commit it with the baseline, so later runs (P-L0's plunge-vs-stock
-   comparison) decrypt with the same passphrase and salt.
+   `pulumi stack init` writes an `encryptionsalt` into `Pulumi.floci.yaml`
+   when the file has none. The committed stack files already carry one, so
+   later runs (P-L0's plunge-vs-stock comparison) decrypt with the same
+   passphrase and salt; a new program commits its salt with its first
+   baseline.
 
-4. Read the result before committing it. A good baseline has no
+4. Read the result. A good baseline has no
    `diagnostics` of severity `error`, has a `create` step for every resource
    in the table above except `vpc-id`, shows `vpcId`, `securityGroupId` and
    `vpcParameterName` as unknown, and shows `dbPasswordValue` as a secret. The
@@ -231,10 +428,8 @@ below are the stock half by hand, for recording `baseline/` in the tree.
 
    For `azure-yaml`, a good baseline creates `app-rg`, `scratch-rg`,
    `app-vnet`, `app-subnet`, `app-nsg`, the `west` provider and `west-rg`,
-   with the IDs unknown. Then run `scripts/plunge-baseline.sh azure-yaml`,
-   copy its `azure-yaml/compare.txt` to `baseline/plunge-compare.txt`, and add
-   its `VERDICT azure-yaml ...` line to `baseline-verdicts.txt`. Only
-   `scratch-rg`'s autonamed name may differ (`DIFF-INPUTS`).
+   with the IDs unknown, and in the plunge comparison only `scratch-rg`'s
+   autonamed name may differ (`DIFF-INPUTS`).
 
 Autonamed resources (`events`, `worker-*`, `docs-notify`, `app-sg`'s name,
 `azure-yaml`'s `scratch-rg`)
