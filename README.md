@@ -98,9 +98,10 @@ A host that is neither bundled nor on `PATH` is fetched the way upstream fetches
 build of that host, at plunge's Pulumi-compatible version, not one built from this tree. That is the
 same code while plunge's hosts don't diverge from upstream's.
 
-Releases are built by `.github/workflows/plunge-release.yml` when a `vX.Y.Z` tag is pushed. It runs
-goreleaser with `.goreleaser.plunge.yml` and publishes `plunge-vX.Y.Z-<os>-<arch>` archives on this
-repository's releases page. Windows binaries are unsigned. The snapshot build below shows the same
+Releases are built by `.github/workflows/plunge-release.yml` when a `plunge-vX.Y.Z` tag is pushed. A bare
+`vX.Y.Z` tag doesn't trigger it: those are upstream pulumi's tag names, which this tree carries once
+upstream is fetched (INTENTIUS/plunge#33). It runs goreleaser with `.goreleaser.plunge.yml` and publishes
+`plunge-vX.Y.Z-<os>-<arch>` archives on this repository's releases page. Windows binaries are unsigned. The snapshot build below shows the same
 artifact list without publishing anything.
 
 ```sh
@@ -137,7 +138,8 @@ fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG
 ### Scheduled upstream merge
 
 `scripts/plunge-upstream-merge.sh` does the same on a fresh branch. It fetches pulumi/pulumi master
-(fetch only; it never pushes there), cuts `upstream-merge/<date>-<upstream sha>` from
+(fetch only; it never pushes there, and it sets the `upstream` remote's push URL to `no-push://`,
+whether it adds the remote or finds one already there), cuts `upstream-merge/<date>-<upstream sha>` from
 `origin/integration/pulumi-engine` (`BASE` to change it), merges with a merge commit, moves any workflow
 upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg`, `sdk/pcl`,
 the three language hosts (with `GOTOOLCHAIN=go1.27.1`) and `bin/plunge`. A conflict only in upstream's

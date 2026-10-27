@@ -8,8 +8,9 @@
 #   scripts/plunge-upstream-merge.sh [--push]
 #
 # Steps:
-#   1. Fetch upstream master (fetch only: this script never pushes to pulumi/pulumi, and a remote it
-#      adds gets a push URL that can't work).
+#   1. Fetch upstream master (fetch only: this script never pushes to pulumi/pulumi, and the upstream
+#      remote's push URL is set to one that can't work, on a remote it adds and on one already there,
+#      INTENTIUS/plunge#33).
 #   2. Create upstream-merge/<UTC date>-<upstream short sha> off origin/$BASE, and merge upstream/master
 #      into it with a merge commit (--no-ff, no fast-forward, no squash).
 #   3. Take upstream's generated Automation API (GENERATED_DIRS below: the Go package, and the nodejs and
@@ -341,16 +342,24 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   fail "the working tree has uncommitted changes"
 fi
 
-# Upstream is fetched from pulumi/pulumi and nothing else. If the remote is missing, add it with a push
-# URL that refuses, so no later command can push there by mistake.
+# Upstream is fetched from pulumi/pulumi and nothing else. If the remote is missing, add it. Either way,
+# give it a push URL that refuses, so no later command (a `git push upstream`, or a tag pushed there) can
+# push there by mistake (INTENTIUS/plunge#33).
+NO_PUSH_URL="no-push://upstream-is-fetch-only"
+push_url_set=0
 if ! git remote get-url "${UPSTREAM}" > /dev/null 2>&1; then
   git remote add "${UPSTREAM}" "${UPSTREAM_URL}"
-  git remote set-url --push "${UPSTREAM}" "no-push://upstream-is-fetch-only"
 fi
 case "$(git remote get-url "${UPSTREAM}")" in
   https://github.com/pulumi/pulumi|https://github.com/pulumi/pulumi.git|git@github.com:pulumi/pulumi.git) ;;
   *) fail "remote ${UPSTREAM} is $(git remote get-url "${UPSTREAM}"), not pulumi/pulumi" ;;
 esac
+if [ "$(git remote get-url --push --all "${UPSTREAM}")" != "${NO_PUSH_URL}" ]; then
+  # Drop every push URL the remote has (set-url --push alone replaces only the first), then set the one.
+  git config --unset-all "remote.${UPSTREAM}.pushurl" || true
+  git remote set-url --push "${UPSTREAM}" "${NO_PUSH_URL}" || fail "setting ${UPSTREAM}'s push URL"
+  push_url_set=1
+fi
 
 git fetch --no-tags origin "${BASE}" || fail "fetching origin ${BASE}"
 git fetch --no-tags "${UPSTREAM}" master || fail "fetching ${UPSTREAM} master"
@@ -364,6 +373,9 @@ report "# Upstream merge: pulumi/pulumi master ${up_short} into ${BASE}" ""
 report "- ${BASE}: $(git rev-parse --short=10 "${base_sha}")"
 report "- upstream master: ${up_short} ($(git log -1 --format='%cs %s' "${up_sha}"))"
 report "- Pulumi-compatible version on ${BASE}: ${compat_before:-unknown}"
+if [ "${push_url_set}" -eq 1 ]; then
+  report "- set remote ${UPSTREAM}'s push URL to ${NO_PUSH_URL} (it could push before)"
+fi
 
 if git merge-base --is-ancestor "${up_sha}" "${base_sha}"; then
   report "" "Nothing new upstream: ${up_short} is already in ${BASE}."
