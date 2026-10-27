@@ -117,6 +117,7 @@ func NewStackCmd() *cobra.Command {
 	outputflag.VarP(cmd.Flags(), &output)
 
 	cmd.AddCommand(newStackAdoptCmd())
+	cmd.AddCommand(newStackMoveCmd()) // plunge: INTENTIUS/plunge#56
 	cmd.AddCommand(newStackExportCmd())
 	cmd.AddCommand(newStackGraphCmd())
 	cmd.AddCommand(newStackImportCmd(pkgWorkspace.Instance, cmdBackend.DefaultLoginManager, secrets.DefaultProvider))
