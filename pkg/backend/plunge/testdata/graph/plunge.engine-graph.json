@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "meta": {
+    "engineGraph": {
+      "format": 1,
+      "engine": {
+        "name": "plunge",
+        "version": "3.272.0-plunge.1"
+      },
+      "scope": {
+        "kind": "stack",
+        "project": "app",
+        "stack": "dev"
+      },
+      "observedAt": "2026-10-26T12:00:00Z",
+      "markerScheme": {
+        "ownerKey": "plunge-stack",
+        "addressKey": "plunge-urn",
+        "continuationKeys": [
+          "plunge-urn-2",
+          "plunge-urn-3",
+          "plunge-urn-4"
+        ],
+        "encoding": {
+          "tags": "plain",
+          "labels": "digest"
+        }
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "urn:pulumi:dev::app::pulumi:providers:aws::default",
+      "kind": "pulumi:providers:aws",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::app::pulumi:providers:aws::default"
+      },
+      "facts": {
+        "ownership": "bound",
+        "ownedBy": "record",
+        "observedAt": "2026-10-26T12:00:00Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::app::aws:s3/bucketV2:BucketV2::assets",
+      "kind": "aws:s3/bucketV2:BucketV2",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::app::aws:s3/bucketV2:BucketV2::assets"
+      },
+      "physicalId": "assets-4f1c2e9",
+      "facts": {
+        "ownership": "bound",
+        "ownedBy": "marker",
+        "markers": {
+          "owner": "app/dev",
+          "address": "aws:s3/bucketV2:BucketV2::assets",
+          "encoding": "plain",
+          "source": "record"
+        },
+        "cloudIds": [
+          {
+            "kind": "provider-id",
+            "value": "assets-4f1c2e9"
+          },
+          {
+            "kind": "arn",
+            "value": "arn:aws:s3:::assets-4f1c2e9"
+          }
+        ],
+        "recordVersions": {
+          "kept": true,
+          "versions": [
+            {
+              "id": "000003",
+              "writtenAt": "2026-10-26T11:40:00Z",
+              "current": true,
+              "deleted": false
+            }
+          ]
+        },
+        "observedAt": "2026-10-26T12:00:00Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::app::gcp:storage/bucket:Bucket::media",
+      "kind": "gcp:storage/bucket:Bucket",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::app::gcp:storage/bucket:Bucket::media"
+      },
+      "physicalId": "media-9a0b",
+      "facts": {
+        "ownership": "bound",
+        "ownedBy": "marker",
+        "markers": {
+          "owner": "3f2a9c0d41b7e6a1",
+          "address": "9c41e0b7d2a85f3e6b1c0d9a7e4f2b18",
+          "encoding": "digest",
+          "source": "record"
+        },
+        "cloudIds": [
+          {
+            "kind": "provider-id",
+            "value": "media-9a0b"
+          },
+          {
+            "kind": "self-link",
+            "value": "https://www.googleapis.com/storage/v1/b/media-9a0b"
+          }
+        ],
+        "recordVersions": {
+          "kept": false,
+          "versions": []
+        },
+        "observedAt": "2026-10-26T12:00:00Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::app::aws:s3/bucketPolicy:BucketPolicy::assets-policy",
+      "kind": "aws:s3/bucketPolicy:BucketPolicy",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::app::aws:s3/bucketPolicy:BucketPolicy::assets-policy"
+      },
+      "facts": {
+        "ownership": "pending",
+        "ownedBy": "record",
+        "observedAt": "2026-10-26T12:00:00Z"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "urn:pulumi:dev::app::aws:s3/bucketPolicy:BucketPolicy::assets-policy",
+      "to": "urn:pulumi:dev::app::aws:s3/bucketV2:BucketV2::assets",
+      "kind": "ref",
+      "viaAttr": "dependencies",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::app::aws:s3/bucketPolicy:BucketPolicy::assets-policy",
+      "to": "urn:pulumi:dev::app::aws:s3/bucketV2:BucketV2::assets",
+      "kind": "ref",
+      "viaAttr": "bucket",
+      "grain": "property"
+    },
+    {
+      "from": "urn:pulumi:dev::app::aws:s3/bucketV2:BucketV2::assets",
+      "to": "urn:pulumi:dev::app::pulumi:providers:aws::default",
+      "kind": "ref",
+      "viaAttr": "provider",
+      "grain": "instance"
+    }
+  ],
+  "groups": {}
+}

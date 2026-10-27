@@ -64,6 +64,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/drift"
 	cmdEnv "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/env"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/events"
+	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/graph"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/insights"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/install"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/logs"
@@ -496,6 +497,7 @@ func NewPulumiCmd() (*cobra.Command, func()) {
 				operations.NewRefreshCmd(),
 				state.NewStateCmd(),
 				drift.NewDriftCmd(pkgWorkspace.Instance, cmdBackend.DefaultLoginManager),
+				graph.NewGraphCmd(pkgWorkspace.Instance, cmdBackend.DefaultLoginManager),
 				install.NewInstallCmd(pkgWorkspace.Instance),
 			},
 		},
