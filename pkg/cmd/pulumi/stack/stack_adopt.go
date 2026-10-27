@@ -21,15 +21,19 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"sort"
 
 	"github.com/spf13/cobra"
 
+	"github.com/intentius/choudoufu/pkg/adoption"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge"
 	cmdBackend "github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/backend"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/constrictor"
 	"github.com/pulumi/pulumi/pkg/v3/cmd/pulumi/ui"
+	"github.com/pulumi/pulumi/pkg/v3/resource/plugin"
 	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
@@ -47,6 +51,8 @@ func newStackAdoptCmd() *cobra.Command {
 	var file string
 	var yes bool
 	var jsonOut bool
+	var adoptFile string
+	var indexStore string
 
 	cmd := &cobra.Command{
 		Use:   "adopt",
@@ -69,7 +75,18 @@ func newStackAdoptCmd() *cobra.Command {
 			"\n" +
 			"--json prints the classification as one JSON document (docs/plunge/ADOPT.md) and never prompts. Alone it\n" +
 			"writes nothing; with --yes it adopts and prints the result. A refused adoption prints the document with\n" +
-			"its refusals and exits non-zero.",
+			"its refusals and exits non-zero.\n" +
+			"\n" +
+			"--adopt FILE adopts indexed cloud objects instead: an `adopt: v1` adoption file (chant's schema) names\n" +
+			"an index version in the index store (--index-store, by default behold's: the parent of\n" +
+			"$BEHOLD_INDEX_DIR, else $XDG_DATA_HOME/behold or ~/.local/share/behold) and the nodes to adopt, each\n" +
+			"with its resource name (`as`) and, where the inventory type does not join to one, its Pulumi type.\n" +
+			"Each object is read again through the stack's own provider, configured from the stack's\n" +
+			"configuration, and that read decides: an object carrying another stack's marker, a type whose tags\n" +
+			"can only be set at create, a type that cannot be imported and an object the read does not find are\n" +
+			"refused, before anything is written. Run it in the stack's project directory. Adoption writes the\n" +
+			"records and no marker; the next `plunge up` writes each object's markers as a tags-only update,\n" +
+			"which the adoption lists and up's preview and confirmation show.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			ws := pkgWorkspace.Instance
@@ -87,7 +104,17 @@ func newStackAdoptCmd() *cobra.Command {
 			}
 
 			adoptOpts := plunge.AdoptOptions{SecretsProvider: secrets.DefaultProvider}
-			if file != "" {
+			if adoptFile != "" {
+				if file != "" {
+					return errors.New("--adopt and --file each name what to adopt; pass one")
+				}
+				ix, closeIndex, err := indexAdoptOptions(ctx, ws, s, adoptFile, indexStore)
+				if err != nil {
+					return err
+				}
+				defer closeIndex()
+				adoptOpts.Index = ix
+			} else if file != "" {
 				d, err := readDeploymentFile(file)
 				if err != nil {
 					return err
@@ -110,9 +137,13 @@ func newStackAdoptCmd() *cobra.Command {
 				return err
 			}
 			printAdoption(cmd.OutOrStdout(), s.Ref().String(), unconfirmed.Result)
-			if err := ui.ConfirmDeletion(yes, cmdutil.Interactive(),
-				fmt.Sprintf("This writes plunge records for %d resources of %s.", len(unconfirmed.Result.Resources),
-					s.Ref()),
+			prompt := fmt.Sprintf("This writes plunge records for %d resources of %s.",
+				len(unconfirmed.Result.Resources), s.Ref())
+			if adoptOpts.Index != nil {
+				prompt += " Nothing is written to the cloud now: the next `plunge up` writes the markers listed " +
+					"above, tags only, after its own preview and confirmation."
+			}
+			if err := ui.ConfirmDeletion(yes, cmdutil.Interactive(), prompt,
 				s.Ref().String(), cmd.OutOrStdout(), opts); err != nil {
 				return err
 			}
@@ -137,6 +168,11 @@ func newStackAdoptCmd() *cobra.Command {
 		&yes, "yes", "y", false, "Skip the confirmation prompt and adopt")
 	cmd.PersistentFlags().BoolVarP(
 		&jsonOut, "json", "j", false, "Print the classification as JSON; without --yes nothing is written")
+	cmd.PersistentFlags().StringVar(
+		&adoptFile, "adopt", "", "Adopt the indexed objects this adoption file (adopt: v1) selects")
+	cmd.PersistentFlags().StringVar(
+		&indexStore, "index-store", "", "The index store holding the adoption file's index version (the directory "+
+			"with index/ in it); defaults to behold's per-user store")
 	return cmd
 }
 
@@ -159,6 +195,87 @@ func runStackAdoptJSON(
 		return result.BailError(err)
 	}
 	return nil
+}
+
+// defaultIndexStore is behold's per-user index store, the directory holding index/ (behold
+// src/graph-db/sources.ts userIndexDir): the parent of $BEHOLD_INDEX_DIR, else $XDG_DATA_HOME/behold, else
+// ~/.local/share/behold.
+func defaultIndexStore() (string, error) {
+	if dir := os.Getenv("BEHOLD_INDEX_DIR"); dir != "" {
+		return filepath.Dir(filepath.Clean(dir)), nil
+	}
+	if dir := os.Getenv("XDG_DATA_HOME"); dir != "" {
+		return filepath.Join(dir, "behold"), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("finding behold's index store: %w (pass --index-store)", err)
+	}
+	return filepath.Join(home, ".local", "share", "behold"), nil
+}
+
+// indexAdoptOptions reads the adoption file against its index version and sets up the stack's providers and
+// secrets manager for `plunge stack adopt --adopt` (INTENTIUS/plunge#52). The providers are configured from the
+// project's stack configuration, as `plunge up` configures the default providers.
+func indexAdoptOptions(
+	ctx context.Context, ws pkgWorkspace.Context, s backend.Stack, adoptFile, indexStore string,
+) (*plunge.IndexAdoptOptions, func(), error) {
+	if indexStore == "" {
+		var err error
+		if indexStore, err = defaultIndexStore(); err != nil {
+			return nil, nil, err
+		}
+	}
+	a, err := adoption.Open(adoptFile, indexStore)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading the adoption file: %w", err)
+	}
+
+	sink := cmdutil.Diag()
+	pwd, err := os.Getwd()
+	if err != nil {
+		return nil, nil, err
+	}
+	project, _, err := ws.ReadProject(pwd)
+	if err != nil {
+		return nil, nil, fmt.Errorf("--adopt reads the stack's provider configuration from its project: %w", err)
+	}
+	ps, err := LoadProjectStack(ctx, sink, project, s, "")
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading the configuration of %s: %w", s.Ref(), err)
+	}
+	ssml := NewStackSecretsManagerLoaderFromEnv()
+	sm, state, err := ssml.GetSecretsManager(ctx, s, ps)
+	if err != nil {
+		return nil, nil, fmt.Errorf("opening the secrets manager of %s: %w", s.Ref(), err)
+	}
+	if state != SecretsManagerUnchanged {
+		if err := SaveProjectStack(ctx, s, ps, ""); err != nil {
+			return nil, nil, fmt.Errorf("saving the configuration of %s: %w", s.Ref(), err)
+		}
+	}
+
+	host, err := backend.DefaultHostFactory(s.Backend().GetReadOnlyCloudRegistry())(ctx, sink, sink, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("starting the plugin host: %w", err)
+	}
+	pctx, err := plugin.NewContextWithHost(ctx, sink, sink, host, pwd, pwd, nil)
+	if err != nil {
+		_ = host.Close()
+		return nil, nil, err
+	}
+	provs, err := plunge.NewStackProviders(pctx, s.Ref(), ps.Config, sm.Decrypter())
+	if err != nil {
+		_ = pctx.Close()
+		_ = host.Close()
+		return nil, nil, err
+	}
+	closeAll := func() {
+		_ = provs.Close()
+		_ = pctx.Close()
+		_ = host.Close()
+	}
+	return &plunge.IndexAdoptOptions{Adoption: a, File: adoptFile, Providers: provs, SecretsManager: sm}, closeAll, nil
 }
 
 func readDeploymentFile(path string) (*apitype.UntypedDeployment, error) {
@@ -184,13 +301,40 @@ func printAdoption(w io.Writer, stack string, res *plunge.AdoptResult) {
 		fmt.Fprintf(w, "Adopted %s: %d resources recorded (checkpoint digest %s).\n", stack, len(res.Resources),
 			res.Digest)
 	default:
-		fmt.Fprintf(w, "Adopting %s (checkpoint digest %s):\n", stack, res.Digest)
+		fmt.Fprintf(w, "Adopting %s (from %s, digest %s):\n", stack, res.Source, res.Digest)
 	}
 	for _, r := range res.Resources {
 		line := fmt.Sprintf("  %s  %s  ownership: %s", r.URN, r.ID, r.Ownership)
+		if r.Node != "" {
+			line += "  node: " + r.Node
+		}
 		if r.Reason != "" {
 			line += " (" + r.Reason + ")"
 		}
 		fmt.Fprintln(w, line)
+		switch {
+		case r.MarkerWrite != nil:
+			fmt.Fprintf(w, "    marker write at the next `plunge up`, tags only: %s += %s\n", r.MarkerWrite.Property,
+				formatTags(r.MarkerWrite.Tags))
+		case r.Node != "" && r.Marked:
+			fmt.Fprintln(w, "    already carries its markers; no marker write")
+		}
 	}
+}
+
+// formatTags is a marker set as key=value pairs, sorted by key.
+func formatTags(tags map[string]string) string {
+	keys := make([]string, 0, len(tags))
+	for k := range tags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := ""
+	for i, k := range keys {
+		if i > 0 {
+			out += ", "
+		}
+		out += k + "=" + tags[k]
+	}
+	return "{" + out + "}"
 }

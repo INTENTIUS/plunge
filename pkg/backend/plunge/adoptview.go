@@ -56,8 +56,10 @@ type AdoptView struct {
 	Stack      string              `json:"stack"`
 	Status     AdoptStatus         `json:"status"`
 	Checkpoint AdoptViewCheckpoint `json:"checkpoint"`
-	Resources  []AdoptViewResource `json:"resources"`
-	Refusals   []AdoptViewRefusal  `json:"refusals"`
+	// Index is the index version an adoption from an adoption file read (--adopt); absent for a checkpoint.
+	Index     *AdoptViewIndex     `json:"index,omitempty"`
+	Resources []AdoptViewResource `json:"resources"`
+	Refusals  []AdoptViewRefusal  `json:"refusals"`
 }
 
 // AdoptViewCheckpoint is the checkpoint the adoption read.
@@ -66,7 +68,24 @@ type AdoptViewCheckpoint struct {
 	Digest string `json:"digest,omitempty"`
 }
 
-// AdoptViewResource is one resource of the checkpoint.
+// AdoptViewIndex is the adoption file and the index version it names.
+type AdoptViewIndex struct {
+	File     string `json:"file,omitempty"`
+	ScopeKey string `json:"scopeKey"`
+	Version  string `json:"version"`
+	Digest   string `json:"digest"`
+}
+
+// AdoptViewMarkerWrite is the one write the first `plunge up` makes to an object adopted from an index: these
+// markers set in Property. TagsOnly is always true; it says, for a reader of the document, that the write changes
+// the tags (or labels) and nothing else (choudoufu#2284 Q3).
+type AdoptViewMarkerWrite struct {
+	Property string            `json:"property"`
+	Tags     map[string]string `json:"tags"`
+	TagsOnly bool              `json:"tagsOnly"`
+}
+
+// AdoptViewResource is one resource of the checkpoint, or one object of an index adoption.
 type AdoptViewResource struct {
 	URN  resource.URN `json:"urn"`
 	Type string       `json:"type"`
@@ -78,6 +97,12 @@ type AdoptViewResource struct {
 	Marked bool `json:"marked"`
 	// Reason says why the fate is record or pending.
 	Reason string `json:"reason,omitempty"`
+	// Node is the index node an index adoption adopts as this resource, and ImportID the ID it is imported by.
+	Node     string      `json:"node,omitempty"`
+	ImportID resource.ID `json:"importId,omitempty"`
+	// MarkerWrite is the marker write the first `plunge up` makes; absent when the object already carries its
+	// markers, for a record-owned type, and for a checkpoint adoption.
+	MarkerWrite *AdoptViewMarkerWrite `json:"markerWrite,omitempty"`
 	// Refusals are the refusals that name this resource.
 	Refusals []AdoptViewRefusal `json:"refusals,omitempty"`
 }
@@ -119,9 +144,17 @@ func NewAdoptView(stack string, res *AdoptResult, err error) (*AdoptView, error)
 		return v, nil
 	}
 	v.Checkpoint = AdoptViewCheckpoint{Source: res.Source, Digest: res.Digest}
+	if res.Index != nil {
+		v.Index = &AdoptViewIndex{File: res.Index.File, ScopeKey: res.Index.ScopeKey, Version: res.Index.Version,
+			Digest: res.Index.Digest}
+	}
 	for _, r := range res.Resources {
 		e := AdoptViewResource{URN: r.URN, Type: string(r.Type), ID: r.ID, Fate: AdoptFate(r.Ownership),
-			Marked: r.Marked, Reason: r.Reason}
+			Marked: r.Marked, Reason: r.Reason, Node: r.Node, ImportID: r.ImportID}
+		if r.MarkerWrite != nil && !res.AlreadyAdopted {
+			e.MarkerWrite = &AdoptViewMarkerWrite{Property: r.MarkerWrite.Property, Tags: r.MarkerWrite.Tags,
+				TagsOnly: true}
+		}
 		if res.AlreadyAdopted {
 			e.Fate, e.AdoptedAs = AdoptFateAlreadyAdopted, r.Ownership
 		}

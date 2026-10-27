@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,4 +80,39 @@ func TestStackAdoptJSON(t *testing.T) {
 	out.Reset()
 	require.NoError(t, runStackAdoptJSON(ctx, &out, yes, adoptTestStack(), plunge.AdoptOptions{}, true))
 	assert.True(t, yes.calls[0].Confirmed)
+}
+
+// --adopt's index store defaults to behold's per-user store: the parent of BEHOLD_INDEX_DIR, else XDG_DATA_HOME's
+// behold directory (INTENTIUS/plunge#52). Not parallel: it sets the environment.
+func TestDefaultIndexStore(t *testing.T) {
+	t.Setenv("BEHOLD_INDEX_DIR", filepath.Join("/srv", "behold", "index"))
+	dir, err := defaultIndexStore()
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join("/srv", "behold"), dir)
+
+	t.Setenv("BEHOLD_INDEX_DIR", "")
+	t.Setenv("XDG_DATA_HOME", filepath.Join("/data"))
+	dir, err = defaultIndexStore()
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join("/data", "behold"), dir)
+}
+
+// The text view lists each marker write of an index adoption as tags only, and a marked object as needing none.
+func TestPrintIndexAdoptionListsMarkerWrites(t *testing.T) {
+	t.Parallel()
+
+	var out bytes.Buffer
+	printAdoption(&out, "organization/test/dev", &plunge.AdoptResult{
+		Source: "the adoption file a.json (index cloud/aws/1/x/v.json)", Digest: "abc",
+		Resources: []plunge.AdoptedResource{
+			{URN: "urn:pulumi:dev::test::aws:s3/bucket:Bucket::logs", ID: "logs", Ownership: plunge.OwnershipMarker,
+				Node: "aws/1/us-east-1/AWS::S3::Bucket/logs", MarkerWrite: &plunge.MarkerWrite{
+					Property: "tags", Tags: map[string]string{"plunge-urn": "u", "plunge-stack": "test/dev"},
+				}},
+			{URN: "urn:pulumi:dev::test::aws:s3/bucket:Bucket::old", ID: "old", Ownership: plunge.OwnershipMarker,
+				Node: "aws/1/us-east-1/AWS::S3::Bucket/old", Marked: true},
+		},
+	})
+	assert.Contains(t, out.String(), "tags only: tags += {plunge-stack=test/dev, plunge-urn=u}")
+	assert.Contains(t, out.String(), "already carries its markers; no marker write")
 }

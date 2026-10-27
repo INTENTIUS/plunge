@@ -38,7 +38,7 @@ adoption did or would do as one JSON document on stdout, and never prompts.
 
 | Field | Meaning |
 |---|---|
-| `adopt` | The document version. A change to the shape is a new version. |
+| `adopt` | The document version. Removing or reinterpreting a field is a new version; the optional fields `--adopt` adds (below) are not. |
 | `stack` | The stack reference. |
 | `status` | `would-adopt` (classified, nothing written), `adopted` (this call wrote the records), `already-adopted` (the stack's adoption record names this checkpoint; nothing written), or `refused` (nothing written; the command exits 1). |
 | `checkpoint.source` | Where the checkpoint came from: the DIY checkpoint at the same root, or `the file <path>` for `--file`. For `already-adopted`, the source the adoption record names. Absent when the checkpoint was not read. |
@@ -66,6 +66,55 @@ adoption did or would do as one JSON document on stdout, and never prompts.
 | `adopted-from-another-checkpoint` | The stack was adopted from a checkpoint with a different digest. | absent |
 | `foreign-records` | The stack already has plunge records that are not this checkpoint's. | absent |
 | `empty-checkpoint` | The checkpoint holds no resources. | absent |
+
+Refused by `--adopt` only (each names the resource, except `stock-checkpoint`):
+
+| Code | When |
+|---|---|
+| `engine-type` | The selection names no Pulumi type and the node's inventory type joins to none or several, or the type it names is not one the node's CloudFormation type joins to. |
+| `address` | The selection's `as` is not a resource name, or not a top-level URN of this stack. |
+| `not-importable` | choudoufu's pkg/identity classes the type as not importable. |
+| `import-id` | The node's native ID cannot be turned into the provider's import ID (pkg/identity's Cloud Control translation for pulumi-aws, GoogleAssetImportID for Google). |
+| `foreign-marker` | The live object carries another stack's marker, or this stack's marker for another resource. |
+| `live-read-failed` | The stack's provider could not be loaded, configured or asked, or a read plunge makes for the import ID (Cloud Control, STS) has no endpoint under the stack's custom endpoints. |
+| `not-found` | The stack's provider found no object by the import ID. |
+| `stock-checkpoint` | The stack's DIY checkpoint holds resources; adopt it without `--adopt`. |
+
+`create-only-tags`, `marker-hiding-provider-config`, `unrepresentable-markers`,
+`foreign-records` and `adopted-from-another-checkpoint` (another adoption
+file, or a checkpoint) apply to `--adopt` too.
+
+## `--adopt FILE`
+
+`plunge stack adopt --adopt FILE [--index-store DIR]` adopts indexed cloud
+objects (INTENTIUS/plunge#52; design and ruling on choudoufu#2284). FILE is an
+`adopt: v1` adoption file (chant core's schema, read through choudoufu
+pkg/adoption), which names an index version in the index store (by default
+behold's per-user store) and the nodes to adopt. For plunge, `as` is the
+resource's name; the resource is adopted top-level, under the root stack.
+`type` is the Pulumi type token, and may be left out for an aws node
+(aws-native's token for its CloudFormation type) and a Kubernetes node.
+
+Each object is read again through the stack's own default provider,
+configured from the stack's configuration, and that read decides. Adoption
+writes the resource records, the provider's and the root stack's, and the
+adoption record. It writes nothing to the cloud: the next `plunge up` writes
+each object's markers as an in-place, tags-only update, after its own preview
+and confirmation. The gate is `--yes` (or the prompt) here plus up's
+confirmation there.
+
+The document carries, in addition:
+
+| Field | Meaning |
+|---|---|
+| `index.file`, `.scopeKey`, `.version`, `.digest` | The adoption file and the index version it names. `checkpoint.digest` is the adoption file's digest. |
+| `resources[].node` | The index node adopted. |
+| `resources[].importId` | The ID the object is imported by. |
+| `resources[].markerWrite` | `{property, tags, tagsOnly: true}`: the markers the next `plunge up` sets, and nothing else. Absent for an object already carrying its markers and for a record-owned type. |
+
+The run against an emulator is the maintainer's:
+`plunge stack adopt --adopt adopt.json --index-store <dir> --json` on a stack
+whose `aws:endpoints` name the pinned floci, then `plunge up`.
 
 A consumer should treat an unknown code as a refusal it cannot explain, and an
 unknown `adopt` version as a document it cannot read.

@@ -135,24 +135,36 @@ func (v *importVetter) VetImport(ctx context.Context, req deploy.ImportVetReques
 	}
 
 	tags := tagsOf(resource.ToResourcePropertyMap(*resp.Outputs), info)
-	if markers.Carries(tags, want) {
+	marker, detail, _ := liveOwnerRefusal(tags, want)
+	if detail == "" {
+		// Unmarked, or already this resource's: the update after the import adds this stack's markers in place.
 		return nil
 	}
-	ours := want[markers.TagStack]
+	refusal.Marker, refusal.Detail = marker, detail
+	if marker != want[markers.TagStack] {
+		refusal.Detail += ". Move it out of that stack first, or drop the `import:`"
+	}
+	return refusal
+}
+
+// liveOwnerRefusal reads a live object's tags against the markers want names. ours reports that the object
+// already carries them. A non-empty detail refuses it: another stack's marker (marker is that stack, as written),
+// or this stack's marker for another resource. An unmarked object is neither.
+func liveOwnerRefusal(tags, want map[string]string) (marker, detail string, ours bool) {
+	if markers.Carries(tags, want) {
+		return "", "", true
+	}
+	mine := want[markers.TagStack]
 	stack, urn, has := markers.Owner(tags)
 	switch {
 	case !has:
-		// Unmarked: the update after the import adds this stack's markers in place.
-		return nil
-	case stack != ours:
-		refusal.Marker = stack
-		refusal.Detail = fmt.Sprintf("its live object's %s marker names the stack %q, not this stack's %q; "+
-			"importing it would write this stack's markers over that stack's, and an object is one stack's. Move it "+
-			"out of that stack first, or drop the `import:`", markers.TagStack, stack, ours)
+		return "", "", false
+	case stack != mine:
+		return stack, fmt.Sprintf("its live object's %s marker names the stack %q, not this stack's %q; "+
+			"importing it would write this stack's markers over that stack's, and an object is one stack's",
+			markers.TagStack, stack, mine), false
 	default:
-		refusal.Marker = stack
-		refusal.Detail = fmt.Sprintf("its live object's markers name this stack but another resource (%s %q), "+
-			"which still claims it", markers.TagURN, urn)
+		return stack, fmt.Sprintf("its live object's markers name this stack but another resource (%s %q), "+
+			"which still claims it", markers.TagURN, urn), false
 	}
-	return refusal
 }
