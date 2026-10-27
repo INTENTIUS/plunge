@@ -1,26 +1,28 @@
 ---
 title: Resource-level concurrency
-description: Pulumi locks the stack. plunge takes no lock; record writes are conditional and a clash is refused by name.
+description: Each record write in plunge is conditional, so runs on different resources of one stack proceed together and a clash is refused by name.
 prompt: |
   Read https://intentius.io/plunge/how-it-works/concurrency/ and say how our CI serializes updates to one stack. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-Stock Pulumi locks the stack for every update, so updates to different
-resources wait for each other. plunge takes no stack lock for update, preview,
-refresh, import or destroy; each record write is one atomic conditional
-request ([Records](../records/)).
+Pulumi's stack lock keeps each update to one stack in order. plunge keeps one
+record per resource, so updates to different resources can run together. It
+takes no stack lock for update, preview, refresh, import or destroy; each
+record write is one atomic conditional request ([Records](../records/)).
 
-## Two updates, one stack
+## Two updates on one plunge stack
 
-| | Stock DIY backend | plunge |
-|---|---|---|
-| Run A changes `db`, run B changes `dns` | B waits for A's lock or fails | Both land; neither writes the other's records |
-| Both change `db`'s record | B waits | The first write wins; the second is refused (`RecordConflictError`, naming the URN and both versions) and writes nothing over it |
-| An update racing a destroy of one resource | serialized by the lock | The loser's conditional write finds another version, or no record, and is refused by name |
-| Two first runs create the default provider | serialized | The provider's ID is a v5 UUID of its URN and configuration, so both write the same record |
-| A run changes a resource that depends on one another run has in flight | serialized | Refused before the provider is called (`InFlightDependencyError`, naming both resources) |
-| A run killed part way | leaves the stack locked until the lock is removed | leaves pending operations on the resources it touched ([Pending operations](../../use/pending/)) |
+The stock DIY backend orders these runs with its stack lock. On plunge:
+
+| Runs | Outcome |
+|---|---|
+| Run A changes `db`, run B changes `dns` | Both land; neither writes the other's records |
+| Both change `db`'s record | The first write wins; the second is refused (`RecordConflictError`, naming the URN and both versions) and writes nothing over it |
+| An update racing a destroy of one resource | The loser's conditional write finds another version, or no record, and is refused by name |
+| Two first runs create the default provider | The provider's ID is a v5 UUID of its URN and configuration, so both write the same record |
+| A run changes a resource that depends on one another run has in flight | Refused before the provider is called (`InFlightDependencyError`, naming both resources) |
+| A run killed part way | Leaves pending operations on the resources it touched ([Pending operations](../../use/pending/)) |
 
 Rows one, four and five are unit-tested
 (`TestTwoConcurrentUpdatesOnDisjointResourcesBothLand`,

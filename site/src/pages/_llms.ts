@@ -28,7 +28,7 @@ export async function pages() {
 
 export const PREAMBLE = `# plunge
 
-> Pulumi with resource level concurrency and no stack lock
+> Your Pulumi programs, with one record per resource and parallel updates
 
 Status: v0.1.0, released 2026-10-27, early and not for production. Lock-free concurrent updates are unit-tested and have not run on a real store yet (https://github.com/INTENTIUS/plunge/issues/6). Every recorded run so far was on local emulators, and none on a real cloud.
 

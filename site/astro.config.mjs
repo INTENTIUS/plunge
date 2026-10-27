@@ -77,7 +77,7 @@ export default defineConfig({
 				ThemeProvider: './src/components/ThemeProvider.astro',
 				ThemeSelect: './src/components/ThemeSelect.astro',
 			},
-			description: 'Pulumi with resource level concurrency and no stack lock',
+			description: 'Your Pulumi programs, with one record per resource and parallel updates',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/INTENTIUS/plunge' }],
 			editLink: {
 				baseUrl: 'https://github.com/INTENTIUS/plunge/edit/main/site/',
@@ -92,7 +92,7 @@ export default defineConfig({
 					label: 'Start here',
 					items: [
 						{ label: 'Try it', link: '/for/new/' },
-						{ label: 'Migrate a Pulumi stack', link: '/for/pulumi-stack/' },
+						{ label: 'Adopt a Pulumi stack', link: '/for/pulumi-stack/' },
 						{ label: 'Evaluate', link: '/for/evaluate/' },
 					],
 				},
@@ -103,7 +103,7 @@ export default defineConfig({
 						{ label: 'Start a new stack', slug: 'use/start' },
 						{ label: 'Tutorial', slug: 'use/tutorial' },
 						{ label: 'Set up by hand', slug: 'use/setup' },
-						{ label: 'Migrate a stock stack', slug: 'use/migrate' },
+						{ label: 'Adopt an existing stack', slug: 'use/migrate' },
 						{ label: 'Pending operations and crashes', slug: 'use/pending' },
 						{ label: 'Rename a resource', slug: 'use/rename' },
 						{ label: 'Remove a resource', slug: 'use/remove' },
