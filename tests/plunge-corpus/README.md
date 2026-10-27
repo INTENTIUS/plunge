@@ -100,6 +100,14 @@ instead of `corpus:*`.
 pubsub, iambeta, resource manager, service usage and cloud billing endpoints
 at `http://localhost:4588`, with the paths choudoufu's
 `live/e2e/lib/gcp.sh` uses for hashicorp/google against the same emulator.
+It also turns off pulumi-gcp's region validation: the provider looks up the
+project's regions when it configures, and that lookup ignores the custom
+endpoints, so without the switch it went to compute.googleapis.com and came
+back 401 (INTENTIUS/plunge#42). `gcp:skipRegionValidation: true` in the
+stack file covers the default provider. The explicit `europe` provider can't
+take it as a property, so it reads `PULUMI_GCP_SKIP_REGION_VALIDATION=true`
+from the environment, which `scripts/plunge-baseline.sh` exports; export it
+yourself for any other run of `gcp-yaml` (the by-hand steps below, an `up`).
 
 `azure-yaml` sets `azure:metadataHost` to `localhost:4577`. With a metadata
 host set, azurerm reads every endpoint (ARM, the Entra login endpoint, the
@@ -314,6 +322,16 @@ Re-record only the programs the change touches. A plunge-only change
 needs no re-record: run `scripts/plunge-baseline.sh` and compare its
 verdicts with `baseline-verdicts.txt`.
 
+`plunge-baseline-record.sh` records every program in the run's
+`verdicts.txt`, so name only the touched programs to `plunge-baseline.sh`
+for a recording run. An untouched program never reproduces its committed
+`preview.json` byte for byte: the autonamed suffixes are random, and the
+order of the steps and of a property's dependency URNs follows the order the
+language host registered them in, which varies between runs. What does
+reproduce is its `plunge-compare.txt`, its `VERDICT` line, and the preview
+with steps sorted by URN, dependency lists sorted and autonamed suffixes
+masked (2026-10-27, all six untouched programs, INTENTIUS/plunge#42).
+
 Baseline files are never hand-edited. They are copied from one run by
 `scripts/plunge-baseline-record.sh`, which refuses a run the safe-run
 check didn't pass, and a program whose verdict is `ERROR` or
@@ -383,6 +401,7 @@ preview; what they write is not committed.
    export PULUMI_SKIP_UPDATE_CHECK=true
    unset AWS_PROFILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
    unset GOOGLE_APPLICATION_CREDENTIALS GOOGLE_OAUTH_ACCESS_TOKEN
+   export PULUMI_GCP_SKIP_REGION_VALIDATION=true   # gcp-yaml's europe provider (see above)
    export AWS_ENDPOINT_URL=http://localhost:4566   # a second guard behind aws:endpoints
    ```
 
