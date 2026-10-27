@@ -21,14 +21,19 @@
 #      A conflict in a go.mod or go.sum is resolved too (INTENTIUS/plunge#26): the script takes upstream's
 #      file, so the merge picks up upstream's dependency bumps, re-applies what plunge adds to that module
 #      (GO_MOD_FORK below, a fork-owned list; versions come from the fork's go.mod on $BASE), and runs
-#      `go mod tidy` in the module. If tidy fails, the merge stops with CONFLICT and gomod.log says why.
+#      `go mod tidy` in the module. Then it tidies every other module in the repo too (INTENTIUS/plunge#30):
+#      a module that merged cleanly but replaces ../pkg or ../sdk (sdk/pcl, a language host, a test
+#      program) can be left untidy by the resolved go.mod. Modules go in the order sdk, pkg, sdk/pcl, the
+#      language hosts, then the rest; scripts/tidy.sh's EXCLUDE list is skipped, as `make tidy` skips it.
+#      If any tidy fails, the merge stops with CONFLICT and gomod.log says why.
 #      Any other conflict: record the conflicted files, abort the merge, and stop with CONFLICT. A human
 #      resolves it (the report says how to reproduce it).
 #   4. Move any workflow upstream added to .github/workflows into .github/upstream-workflows/, in its own
 #      commit, so nothing upstream schedules or publishes becomes live (the plunge-upstream-guard check
 #      would fail the branch otherwise).
 #   5. Rebuild: go build ./... in sdk (which builds plunge_commands.go against upstream's regenerated
-#      package) and pkg, then bin/plunge with plunge's version stamp. A failure stops with BUILD-FAILED.
+#      package), pkg, sdk/pcl and the three language hosts (INTENTIUS/plunge#30), then bin/plunge with
+#      plunge's version stamp. A failure stops with BUILD-FAILED.
 #   6. With --push, push the branch to origin. Only upstream-merge/* branches are ever pushed; never main
 #      or $BASE. Merging the branch into $BASE is a human's call.
 #
@@ -36,6 +41,7 @@
 #   BASE      integration branch to branch from   (default: main)
 #   UPSTREAM  upstream remote name                (default: upstream)
 #   OUT       report directory                    (default: plunge-upstream-merge-out)
+#   HOST_GOTOOLCHAIN  GOTOOLCHAIN for the language-host modules (default: go1.27.1)
 #
 # Output in $OUT:
 #   report.md     the report the workflow posts as an issue
@@ -60,6 +66,7 @@ BASE="${BASE:-main}"
 UPSTREAM="${UPSTREAM:-upstream}"
 UPSTREAM_URL="https://github.com/pulumi/pulumi.git"
 OUT="${OUT:-plunge-upstream-merge-out}"
+HOST_GOTOOLCHAIN="${HOST_GOTOOLCHAIN:-go1.27.1}"
 PUSH=0
 
 for arg in "$@"; do
@@ -127,6 +134,76 @@ take_generated() {
     fi
   done
   git diff --cached --name-only HEAD -- "${GENERATED_DIRS[@]}"
+}
+
+# The language hosts' modules, which build and tidy with HOST_GOTOOLCHAIN (INTENTIUS/plunge#22, #30).
+LANGUAGE_HOSTS=(
+  sdk/go/pulumi-language-go
+  sdk/nodejs/cmd/pulumi-language-nodejs
+  sdk/python/cmd/pulumi-language-python
+)
+
+is_language_host() {
+  local h
+  for h in "${LANGUAGE_HOSTS[@]}"; do
+    [ "$1" = "${h}" ] && return 0
+  done
+  return 1
+}
+
+# in_module <dir> <command...>: run a command in a module's directory, with HOST_GOTOOLCHAIN in a
+# language host.
+in_module() {
+  local dir="$1"
+  shift
+  if is_language_host "${dir}"; then
+    (cd "${dir}" && GOTOOLCHAIN="${HOST_GOTOOLCHAIN}" "$@")
+  else
+    (cd "${dir}" && "$@")
+  fi
+}
+
+# order_modules: read module dirs on stdin, print them sdk, pkg, sdk/pcl, the language hosts, then the
+# rest sorted. The others read sdk's and pkg's go.mod through a replace, so those go first.
+order_modules() {
+  local dir rank
+  sort -u | while IFS= read -r dir; do
+    case "${dir}" in
+      sdk) rank=0 ;;
+      pkg) rank=1 ;;
+      sdk/pcl) rank=2 ;;
+      *) if is_language_host "${dir}"; then rank=3; else rank=4; fi ;;
+    esac
+    echo "${rank} ${dir}"
+  done | sort -k1,1n -k2 | cut -d' ' -f2-
+}
+
+# all_modules: every tracked module dir, less the go.mod files scripts/tidy.sh excludes (their
+# dependencies are generated and gitignored), in order_modules' order.
+all_modules() {
+  local exclude
+  exclude="$(sed -n 's/^EXCLUDE="\(.*\)"$/\1/p' scripts/tidy.sh 2> /dev/null || true)"
+  git ls-files -- 'go.mod' '*/go.mod' | {
+    if [ -n "${exclude}" ]; then
+      # shellcheck disable=SC2086 # EXCLUDE is a list of `-e <pattern>` arguments.
+      grep -v ${exclude} || true
+    else
+      cat
+    fi
+  } | while IFS= read -r f; do dirname "${f}"; done | order_modules
+}
+
+# tidy_module <dir>: scripts/tidy.sh's flags; tidy.sh --check rejects toolchain lines, so drop any tidy
+# adds. Stages the module's go.mod and go.sum.
+tidy_module() {
+  local dir="$1"
+  echo "== ${dir}: go mod tidy"
+  in_module "${dir}" go mod tidy -compat=1.23 || return 1
+  in_module "${dir}" go mod edit -toolchain=none || return 1
+  git add -- "${dir}/go.mod" || return 1
+  if [ -f "${dir}/go.sum" ]; then
+    git add -- "${dir}/go.sum" || return 1
+  fi
 }
 
 # What plunge adds to upstream's go.mod files, by module (INTENTIUS/plunge#26).
@@ -229,16 +306,15 @@ fix_go_mod() {
         ;;
     esac
   done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "${GO_MOD_FORK}")
-  echo "== ${dir}: go mod tidy"
-  # scripts/tidy.sh's flags; tidy.sh --check rejects toolchain lines, so drop any tidy adds.
-  (cd "${dir}" && go mod tidy -compat=1.23 && go mod edit -toolchain=none)
+  tidy_module "${dir}"
 }
 
 # resolve_go_mods <rev> <conflicts file>: take <rev>'s copy of each conflicted go.mod and go.sum, then fix
-# and tidy each module. sdk and pkg go first, because the other modules read their go.mod through a
-# replace. Fails if a module can't be fixed or tidied.
+# and tidy each conflicted module, then tidy every other module (INTENTIUS/plunge#30), all in
+# order_modules' order. Fails if a module can't be fixed or tidied.
 resolve_go_mods() {
   local rev="$1" f dir base_mod
+  local -a done_dirs=()
   while IFS= read -r f; do
     if is_go_mod "${f}"; then
       git checkout "${rev}" -- "${f}" || return 1
@@ -248,14 +324,17 @@ resolve_go_mods() {
     base_mod="${OUT}/base-go.mod"
     git show "${base_sha}:${dir}/go.mod" > "${base_mod}" 2> /dev/null || : > "${base_mod}"
     fix_go_mod "${dir}" "${base_mod}" || return 1
-    git add -- "${dir}/go.mod" || return 1
-    if [ -f "${dir}/go.sum" ]; then
-      git add -- "${dir}/go.sum" || return 1
-    fi
+    done_dirs+=("${dir}")
   done < <(while IFS= read -r f; do
              if is_go_mod "${f}"; then dirname "${f}"; fi
-           done < "$2" | sort -u | awk '{ print ($0 == "sdk" ? 0 : $0 == "pkg" ? 1 : 2), $0 }' |
-             sort -k1,1n -k2 | cut -d' ' -f2-)
+           done < "$2" | order_modules)
+  # A module that merged cleanly can still need tidying once the resolved go.mod files are in.
+  while IFS= read -r dir; do
+    if [ "${#done_dirs[@]}" -gt 0 ] && printf '%s\n' "${done_dirs[@]}" | grep -qxF -- "${dir}"; then
+      continue
+    fi
+    tidy_module "${dir}" || return 1
+  done < <(all_modules)
 }
 
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
@@ -353,7 +432,7 @@ if [ "${merged}" -eq 0 ]; then
       if [ -s "${OUT}/gomod-conflicts.txt" ]; then
         report "## go.mod and go.sum taken from upstream" "" \
           "These conflicted; upstream's versions were taken, plunge's own entries from ${GO_MOD_FORK}" \
-          "re-applied, and \`go mod tidy\` run in each module (gomod.log has the details):" ""
+          "re-applied, and \`go mod tidy\` run in every module (gomod.log has the details):" ""
         sed 's/^/- /' "${OUT}/gomod-conflicts.txt" >> "${REPORT}"
         report "" '```'
         grep '^== ' "${OUT}/gomod.log" | grep -v ': go mod tidy$' | sed 's/^== //' >> "${REPORT}" || true
@@ -412,19 +491,26 @@ fi
 compat_after="$(./scripts/plunge-version.sh pulumi || true)"
 report "- Pulumi-compatible version after the merge: ${compat_after:-unknown}" ""
 
+# sdk, pkg, sdk/pcl and the language hosts (INTENTIUS/plunge#30). After a go.mod resolution every module
+# was tidied above; these are the ones plunge ships.
+BUILD_MODULES=(sdk pkg sdk/pcl "${LANGUAGE_HOSTS[@]}")
+# Each step is checked on its own: errexit doesn't apply inside a block whose status is tested.
 build_ok=1
 {
-  echo "== go build ./... (sdk)"
-  (cd sdk && go build ./...)
-  echo "== go build ./... (pkg)"
-  (cd pkg && go build ./...)
+  for dir in "${BUILD_MODULES[@]}"; do
+    echo "== go build ./... (${dir})"
+    in_module "${dir}" go build ./... || build_ok=0
+  done
   echo "== bin/plunge"
-  (cd pkg && go build -o ../bin/plunge -ldflags "$(../scripts/plunge-version.sh ldflags)" ./cmd/pulumi)
-  ./bin/plunge version
-} > "${OUT}/build.log" 2>&1 || build_ok=0
+  if (cd pkg && go build -o ../bin/plunge -ldflags "$(../scripts/plunge-version.sh ldflags)" ./cmd/pulumi); then
+    ./bin/plunge version || build_ok=0
+  else
+    build_ok=0
+  fi
+} > "${OUT}/build.log" 2>&1
 
 if [ "${build_ok}" -eq 1 ]; then
-  report "## Build" "" "go build in sdk and pkg, and bin/plunge, all built. Tests were not run." ""
+  report "## Build" "" "go build in ${BUILD_MODULES[*]}, and bin/plunge, all built. Tests were not run." ""
   status="MERGED ${BRANCH} ${up_short}"
   code=0
 else
