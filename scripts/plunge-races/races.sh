@@ -8,7 +8,8 @@
 # Usage:
 #   scripts/plunge-races/races.sh [race ...]
 #
-# Races: c1 c2 c3 c4 c5-disjoint c5-same c5-sse c6 (default: all, in that order). See lib.sh for the environment.
+# Races: c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6 (default: all, in that order). See lib.sh for the
+# environment.
 #
 # Output in $OUT/<race>/: each run's log (a.log, b.log, ...), records.txt (the record listing after the race,
 # decoded), records.json, and $OUT/verdicts.txt with one line per claim:
@@ -46,8 +47,23 @@ runner() {
 # winner's objects by marker (or plans against the winner's record) and creates nothing.
 race_c1() {
   race_begin c1
-  checkout "${WORK}/a" site role
-  checkout "${WORK}/b" site role
+  c1_race c1 site role "${PREFIX}-site" "${PREFIX}-app"
+}
+
+# C1 over aws-native types (INTENTIUS/plunge#36, for #10's aws-native leg): the same race with an
+# aws-native:s3:Bucket (bucketName) and an aws-native:iam:Role (roleName), whose creates and the bind phase's
+# listing go through Cloud Control on floci. The aws-native provider takes its endpoint from AWS_ENDPOINT_URL, so
+# the race fails first if any log shows a real AWS endpoint.
+race_c1_native() {
+  race_begin c1-native
+  c1_race c1-native native-site native-role "${PREFIX}-nsite" "${PREFIX}-napp"
+}
+
+# c1_race <race> <bucket-resource> <role-resource> <bucket-name> <role-name>: the C1 race body.
+c1_race() {
+  local race="$1" site="$2" role="$3" bucket="$4" rolename="$5"
+  checkout "${WORK}/a" "${site}" "${role}"
+  checkout "${WORK}/b" "${site}" "${role}"
   both "$(runner "${WORK}/a" "${WORK}/a.log" up --yes)" "$(runner "${WORK}/b" "${WORK}/b.log" up --yes)"
   echo "first runs: a=${RC_A} b=${RC_B}" | tee -a "${WORK}/race.txt"
   local d
@@ -57,18 +73,23 @@ race_c1() {
   pl "${WORK}/a" "${WORK}/a-preview.log" preview --json || true
   pl "${WORK}/b" "${WORK}/b-preview.log" preview --json || true
   records
+  real_cloud_rejections "${WORK}"/*.log > "${WORK}/real-cloud.txt"
+  if [ -s "${WORK}/real-cloud.txt" ]; then
+    verdict C1 "${race}" FAIL "a log names a real AWS endpoint or a rejection of the test keys; stop and see real-cloud.txt"
+    return
+  fi
   local buckets roles
-  buckets="$(awsf s3api list-buckets --query "Buckets[?Name=='${PREFIX}-site'].Name" --output text | wc -w)"
-  roles="$(awsf iam list-roles --query "Roles[?RoleName=='${PREFIX}-app'].RoleName" --output text | wc -w)"
-  echo "live: ${buckets} bucket(s) ${PREFIX}-site, ${roles} role(s) ${PREFIX}-app" | tee -a "${WORK}/race.txt"
+  buckets="$(awsf s3api list-buckets --query "Buckets[?Name=='${bucket}'].Name" --output text | wc -w)"
+  roles="$(awsf iam list-roles --query "Roles[?RoleName=='${rolename}'].RoleName" --output text | wc -w)"
+  echo "live: ${buckets} bucket(s) ${bucket}, ${roles} role(s) ${rolename}" | tee -a "${WORK}/race.txt"
   local tags
-  tags="$(awsf s3api get-bucket-tagging --bucket "${PREFIX}-site" 2>/dev/null || true)"
+  tags="$(awsf s3api get-bucket-tagging --bucket "${bucket}" 2>/dev/null || true)"
   echo "${tags}" > "${WORK}/site-tags.json"
   if [ "${buckets}" = 1 ] && [ "${roles}" = 1 ] && no_changes "${WORK}/a-preview.log" &&
     no_changes "${WORK}/b-preview.log" && grep -q plunge-urn "${WORK}/site-tags.json"; then
-    verdict C1 c1 PASS "one bucket and one role after two racing first runs and their re-runs, marked, and both checkouts plan no changes"
+    verdict C1 "${race}" PASS "one bucket and one role after two racing first runs and their re-runs, marked, and both checkouts plan no changes"
   else
-    verdict C1 c1 FAIL "buckets=${buckets} roles=${roles}; see a-preview.log, b-preview.log, site-tags.json"
+    verdict C1 "${race}" FAIL "buckets=${buckets} roles=${roles}; see a-preview.log, b-preview.log, site-tags.json"
   fi
 }
 
@@ -317,11 +338,12 @@ race_c6() {
   fi
 }
 
-ALL=(c1 c2 c3 c4 c5-disjoint c5-same c5-sse c6)
+ALL=(c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6)
 if [ "$#" -gt 0 ]; then RACES=("$@"); else RACES=("${ALL[@]}"); fi
 for r in "${RACES[@]}"; do
   case "${r}" in
     c1) race_c1 ;;
+    c1-native) race_c1_native ;;
     c2) race_c2 ;;
     c3) race_c3 ;;
     c4) race_c4 ;;
