@@ -16,10 +16,12 @@ package plunge
 
 // The AWS account ID a Cloud Control translation needs (INTENTIUS/plunge#31). aws_budgets_budget_action's Terraform
 // id starts with the account ID ("<account id>:<action id>:<budget name>"), which neither its Cloud Control
-// identifier nor its model carries. plunge reads it with STS GetCallerIdentity, as the provider's own credentials see
-// it, on the stack's own STS endpoint, under #27's endpoint rules (endpoints.go): the provider's endpoints entry for
-// sts, then the AWS_ENDPOINT_URL_STS and AWS_ENDPOINT_URL variables the provider reads. When the stack names custom
-// endpoints but none for STS, the listing is skipped with a warning, and plunge never calls STS's public endpoint.
+// identifier nor its model carries. The translation is choudoufu's pkg/identity (choudoufu#2286), which calls no
+// cloud; this file is the engine side behind its identity.AccountSource. plunge reads the ID with STS
+// GetCallerIdentity, as the provider's own credentials see it, on the stack's own STS endpoint, under #27's endpoint
+// rules (endpoints.go): the provider's endpoints entry for sts, then the AWS_ENDPOINT_URL_STS and AWS_ENDPOINT_URL
+// variables the provider reads. When the stack names custom endpoints but none for STS, the listing is skipped with
+// a warning, and plunge never calls STS's public endpoint.
 //
 // A provider whose allowedAccountIds names exactly one account needs no call: the provider refuses to run as any
 // other.
@@ -38,6 +40,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
+	"github.com/intentius/choudoufu/pkg/identity"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
 
@@ -112,6 +115,15 @@ func (a *accountIDs) get(ctx context.Context, urn resource.URN, inputs resource.
 		return "", err
 	}
 	return *acct, nil
+}
+
+// source is the account ID the provider with these inputs runs as, as the identity.AccountSource choudoufu's
+// Cloud Control translation calls when the type's id needs it (choudoufu#2286). The translation calls it only
+// then, so a listing that needs no account ID never reaches STS.
+func (a *accountIDs) source(urn resource.URN, inputs resource.PropertyMap, region string) identity.AccountSource {
+	return identity.AccountSourceFunc(func(ctx context.Context) (string, error) {
+		return a.get(ctx, urn, inputs, region)
+	})
 }
 
 // stsCredentials are the credentials the call is signed with: the provider's accessKey, secretKey and token, then

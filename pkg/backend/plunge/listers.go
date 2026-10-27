@@ -38,6 +38,7 @@ import (
 	"github.com/intentius/choudoufu/pkg/azsweep"
 	"github.com/intentius/choudoufu/pkg/cloudcontrol"
 	"github.com/intentius/choudoufu/pkg/gcpsweep"
+	"github.com/intentius/choudoufu/pkg/identity"
 	"github.com/intentius/choudoufu/pkg/kubesweep"
 	"github.com/intentius/choudoufu/pkg/registry"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcplist"
@@ -78,8 +79,9 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 	}
 	if info.Family == FamilyAWS {
 		// pulumi-aws's ID is the Terraform id. A single-part Cloud Control identifier is it for most types, and
-		// is translated for the rest (ccid_single.go); a multi-part one is translated through the type's import
-		// id grammar (ccid.go) or a written-out translation (ccid_hand.go).
+		// is translated for the rest; a multi-part one is translated through the type's import id grammar or a
+		// written-out translation. The translation is choudoufu's pkg/identity (CloudControlTranslation,
+		// choudoufu#2286, moved there from this package).
 		if _, reason := awsIDTranslation(info); reason != "" {
 			return false, reason
 		}
@@ -88,25 +90,15 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 }
 
 // awsIDTranslation is how a pulumi-aws type's Cloud Control identifiers become Terraform ids.
-func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
+func awsIDTranslation(info TypeInfo) (*identity.CloudControlID, string) {
 	roster, err := registry.Embedded()
 	if err != nil {
 		return nil, "choudoufu's registry could not be read: " + err.Error()
 	}
-	switch roster.IdentifierArity(info.CFNType) {
-	case 0:
+	if roster.IdentifierArity(info.CFNType) == 0 {
 		return nil, fmt.Sprintf("the registry has no primary identifier for %s", info.CFNType)
-	case 1:
-		return ccSingleTranslation(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType)[0])
 	}
-	if t, ok := ccHandTranslation(info.TFType, info.CFNType); ok {
-		return t, ""
-	}
-	t, reason := ccTerraformID(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
-	if reason != "" {
-		return nil, reason
-	}
-	return &t, ""
+	return identity.CloudControlTranslation(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
 }
 
 func (l *cloudControlLister) ListMarked(
@@ -126,21 +118,18 @@ func (l *cloudControlLister) ListMarked(
 	if err != nil {
 		return nil, err
 	}
-	var translate *ccTranslation
+	var translate *identity.CloudControlID
 	if info.Family == FamilyAWS {
 		var reason string
 		if translate, reason = awsIDTranslation(info); reason != "" {
 			return nil, errors.New(reason)
 		}
 	}
-	if translate.needsAccount() {
-		// The id starts with the account ID, read with STS on the stack's own endpoint (accountid.go). A stack
-		// that names custom endpoints and none for STS skips the listing, as it would for Cloud Control.
-		account, err := l.accounts.get(ctx, req.URN, req.ProviderInputs, region)
-		if err != nil {
-			return nil, err
-		}
-		translate = translate.withAccount(account)
+	// An id that starts with the account ID reads it with STS on the stack's own endpoint (accountid.go). A
+	// stack that names custom endpoints and none for STS skips the listing, as it would for Cloud Control.
+	translate, err = translate.ResolveAccount(ctx, l.accounts.source(req.URN, req.ProviderInputs, region))
+	if err != nil {
+		return nil, err
 	}
 	descs, err := c.ListResources(ctx, info.CFNType)
 	if err != nil {
@@ -149,7 +138,7 @@ func (l *cloudControlLister) ListMarked(
 	var objs []LiveObject
 	for _, d := range descs {
 		tags, ok := cfnTags(d.Properties)
-		if translate.wantsModel(d.Identifier, d.Properties) {
+		if translate.WantsModel(d.Identifier, d.Properties) {
 			// The id is read from a model property (an ARN, a name, an ID), which a list handler may leave out.
 			ok = false
 		}
@@ -167,10 +156,10 @@ func (l *cloudControlLister) ListMarked(
 		}
 		id := d.Identifier
 		if translate != nil {
-			tfID, ok := translate.translate(d.Identifier, d.Properties)
+			tfID, ok := translate.Translate(d.Identifier, d.Properties)
 			if !ok {
 				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s",
-					d.Identifier, info.CFNType, translate.describe(info.TFType))
+					d.Identifier, info.CFNType, translate.Describe())
 			}
 			id = tfID
 		}
