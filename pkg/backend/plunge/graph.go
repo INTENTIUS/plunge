@@ -134,7 +134,8 @@ type GraphCloudID struct {
 	Value string `json:"value"`
 }
 
-// GraphRecordVersions is facts.recordVersions (`--versions`, INTENTIUS/plunge#43). The emitter of #40 never sets it.
+// GraphRecordVersions is facts.recordVersions (`--versions`, INTENTIUS/plunge#43). Kept is false for a store that
+// replaces records in place (local, Kubernetes, GCS and Azure Blob as plunge opens them), with no versions.
 type GraphRecordVersions struct {
 	Kept     bool                 `json:"kept"`
 	Versions []GraphRecordVersion `json:"versions"`
@@ -173,6 +174,9 @@ type GraphRequest struct {
 	EngineVersion string
 	// Now is when the read starts; time.Now when nil.
 	Now func() time.Time
+	// Versions adds facts.recordVersions to each node (`--versions`, INTENTIUS/plunge#43): one version listing per
+	// record through staterecord's VersionLister, which reads no record value.
+	Versions bool
 }
 
 // EmitGraph reads a stack's records in one bulk read and returns its engine graph document. It makes no provider
@@ -268,6 +272,10 @@ func emitGraph(
 		for _, e := range stateEdges(state) {
 			edges[e] = true
 		}
+	}
+
+	if req.Versions {
+		listRecordVersions(ctx, store, keys, doc)
 	}
 
 	for e := range edges {
@@ -475,4 +483,40 @@ func stateEdges(state apitype.ResourceV3) []GraphEdge {
 		}
 	}
 	return out
+}
+
+// listRecordVersions sets facts.recordVersions on every node from the store's version listing, newest first. The
+// listing carries version IDs, write times and the current and delete-marker flags, never a payload. A store with no
+// VersionLister keeps no versions, so every node reports kept false. A listing that fails (S3 refuses
+// s3:ListBucketVersions to a role without it) leaves that node's recordVersions absent, unknown rather than guessed,
+// and names the failure in gaps.
+func listRecordVersions(ctx context.Context, store staterecord.Store, keys stackKeys, doc *GraphDocument) {
+	lister, ok := staterecord.AsVersionLister(store)
+	for i := range doc.Nodes {
+		n := &doc.Nodes[i]
+		if n.Facts == nil {
+			n.Facts = &EngineFacts{}
+		}
+		if !ok {
+			n.Facts.RecordVersions = &GraphRecordVersions{Kept: false, Versions: []GraphRecordVersion{}}
+			continue
+		}
+		versions, err := lister.ListVersions(ctx, keys.resource(resource.URN(n.ID)))
+		if err != nil {
+			doc.Meta.EngineGraph.Gaps = append(doc.Meta.EngineGraph.Gaps, GraphGap{
+				Address: n.ID, Reason: "versions-unlisted", Detail: err.Error(),
+			})
+			continue
+		}
+		rv := &GraphRecordVersions{Kept: true, Versions: make([]GraphRecordVersion, 0, len(versions))}
+		for _, v := range versions {
+			rv.Versions = append(rv.Versions, GraphRecordVersion{
+				ID:        v.VersionID,
+				WrittenAt: v.LastModified.UTC().Format(time.RFC3339),
+				Current:   v.Current,
+				Deleted:   v.Deleted,
+			})
+		}
+		n.Facts.RecordVersions = rv
+	}
 }
