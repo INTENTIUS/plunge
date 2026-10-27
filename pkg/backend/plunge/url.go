@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"k8s.io/client-go/kubernetes"
@@ -41,11 +40,13 @@ import (
 // live beside it under ".pulumi/records".
 //
 //	plunge+file:///path/to/dir        local records, one host only
-//	plunge+s3://bucket/prefix         S3 conditional writes (region, profile, endpoint, s3ForcePathStyle query keys)
+//	plunge+s3://bucket/prefix         S3 conditional writes (region, profile, endpoint, s3ForcePathStyle query keys;
+//	                                  with an endpoint, static AWS keys from the environment only, localstores.go)
 //	plunge+azblob://container/prefix  Azure Blob ETag conditions (storage_account query key or AZURE_STORAGE_ACCOUNT;
 //	                                  resource_group and subscription_id for the account-settings contract;
 //	                                  endpoint and metadata_host for an emulator, azblobstore.go)
-//	plunge+gs://bucket/prefix         GCS generation preconditions
+//	plunge+gs://bucket/prefix         GCS generation preconditions (STORAGE_EMULATOR_HOST for an emulator, with
+//	                                  GOOGLE_OAUTH_ACCESS_TOKEN or no credential, localstores.go)
 //	plunge+k8s://namespace/prefix     one Kubernetes Secret per record, resourceVersion preconditions (metadata,
 //	                                  kubeconfig, context, in_cluster and estate query keys)
 //
@@ -164,6 +165,15 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 		return staterecord.NewLocalStore(filepath.Join(dir, filepath.FromSlash(recordsDir)))
 
 	case "s3":
+		if endpoint := s3CustomEndpoint(q); endpoint != "" {
+			// An emulator's endpoint: static keys from the environment, never the default chain
+			// (INTENTIUS/plunge#50, localstores.go).
+			client, err := s3CustomClient(plungeURL, endpoint, q)
+			if err != nil {
+				return nil, err
+			}
+			return openS3Store(ctx, client, u.Host, keyPrefix, q)
+		}
 		var opts []func(*awsconfig.LoadOptions) error
 		if r := q.Get("region"); r != "" {
 			opts = append(opts, awsconfig.WithRegion(r))
@@ -176,26 +186,11 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 			return nil, fmt.Errorf("plunge: loading the AWS configuration for %q: %w", plungeURL, err)
 		}
 		client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-			if e := q.Get("endpoint"); e != "" {
-				o.BaseEndpoint = aws.String(e)
-			}
 			if q.Get("s3ForcePathStyle") == "true" || q.Get("use_path_style") == "true" {
 				o.UsePathStyle = true
 			}
 		})
-		// The bucket's settings are checked on open, as the Azure Blob store's are (INTENTIUS/plunge#20):
-		// versioning, a lifecycle rule for noncurrent versions, and the public access block. bucket_owner, when
-		// set, makes every request carry S3's ExpectedBucketOwner.
-		store, err := staterecord.NewS3Store(staterecord.S3Config{
-			Client: client, Bucket: u.Host, KeyPrefix: keyPrefix, ExpectedBucketOwner: q.Get("bucket_owner"),
-		})
-		if err != nil {
-			return nil, err
-		}
-		if err := enforceContract(ctx, store, allowInsecure(q)); err != nil {
-			return nil, err
-		}
-		return store, nil
+		return openS3Store(ctx, client, u.Host, keyPrefix, q)
 
 	case "azblob":
 		account := q.Get("storage_account")
@@ -269,7 +264,17 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 		return store, nil
 
 	case "gs":
-		client, err := storage.NewClient(ctx)
+		if q.Has("endpoint") {
+			return nil, gcsEndpointKeyError(plungeURL)
+		}
+		var client *storage.Client
+		if gcsEmulatorHost() != "" {
+			// An emulator: a static token or no credential, never Application Default Credentials
+			// (INTENTIUS/plunge#50, localstores.go).
+			client, err = gcsCustomClient(ctx, plungeURL)
+		} else {
+			client, err = storage.NewClient(ctx)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("plunge: building the GCS client for %q: %w", plungeURL, err)
 		}
@@ -290,6 +295,24 @@ func openStore(ctx context.Context, plungeURL string) (staterecord.Store, error)
 	}
 	return nil, fmt.Errorf("plunge: %q is not a plunge backend URL (want %sfile://, %ss3://, %sazblob://, %sgs:// "+
 		"or %sk8s://)", plungeURL, URLPrefix, URLPrefix, URLPrefix, URLPrefix, URLPrefix)
+}
+
+// openS3Store opens the S3 record store over client and checks the bucket's settings on open, as the Azure Blob
+// store's are (INTENTIUS/plunge#20): versioning, a lifecycle rule for noncurrent versions, and the public access
+// block. bucket_owner, when set, makes every request carry S3's ExpectedBucketOwner.
+func openS3Store(
+	ctx context.Context, client *s3.Client, bucket, keyPrefix string, q url.Values,
+) (staterecord.Store, error) {
+	store, err := staterecord.NewS3Store(staterecord.S3Config{
+		Client: client, Bucket: bucket, KeyPrefix: keyPrefix, ExpectedBucketOwner: q.Get("bucket_owner"),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := enforceContract(ctx, store, allowInsecure(q)); err != nil {
+		return nil, err
+	}
+	return store, nil
 }
 
 // openKubernetesStore opens the Kubernetes record store a plunge+k8s://namespace/prefix URL names: one Secret per

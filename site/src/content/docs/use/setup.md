@@ -44,6 +44,28 @@ login ([#35](https://github.com/INTENTIUS/plunge/issues/35)). It signs with
 `ARM_ACCESS_KEY`, a SAS token, or a client secret, all from the environment
 only, since the backend URL is saved and printed.
 
+S3 and GCS follow the same rule against an emulator
+([#50](https://github.com/INTENTIUS/plunge/issues/50)). These stores never build
+the SDK's default chain, which could ask the EC2 or GCE metadata server, SSO,
+STS or Google's OAuth endpoint for a credential:
+
+- `plunge+s3://` with an `endpoint` query key (or `AWS_ENDPOINT_URL_S3` or
+  `AWS_ENDPOINT_URL` set) signs only with `AWS_ACCESS_KEY_ID` and
+  `AWS_SECRET_ACCESS_KEY`, plus `AWS_SESSION_TOKEN` when set. The open is
+  refused when either key is missing or the URL names a `profile`. The region
+  is the `region` key, else `AWS_REGION`, else `us-east-1`.
+- `plunge+gs://` with `STORAGE_EMULATOR_HOST` set sends
+  `GOOGLE_OAUTH_ACCESS_TOKEN` as a static token, or no credential. The open is
+  refused when neither `GOOGLE_OAUTH_ACCESS_TOKEN` nor `GOOGLE_CREDENTIALS` is
+  set, because the stack metadata in the same bucket goes through the DIY
+  backend, which would otherwise look up application default credentials. Any
+  token value works against an emulator that takes anonymous calls. An
+  `endpoint` query key is refused; use `STORAGE_EMULATOR_HOST`, the one setting
+  the DIY backend also follows.
+
+Without those keys and variables, S3 and GCS use their default chains against
+the real cloud, as before.
+
 ## Kubernetes
 
 `plunge+k8s://` keeps one Secret per record in the namespace and needs a DIY
