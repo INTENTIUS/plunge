@@ -24,10 +24,19 @@ Each shows behaviour on an emulator, and none on AWS.
 | The S3 record store on floci, and two updates on different resources of one stack | [#6](https://github.com/INTENTIUS/plunge/issues/6) |
 | Adopting a corpus stack end to end, the first update, the back-out, and races C1 to C6 | [#7](https://github.com/INTENTIUS/plunge/issues/7) |
 | C1 races on pulumi-aws and aws-native | [#10](https://github.com/INTENTIUS/plunge/issues/10), [#36](https://github.com/INTENTIUS/plunge/issues/36) |
-| Sweep warnings for recorded Lambda functions and queues | [#28](https://github.com/INTENTIUS/plunge/issues/28) |
-| Budgets actions listed with the account ID | [#31](https://github.com/INTENTIUS/plunge/issues/31) |
-| The delete check against the live tags | [#37](https://github.com/INTENTIUS/plunge/issues/37) |
 | An IAM gate on `plunge-stack` | [#45](https://github.com/INTENTIUS/plunge/issues/45) |
+
+## Tested, not recorded
+
+On 2026-10-27 the Go suites passed, and a clean `plunge up` and destroy of
+each `aws-*` corpus program on floci showed no sweep warning. Each destroy was
+refused on the SSM parameters, whose tags floci drops
+([lex00/floci#263](https://github.com/lex00/floci/issues/263)), as the live
+marker check requires. That closed
+[#28](https://github.com/INTENTIUS/plunge/issues/28),
+[#31](https://github.com/INTENTIUS/plunge/issues/31) and
+[#37](https://github.com/INTENTIUS/plunge/issues/37); none of these runs is
+recorded as a claim.
 
 ## Run one now
 

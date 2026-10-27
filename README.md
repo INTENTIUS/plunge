@@ -8,8 +8,8 @@ language hosts and providers, and changes where state lives and how a run decide
 - A `plunge+<store>` backend (`file`, `s3`, `gs`, `azblob`, `k8s`) keeps one record per resource, each
   write conditional, with no stack lock.
 - An unnamed resource of a covered type gets the same name on every run, and a saved plan whose
-  records moved is refused (exit 40). Each delete is checked against the live marker (built for
-  INTENTIUS/plunge#37, waiting for its run).
+  records moved is refused (exit 40). Each delete is checked against the live marker
+  (INTENTIUS/plunge#37).
 - `plunge stack adopt` moves a stock stack onto records; `plunge drift --resource` reads one resource's
   drift with one provider Read.
 
@@ -23,6 +23,15 @@ still to come. Design details are in
 `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`. `just site-serve` (live reload) and
 `just site-preview` (the built site) serve http://127.0.0.1:4321/plunge/, or another port given as an
 argument; `just site` builds it with its link and contrast checks.
+
+## Install
+
+plunge `v0.1.0` (Pulumi-compatible `3.272.0`) is on the
+[releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.1.0) with a checksums
+file, for darwin, linux and windows on arm64 and x64. Each archive unpacks to `plunge/` (on Windows
+`plunge/bin/`), the CLI beside its language hosts; put that directory on `PATH`. The
+[install page](https://intentius.io/plunge/use/start/#install) has the commands, the checksum check
+and the macOS quarantine step.
 
 ## Fork point
 
@@ -110,9 +119,11 @@ A host neither bundled nor on `PATH` is fetched as upstream fetches it: stock pu
 plunge's Pulumi-compatible version, the same code while plunge's hosts match upstream's.
 
 Pushing a `plunge-vX.Y.Z` tag runs `.github/workflows/plunge-release.yml`; a bare `vX.Y.Z` tag, upstream
-pulumi's naming, doesn't (INTENTIUS/plunge#33). It runs goreleaser with `.goreleaser.plunge.yml` and
-publishes unsigned-on-Windows `plunge-vX.Y.Z-<os>-<arch>` archives on this repository's releases page.
-The snapshot build below lists the same artifacts and publishes nothing.
+pulumi's naming, doesn't (INTENTIUS/plunge#33). goreleaser's release mode refuses the `plunge-v` prefix,
+so the workflow runs goreleaser with `.goreleaser.plunge.yml` in snapshot mode and publishes the
+`plunge-vX.Y.Z-<os>-<arch>` archives and checksums with `gh release create` under the pushed tag, with
+the Windows binaries unsigned. The first was `plunge-v0.1.0`, on 2026-10-27. The snapshot build below
+lists the same artifacts and publishes nothing.
 
 ```sh
 ./scripts/prep-for-goreleaser.sh

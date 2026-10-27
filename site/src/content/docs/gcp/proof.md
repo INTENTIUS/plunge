@@ -9,7 +9,10 @@ prompt: |
 
 - `plunge preview` against stock `pulumi preview` on `gcp-yaml`, on floci-gcp, 2026-10-26: `MATCH` ([`baseline-verdicts.txt`](https://github.com/INTENTIUS/plunge/blob/main/tests/plunge-corpus/baseline-verdicts.txt), [Claims and runs](/plunge/claims/)).
 
-That is a preview; nothing has been applied on floci-gcp or Google Cloud.
+That is the only recorded run. On 2026-10-27 a clean `plunge up` and destroy
+of `gcp-yaml` on floci-gcp made no real-cloud call
+([#42](https://github.com/INTENTIUS/plunge/issues/42), closed); it is tested,
+not recorded. Nothing has run on Google Cloud.
 
 ## Waiting for a run
 
@@ -18,5 +21,4 @@ That is a preview; nothing has been applied on floci-gcp or Google Cloud.
 | The `plunge+gs://` store on floci-gcp | [#14](https://github.com/INTENTIUS/plunge/issues/14), [#34](https://github.com/INTENTIUS/plunge/issues/34) |
 | Adoption and the races | [#7](https://github.com/INTENTIUS/plunge/issues/7) |
 | floci-gcp list paths | [#32](https://github.com/INTENTIUS/plunge/issues/32) |
-| No token fetched from Google with local endpoints | [#42](https://github.com/INTENTIUS/plunge/issues/42) |
 | A gate | [#45](https://github.com/INTENTIUS/plunge/issues/45) |

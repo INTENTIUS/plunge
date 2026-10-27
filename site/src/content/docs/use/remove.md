@@ -11,8 +11,8 @@ prompt: |
 Delete the resource from the program and run `plunge up`. Since
 [#37](https://github.com/INTENTIUS/plunge/issues/37), plunge deletes the object
 only when its live marker names this stack and resource, and refuses the run
-otherwise ([Deletes](../../how-it-works/deletes/)); the check is built and
-waits for its run.
+otherwise ([Deletes](../../how-it-works/deletes/)). The check's tests pass
+and #37 is closed; no run of it is recorded.
 
 A run of an older program checkout keeps a resource a newer run created and
 warns, naming both stamps.
