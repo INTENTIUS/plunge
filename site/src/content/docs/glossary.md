@@ -98,4 +98,4 @@ of the recorded runs.
 
 To adopt is to move a stock Pulumi stack onto a plunge+ store with
 `plunge stack adopt`. Each resource keeps its ID, and the next `plunge up`
-adds the markers ([Migrate a stock stack](../use/migrate/)).
+adds the markers ([Adopt an existing stack](../use/migrate/)).

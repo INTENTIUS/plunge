@@ -17,7 +17,7 @@ fakes in place of the cloud. **Not built** means the code is not written.
 | `plunge preview` plans the same steps as stock `pulumi preview` on seven corpus programs, apart from autonamed names | Emulator[^parity] | [Recorded runs](#recorded-runs), [#3](https://github.com/INTENTIUS/plunge/issues/3) |
 | `plunge up` writes the markers and fixed names, and `stack export` and `stack output` read the result | Emulator | [Recorded runs](#recorded-runs) |
 | `plunge drift --resource` reads one resource's drift with one provider Read | Emulator | [Drift of one resource](../how-it-works/drift/) |
-| `plunge stack adopt` classifies, adopts, re-runs as a no-op and refuses a changed checkpoint | Emulator | [Migrate a stock stack](../use/migrate/) |
+| `plunge stack adopt` classifies, adopts, re-runs as a no-op and refuses a changed checkpoint | Emulator | [Adopt an existing stack](../use/migrate/) |
 | Two runs on different resources of one stack both land, with no stack lock | Unit-tested[^tests] | [#6](https://github.com/INTENTIUS/plunge/issues/6) |
 | The S3, GCS, Azure Blob and Kubernetes record stores | Unit-tested[^stores] | [#6](https://github.com/INTENTIUS/plunge/issues/6), [#14](https://github.com/INTENTIUS/plunge/issues/14), [#34](https://github.com/INTENTIUS/plunge/issues/34) |
 | Adopting a corpus stack end to end, the first `plunge up` after it, and backing out to stock | Unit-tested[^tests] | [#7](https://github.com/INTENTIUS/plunge/issues/7) |

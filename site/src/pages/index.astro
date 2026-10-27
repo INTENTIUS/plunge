@@ -8,12 +8,12 @@ import Landing from '../components/Landing.astro';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const issue6 = 'https://github.com/INTENTIUS/plunge/issues/6';
 // The maintainer's tagline, word for word, then one plain status line under it.
-const tagline = `Pulumi with resource level concurrency and no stack lock<p class="pl-hero-status">Lock-free concurrent updates are unit-tested and have not run on a real store yet (<a href="${issue6}">#6</a>, <a href="${base}/claims/">claims</a>). Until they have, serialize updates to one stack in CI.</p>`;
+const tagline = `Your Pulumi programs, with one record per resource and parallel updates<p class="pl-hero-status">Lock-free concurrent updates are unit-tested and have not run on a real store yet (<a href="${issue6}">#6</a>, <a href="${base}/claims/">claims</a>). Until they have, serialize updates to one stack in CI.</p>`;
 ---
 <StarlightPage
 	frontmatter={{
 		title: 'plunge',
-		description: 'Pulumi with resource level concurrency and no stack lock',
+		description: 'Your Pulumi programs, with one record per resource and parallel updates',
 		template: 'splash',
 		// The site title alone, in place of "plunge | plunge".
 		head: [{ tag: 'title', content: 'plunge' }],

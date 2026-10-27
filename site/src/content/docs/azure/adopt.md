@@ -11,7 +11,7 @@ plunge stack adopt --json --yes --stack dev  # adopt
 ```
 
 Each resource keeps its ID and gets a record; the next `plunge up` adds the
-tags ([Migrate a stock stack](/plunge/use/migrate/)). A type with no tags
+tags ([Adopt an existing stack](/plunge/use/migrate/)). A type with no tags
 argument, such as a subnet, is record-owned.
 
 ## Recorded runs

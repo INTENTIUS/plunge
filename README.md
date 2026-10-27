@@ -1,6 +1,6 @@
 # plunge
 
-Pulumi with resource level concurrency and no stack lock
+Your Pulumi programs, with one state record per resource, so updates to different resources of a stack can run at once.
 
 Status: lock-free concurrent updates are unit-tested and have not run on a real store yet
 ([#6](https://github.com/INTENTIUS/plunge/issues/6), [claims](https://intentius.io/plunge/claims/)), so

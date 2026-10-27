@@ -11,7 +11,7 @@ plunge stack adopt --json --yes --stack dev  # adopt
 ```
 
 Each resource keeps its ID and gets a record. The next `plunge up` adds the
-labels ([Migrate a stock stack](/plunge/use/migrate/)).
+labels ([Adopt an existing stack](/plunge/use/migrate/)).
 
 plunge refuses by name a provider whose `ignoreLabels` or `defaultLabels`
 would hide or override the `plunge-` keys, and leaves pulumi-gcp's

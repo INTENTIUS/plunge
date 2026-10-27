@@ -1,16 +1,17 @@
 ---
 title: Names
-description: plunge names an unnamed resource the same way on every run, so two creates of it collide at the cloud instead of making two objects.
+description: plunge names an unnamed resource the same way on every run, so a second create of it meets the first at the cloud.
 prompt: |
   Read https://intentius.io/plunge/how-it-works/names/ and list the resources in this program whose names plunge would choose, and any pulumi:autonaming pattern it would refuse. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-Stock Pulumi's `<name>-<random>` lets two concurrent creates make two
-objects. plunge uses `<name>-<hash>`, where the hash is
-seven hex digits of a SHA-256 over the project, stack, qualified type and name.
-It is stable across runs and machines and differs between stacks in one
-account.
+Pulumi adds a random suffix so a replacement can be created before the old
+object is deleted. plunge uses `<name>-<hash>`, a stable name, where the hash
+is seven hex digits of a SHA-256 over the project, stack, qualified type and
+name. It is the same across runs and machines and differs between stacks in
+one account. plunge deletes first on replace
+([below](#replacing-a-named-resource)).
 
 In the recorded `aws-ts` run, queue `events` became `events-76012a7` and
 topic `docs-notify` became `docs-notify-313a6f6`

@@ -36,16 +36,19 @@ Before creating a type a lister covers, plunge lists live objects with the
 resource's markers. If it finds one, it [binds](../glossary/#bind) it instead
 of creating a second.
 
-## A DIY backend and a plunge backend
+## On a plunge backend
 
-| | Stock DIY backend | `plunge+<store>` |
-|---|---|---|
-| Where state lives | one checkpoint file per stack | one record per resource, per root output, and one for the secrets configuration |
-| Two updates at once | the second waits for the stack lock or fails | both run; [a conditional write per record](concurrency/) decides any clash |
-| A run that would delete an object | deletes the objects the checkpoint names | [checks the live marker first](deletes/) |
-| An unnamed resource | gets a random suffix | gets the [same name on every run](names/) |
-| A saved plan applied after the state moved | applied when the program still matches the plan | refused by name, exit 40, when any record it read has moved |
-| Stack history and backups | kept | not kept; the commands are refused by name |
+Stock Pulumi keeps one checkpoint file per stack and orders updates with its
+stack lock. With `plunge+<store>`, each row below works differently.
+
+| | On `plunge+<store>` |
+|---|---|
+| Where state lives | one record per resource, per root output, and one for the secrets configuration |
+| Two updates at once | both run; [a conditional write per record](concurrency/) decides any clash |
+| A run that would delete an object | [checks the live marker first](deletes/) |
+| An unnamed resource | gets the [same name on every run](names/) |
+| A saved plan applied after the state moved | refused by name, exit 40, when any record it read has moved |
+| Stack history and backups | not kept; the commands are refused by name |
 
 The DIY backend at the URL inside `plunge+` keeps everything but state (the
 stack list, stack tags, the default secrets manager), as for stock Pulumi.

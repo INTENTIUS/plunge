@@ -39,9 +39,9 @@ export const DIFFERS: string[] = [
 	'The backend URL gains a plunge+ prefix, and each taggable resource gets plunge-stack and plunge-urn tags.',
 ];
 
-const cloudDiffers = 'plunge has no hosted service. Issue #8 lists each Pulumi Cloud feature you lose.';
+const cloudDiffers = 'Your hosted stacks stay where they are until you adopt one. Issue #8 lists each Pulumi Cloud feature and how chant works next to it.';
 
-const migrate = { label: 'Migrate a stock stack', href: '/use/migrate/' };
+const migrate = { label: 'Adopt an existing stack', href: '/use/migrate/' };
 const quickstart = { label: 'Five-minute quickstart', href: '/use/start/#quickstart' };
 const start = { label: 'Start a new stack', href: '/use/start/' };
 const tutorial = { label: 'Tutorial', href: '/use/tutorial/' };
@@ -107,19 +107,20 @@ export const ROOMS: Room[] = [
 	},
 	{
 		id: 'pulumi-stack',
-		title: 'Migrate a Pulumi stack',
+		title: 'Adopt a Pulumi stack',
 		lede: 'You run Pulumi today, on a DIY backend (a directory, S3, GCS or Azure Blob) or on Pulumi Cloud.',
 		works: [
 			'plunge stack adopt --json classifies your checkpoint and writes nothing (recorded on floci)',
 			'Adoption keeps every ID and gives each resource its own record',
 			'Adopting the same checkpoint again does nothing',
 			'A stock pulumi stack export from Pulumi Cloud gives the file plunge stack adopt --file takes',
+			'Keep the hosted backend for the stacks it runs today, and try one exported stack first',
 		],
 		differs: [...DIFFERS, cloudDiffers, 'Adopting a corpus stack end to end, and backing out, wait for a run (#7).'],
 		first: migrate,
 		howto: [migrate, setup, { label: 'Run it from CI', href: '/use/cicd/' }],
 		explain: [overview, records],
-		reference: [{ label: 'The adopt document', href: '/reference/adopt-json/' }, { label: 'Leaving Pulumi Cloud (#8)', href: issue(8) }, reference],
+		reference: [{ label: 'The adopt document', href: '/reference/adopt-json/' }, { label: 'Pulumi Cloud features and chant (#8)', href: issue(8) }, reference],
 	},
 	{
 		id: 'evaluate',

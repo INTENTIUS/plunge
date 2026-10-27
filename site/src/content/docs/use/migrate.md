@@ -1,5 +1,5 @@
 ---
-title: Migrate a stock stack
+title: Adopt an existing stack
 description: Adopt a stock Pulumi stack onto per-resource records with plunge stack adopt, and back out with a stock import.
 prompt: |
   Follow https://intentius.io/plunge/use/migrate/. Run `plunge stack adopt --json --stack <stack>` without --yes and report the status, each resource's fate and any refusal.
