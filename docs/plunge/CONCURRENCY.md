@@ -394,8 +394,38 @@ previews first and the preview runs the same check, so without
 `--skip-preview` the run is refused at the preview. `PLUNGE_MARKERS=false`
 turns markers off, the check included.
 
-Pending deletes left by a replacement are not checked: they finish replacing
-this stack's own resource.
+A replacement's delete is checked the same way (INTENTIUS/plunge#51). When
+the engine decides to replace a resource, before the replacement's first
+step, the original object is checked, and so is every dependent a
+delete-before-replace deletes first. A pending delete that an earlier run's
+replacement left in the state is checked with the run's other deletes. The
+original shares its URN with the new object, so an original that carries this
+stack's markers is deleted as before. One whose marker names another stack, or
+that carries none, refuses the run, and nothing is created or deleted. If the
+object is this stack's, run an `up` that changes only its tags so the markers
+land in place, then make the change that replaces it.
+
+## Imports: the same rules as a marker write
+
+A resource the program registers with `import:` is not in the stack's state
+yet, so before INTENTIUS/plunge#51 the injector's create-only-tags refusal
+never saw it, and its markers were merged over whatever the live object's
+tags held. Now every import is checked before its step exists:
+
+| The type, and the live object | Outcome |
+|---|---|
+| A type whose tags can only be set at create | The run is refused by URN and type, before any provider call. Marking it would replace it |
+| Carries a marker naming another stack, or another resource of this stack | The run is refused; nothing is imported and the marker stays |
+| Carries no marker | Imported; the update that follows adds this stack's markers in place |
+| Already carries this resource's markers | Imported as is |
+| A type that carries no marker | Imported on the program's word, record-owned |
+
+The live object is read once, through its provider's Read under the stack's
+provider configuration, the same call the import step makes next. A create
+that the bind phase turned into an import was found by its own markers, so it
+is not read again. An object of a create-only type that already carries this
+resource's markers can still join the stack: drop `import:` and the bind
+phase finds it by its markers, where plunge can list the type.
 
 ## Pending operations
 

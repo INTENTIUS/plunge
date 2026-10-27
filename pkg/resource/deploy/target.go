@@ -47,6 +47,10 @@ type Target struct {
 	// exists, and may refuse the run (plunge_deletevet.go, INTENTIUS/plunge#37). Nil keeps upstream's behaviour.
 	DeleteVetter DeleteVetter
 
+	// ImportVetter, when set, is asked about every import before its step exists, and may refuse the run
+	// (plunge_importvet.go, INTENTIUS/plunge#51). Nil keeps upstream's behaviour.
+	ImportVetter ImportVetter
+
 	// Markers, when set, injects ownership markers into every custom, non-provider resource's inputs after the
 	// stack transforms run, and vets every provider's configuration (plunge_markers.go, INTENTIUS/plunge#7). Nil
 	// keeps upstream's behaviour.

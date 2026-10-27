@@ -483,6 +483,8 @@ func (b *plungeBackend) apply(
 		target.Markers = newMarkerPolicy(cat, snap, marks, b.d)
 		target.Binder = newBinder(cat, marks, listers)
 		target.Autonames = newAutonamePolicy(cat, marks)
+		// The import vet (importvet.go, INTENTIUS/plunge#51): an `import:` is held to the injector's rules.
+		target.ImportVetter = newImportVetter(cat, marks)
 	}
 	// The delete vet (deletevet.go, INTENTIUS/plunge#37): the live marker decides every delete, destroy included.
 	if (programDriven(kind) || kind == apitype.DestroyUpdate) && markersEnabled() {
