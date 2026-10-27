@@ -3,12 +3,13 @@
 //   a site page or #anchor that is not in dist/;
 //   a file in this repository (a github.com/INTENTIUS/plunge blob or tree link
 //   on main) that is not in the checkout.
-// It also fails when a room's page was not built, and when the sidebar's
-// "Start here" group and the rooms of rooms.ts disagree.
+// It also fails when a room's page was not built, when the sidebar's
+// "Start here" group and the rooms of rooms.ts disagree, and when an old room
+// address in src/data/redirects.json was not written or points nowhere.
 // Node runs rooms.ts directly, since it strips the types. Copied from
 // choudoufu's site/scripts/check-rooms.mjs.
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOMS, ROOM_ORDER, roomLinks } from '../src/data/rooms.ts';
@@ -78,7 +79,6 @@ for (const l of roomLinks()) {
 
 // Every room is listed once in the order the sidebar uses, and its page was built.
 const forDir = join(dist, 'for');
-for (const r of ROOMS) if (!ROOM_ORDER.includes(r.id)) problems.push(`src/data/rooms.ts: room ${r.id} is not a tile, platform or role`);
 for (const id of ROOM_ORDER) {
 	if (!existsSync(join(forDir, id, 'index.html'))) problems.push(`dist/for/${id}/: the room page was not built`);
 }
@@ -86,7 +86,7 @@ for (const id of ROOM_ORDER) {
 // Every link in the main column of the built home page and room pages. The
 // sidebar is the next check's.
 const pages = [join(dist, 'index.html')];
-if (existsSync(forDir)) for (const id of readdirSync(forDir)) pages.push(join(forDir, id, 'index.html'));
+for (const id of ROOM_ORDER) pages.push(join(forDir, id, 'index.html'));
 for (const f of pages.filter(existsSync)) {
 	const page = readFileSync(f, 'utf8');
 	const start = page.indexOf('<main');
@@ -110,8 +110,17 @@ for (const x of listed) {
 	if (r && r.title !== x.label) problems.push(`astro.config.mjs: "Start here" calls /for/${x.id}/ "${x.label}", but its room is titled "${r.title}"`);
 }
 
+// Each old room address is a built redirect page, and its target resolves.
+const redirects = JSON.parse(readFileSync(join(site, 'src', 'data', 'redirects.json'), 'utf8'));
+for (const [from, to] of Object.entries(redirects)) {
+	if (!target(`${base}${from}`)) problems.push(`src/data/redirects.json: ${from} was not written`);
+	if (ROOM_ORDER.some((id) => from === `/for/${id}/`)) problems.push(`src/data/redirects.json: ${from} is a room page`);
+	const why = broken(to);
+	if (why) problems.push(`src/data/redirects.json: ${from} -> ${why}`);
+}
+
 for (const p of [...pending].sort()) console.log(`rooms: pending ${p} (not written yet)`);
 for (const p of [...PENDING].filter((p) => seen.has(p) && !pending.has(p)).sort()) console.log(`rooms: ${p} has landed; delete it from PENDING in scripts/check-rooms.mjs`);
 for (const p of problems) console.error(p);
 if (problems.length) process.exit(1);
-console.log(`rooms: ${ROOM_ORDER.length} rooms and the home page, every link resolves${pending.size ? ` or is pending (${pending.size})` : ''}`);
+console.log(`rooms: ${ROOM_ORDER.length} rooms, the home page and ${Object.keys(redirects).length} old room addresses, every link resolves${pending.size ? ` or is pending (${pending.size})` : ''}`);

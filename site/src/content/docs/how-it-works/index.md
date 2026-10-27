@@ -10,21 +10,15 @@ plunge, a fork of [pulumi/pulumi](https://github.com/pulumi/pulumi), runs the
 same programs, SDKs and providers, and changes where state lives and how a run
 decides ownership.
 
-In [chant](https://intentius.io/chant/), identity markers on the live object
-decide ownership. plunge carries that into Pulumi, as
-[choudoufu](https://intentius.io/choudoufu/) does into OpenTofu. Both are chant
-engines (a chant workspace can run a plunge stack as a member), and plunge
-runs any Pulumi program without chant.
-
 ## Three words
 
 A stack is the same as in Pulumi: one program's deployment, named
 `<project>/<stack>`.
 
-A marker is a tag or label on the live object naming its stack and its URN:
-`plunge-stack` and `plunge-urn` ([Identity](identity/)).
+A [marker](../glossary/#marker) is a tag or label on the live object naming
+its stack and its URN: `plunge-stack` and `plunge-urn` ([Identity](identity/)).
 
-A record is one resource's state in a store with conditional writes, under
+A [record](../glossary/#record) is one resource's state in a store with conditional writes, under
 `stacks/<project>/<stack>/resources/<urn>` ([Records](records/)).
 
 ## The marker names the owning stack
@@ -39,7 +33,8 @@ aws resourcegroupstaggingapi get-resources \
 ```
 
 Before creating a type a lister covers, plunge lists live objects with the
-resource's markers and binds one it finds instead of creating a second.
+resource's markers. If it finds one, it [binds](../glossary/#bind) it instead
+of creating a second.
 
 ## A DIY backend and a plunge backend
 
@@ -53,8 +48,9 @@ resource's markers and binds one it finds instead of creating a second.
 | Stack history and backups | kept | not kept; the commands are refused by name |
 
 The DIY backend at the URL inside `plunge+` keeps everything but state (the
-stack list, stack tags, the default secrets manager), as for stock Pulumi
-(`pkg/backend/plunge/backend.go`).
+stack list, stack tags, the default secrets manager), as for stock Pulumi.
+
+Source: `pkg/backend/plunge/backend.go`.
 
 ## Recorded runs
 
@@ -62,8 +58,20 @@ The behaviour above is coded and unit-tested. Four runs are recorded, all on
 local emulators; [Claims and runs](../claims/) lists them and the issue for
 each other run.
 
+## Lineage
+
+In [chant](https://intentius.io/chant/), identity markers on the live object
+decide ownership. plunge carries that into Pulumi, as
+[choudoufu](https://intentius.io/choudoufu/) does into OpenTofu. Both are chant
+engines (a chant workspace can run a plunge stack as a member), and plunge
+runs any Pulumi program without chant.
+
 ## Upstream
 
 plunge forks [pulumi/pulumi](https://github.com/pulumi/pulumi) at 7e12743da8
-(after the 3.272.0 release) under Apache-2.0 and merges upstream without rebasing. It is
-not affiliated with Pulumi Corporation, owner of the Pulumi trademark.
+(after the 3.272.0 release) under Apache-2.0, and merges upstream without
+rebasing. The scheduled merge of 2026-10-26 stopped on a conflict in
+`sdk/go/auto/automation/commands.go` and waits for a person
+([#24](https://github.com/INTENTIUS/plunge/issues/24)). Until a person resolves
+it, the fork stays on the upstream release it started from. The project has no tie to Pulumi Corporation, owner of the Pulumi
+trademark.

@@ -1,6 +1,6 @@
 ---
 title: Proof
-description: Recorded runs on Kubernetes and the runs still to come.
+description: Nothing has run on Kubernetes yet. The runs still to come, with their issues.
 prompt: |
   Follow https://intentius.io/plunge/kubernetes/proof/ and report which Kubernetes claims have a recorded run. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.

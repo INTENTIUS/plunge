@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { readFileSync } from 'node:fs';
 
 // expressive-code renders each code line as its own block element with no
 // newline between them, so text extracted from the page (an agent, a reader
@@ -28,12 +29,20 @@ const newlinesBetweenLines = {
 	},
 };
 
+// The room pages that left the "Start here" group: old URL, with its trailing
+// slash, to where its content went. A site page is written with the base
+// (/plunge/...) because Astro does not prefix it. A static build writes each one
+// as a small meta-refresh page, and scripts/check-rooms.mjs checks every target.
+const oldUrls = JSON.parse(readFileSync(new URL('./src/data/redirects.json', import.meta.url), 'utf8'));
+const redirects = Object.fromEntries(Object.entries(oldUrls).map(([from, to]) => [from.replace(/\/$/, ''), to]));
+
 // Published under the org domain at /plunge, as choudoufu's site is at
 // /choudoufu (INTENTIUS/plunge#44). `base` has to match or every internal link
 // 404s on Pages.
 export default defineConfig({
 	site: 'https://intentius.io',
 	base: '/plunge',
+	redirects,
 	integrations: [
 		starlight({
 			title: 'plunge',
@@ -54,12 +63,14 @@ export default defineConfig({
 			],
 			expressiveCode: { plugins: [newlinesBetweenLines] },
 			customCss: ['./src/styles/plunge.css'],
-			// The title gets a "Copy page as Markdown" button, an llms.txt pointer and
-			// the page's agent prompt. The footer adds a small diver. The head adds
+			// The title gets a "Copy page as Markdown" button and an llms.txt pointer.
+			// The footer adds the page's agent prompt, collapsed, and a small diver.
+			// Pagination keeps Prev and Next inside the page's own sidebar group. The head adds
 			// PostHog page analytics when the build has PUBLIC_POSTHOG_KEY.
 			components: {
 				Head: './src/components/Head.astro',
 				PageTitle: './src/components/PageTitle.astro',
+				Pagination: './src/components/Pagination.astro',
 				Footer: './src/components/Footer.astro',
 				SocialIcons: './src/components/SocialIcons.astro',
 				SiteTitle: './src/components/SiteTitle.astro',
@@ -71,27 +82,47 @@ export default defineConfig({
 			editLink: {
 				baseUrl: 'https://github.com/INTENTIUS/plunge/edit/main/site/',
 			},
-			// The groups follow choudoufu's site: Start here, the four platforms,
-			// How it works, Use, Reference. Every group but Start here starts collapsed.
+			// The groups: Start here, Use, How it works, the four platforms, Reference.
+			// Every group but Start here starts collapsed.
 			sidebar: [
 				// The room pages under /for/ (src/pages/for/[id].astro), in the order of
-				// src/data/rooms.ts: the stack you run today, where it runs, then the roles.
-				// scripts/check-rooms.mjs fails the build when this list and rooms.ts disagree.
+				// src/data/rooms.ts. scripts/check-rooms.mjs fails the build when this
+				// list and rooms.ts disagree.
 				{
 					label: 'Start here',
 					items: [
-						{ label: 'From a Pulumi stack', link: '/for/pulumi-stack/' },
-						{ label: 'From Pulumi Cloud', link: '/for/pulumi-cloud/' },
-						{ label: 'From chant', link: '/for/chant/' },
-						{ label: 'Starting new', link: '/for/new/' },
-						{ label: 'On AWS', link: '/for/aws/' },
-						{ label: 'On Kubernetes', link: '/for/kubernetes/' },
-						{ label: 'On GCP', link: '/for/gcp/' },
-						{ label: 'On Azure', link: '/for/azure/' },
-						{ label: 'Security and access', link: '/for/security/' },
-						{ label: 'Evaluating', link: '/for/evaluate/' },
-						{ label: 'With a coding agent', link: '/for/agents/' },
-						{ label: 'Contributing', link: '/for/contribute/' },
+						{ label: 'Try it', link: '/for/new/' },
+						{ label: 'Migrate a Pulumi stack', link: '/for/pulumi-stack/' },
+						{ label: 'Evaluate', link: '/for/evaluate/' },
+					],
+				},
+				{
+					label: 'Use',
+					collapsed: true,
+					items: [
+						{ label: 'Start a new stack', slug: 'use/start' },
+						{ label: 'Tutorial', slug: 'use/tutorial' },
+						{ label: 'Set up by hand', slug: 'use/setup' },
+						{ label: 'Migrate a stock stack', slug: 'use/migrate' },
+						{ label: 'Pending operations and crashes', slug: 'use/pending' },
+						{ label: 'Rename a resource', slug: 'use/rename' },
+						{ label: 'Remove a resource', slug: 'use/remove' },
+						{ label: 'Recover a stack', slug: 'use/recover' },
+						{ label: 'Record store bucket', slug: 'use/bucket' },
+						{ label: 'CI/CD', slug: 'use/cicd' },
+					],
+				},
+				{
+					label: 'How it works',
+					collapsed: true,
+					items: [
+						{ label: 'Overview', slug: 'how-it-works' },
+						{ label: 'Identity', slug: 'how-it-works/identity' },
+						{ label: 'Records', slug: 'how-it-works/records' },
+						{ label: 'Names', slug: 'how-it-works/names' },
+						{ label: 'Resource-level concurrency', slug: 'how-it-works/concurrency' },
+						{ label: 'Deletes', slug: 'how-it-works/deletes' },
+						{ label: 'Drift of one resource', slug: 'how-it-works/drift' },
 					],
 				},
 				...['AWS', 'Kubernetes', 'GCP', 'Azure'].map((label) => {
@@ -110,41 +141,13 @@ export default defineConfig({
 					};
 				}),
 				{
-					label: 'How it works',
-					collapsed: true,
-					items: [
-						{ label: 'Overview', slug: 'how-it-works' },
-						{ label: 'Identity', slug: 'how-it-works/identity' },
-						{ label: 'Records', slug: 'how-it-works/records' },
-						{ label: 'Names', slug: 'how-it-works/names' },
-						{ label: 'Resource-level concurrency', slug: 'how-it-works/concurrency' },
-						{ label: 'Deletes', slug: 'how-it-works/deletes' },
-						{ label: 'Drift of one resource', slug: 'how-it-works/drift' },
-					],
-				},
-				{
-					label: 'Use',
-					collapsed: true,
-					items: [
-						{ label: 'Tutorial', slug: 'use/tutorial' },
-						{ label: 'Start a new stack', slug: 'use/start' },
-						{ label: 'Set up by hand', slug: 'use/setup' },
-						{ label: 'Migrate a stock stack', slug: 'use/migrate' },
-						{ label: 'Pending operations and crashes', slug: 'use/pending' },
-						{ label: 'Rename a resource', slug: 'use/rename' },
-						{ label: 'Remove a resource', slug: 'use/remove' },
-						{ label: 'Recover a stack', slug: 'use/recover' },
-						{ label: 'Record store bucket', slug: 'use/bucket' },
-						{ label: 'CI/CD', slug: 'use/cicd' },
-					],
-				},
-				{
 					label: 'Reference',
 					collapsed: true,
 					items: [
 						{ label: 'Reference', slug: 'reference' },
 						{ label: 'The adopt document', slug: 'reference/adopt-json' },
 						{ label: 'Claims and runs', slug: 'claims' },
+						{ label: 'Glossary', slug: 'glossary' },
 					],
 				},
 			],

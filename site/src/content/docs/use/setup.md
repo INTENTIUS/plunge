@@ -72,12 +72,15 @@ Otherwise S3 and GCS use their default chains against the real cloud.
 ## Kubernetes
 
 `plunge+k8s://` keeps one Secret per record in the namespace and needs a DIY
-`metadata` URL for the stack metadata. The Secrets carry an estate label for
-choudoufu's admission policy (`pkg/staterecord/estate-boundary.yaml`, which
-plunge imports).
+`metadata` URL for the stack metadata. The Secrets carry an
+[estate](../../glossary/#estate) label, which choudoufu's admission policy
+reads.
 
 ## Who may write
 
 The identity running plunge needs read and write on the record prefix and
 read on the bucket's settings. [Record store bucket](../bucket/) has commands
-creating a bucket that passes.
+for a bucket that passes.
+
+Source: choudoufu's `pkg/staterecord/estate-boundary.yaml`, the admission
+policy plunge imports.

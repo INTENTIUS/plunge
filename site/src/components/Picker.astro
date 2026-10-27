@@ -1,23 +1,20 @@
 ---
 // The home page's picker, in choudoufu's picker shape: the stack you run today
-// and where it runs as two rows of tiles, and the roles as a line of links
-// at the end. A card gives the first step for that pick, and a line under it gives
-// the differences. Every list comes from data/rooms.ts, the room pages' source. The
-// first pick is rendered on the server, so the card reads the same without
-// script.
+// and the platform it targets as two rows of tiles, and the roles as a line of
+// links at the end. A card gives the first step for that pick, and a list under
+// it gives every difference from stock Pulumi. Every list comes from
+// data/rooms.ts, the room pages' source. The first pick is rendered on the
+// server, so the card reads the same without script.
 import Diver from "./Diver.astro";
-import { FROM, PLATFORMS, ROLES, room } from '../data/rooms';
+import { DIFFERS, FROM, PLATFORMS, ROLES, room } from '../data/rooms';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const href = (h: string) => (/^https?:/.test(h) ? h : `${base}${h}`);
 const tiles = FROM.map((f) => {
 	const r = room(f.room);
-	return { id: f.id, label: f.label, room: href(`/for/${f.room}/`), title: r.title, differs: r.differs, first: { label: r.first.label, href: href(r.first.href) } };
+	return { id: f.id, label: f.label, room: href(`/for/${f.room}/`), title: r.title, differs: f.differs, first: { label: f.first.label, href: href(f.first.href) } };
 });
-const platforms = PLATFORMS.map((p) => {
-	const r = room(p.room);
-	return { id: p.id, label: p.label, room: href(`/for/${p.room}/`), title: r.title, differs: r.differs };
-});
+const platforms = PLATFORMS.map((p) => ({ id: p.id, label: p.label, room: href(p.hub), title: `the ${p.label} pages`, differs: p.differs }));
 const data = { tiles, platforms };
 const [tile] = tiles;
 const [platform] = platforms;
@@ -34,12 +31,13 @@ const [platform] = platforms;
 		))}
 	</div>
 	<div class="tiles" role="group" aria-labelledby="pl-pick-platform">
-		<span id="pl-pick-platform" class="h">Runs on</span>
+		<span id="pl-pick-platform" class="h">Targets</span>
 		{PLATFORMS.map((p, i) => (
 			<button type="button" class="tile" data-pick="platform" value={p.id} aria-pressed={String(i === 0)}>
 				<Diver size={24} />
 				<b>{p.label}</b>
 				<small>{p.blurb}</small>
+				<span class:list={['status', { none: p.status === 'Not run yet' }]}>{p.status}</span>
 			</button>
 		))}
 	</div>
@@ -47,13 +45,14 @@ const [platform] = platforms;
 		<a class="go" data-first href={tile.first.href}>{tile.first.label}</a>
 		<p class="sub" data-more>Then read <a href={tile.room}>{tile.title}</a> and <a href={platform.room}>{platform.title}</a>.</p>
 	</div>
-	<div class="notes" data-notes hidden={!(tile.differs.length + platform.differs.length)}>
-		<p class="h">Differs</p>
+	<div class="notes">
+		<p class="h">Differences from stock Pulumi</p>
+		<ul>{DIFFERS.map((d) => <li>{d}</li>)}</ul>
 		<ul data-differs>{[...tile.differs, ...platform.differs].map((d) => <li>{d}</li>)}</ul>
 	</div>
 	<nav class="roles" aria-label="By role">
 		<span>Or start from your role</span>
-		{ROLES.map((r) => <a class="role" href={href(`/for/${r.room}/`)}><Diver size={16} />{r.label}</a>)}
+		{ROLES.map((r) => <a class="role" href={href(r.href)}><Diver size={16} />{r.label}</a>)}
 	</nav>
 	<script type="application/json" data-picker-data set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />
 </section>
@@ -90,7 +89,6 @@ const [platform] = platforms;
 			go.textContent = tile.first.label;
 			$('[data-more]').replaceChildren('Then read ', link(tile.title, tile.room), ' and ', link(platform.title, platform.room), '.');
 			const differs = [...tile.differs, ...platform.differs];
-			$('[data-notes]').hidden = !differs.length;
 			$('[data-differs]').replaceChildren(...differs.map((d) => li(d)));
 			try {
 				localStorage.setItem(key, JSON.stringify(pick));
@@ -148,6 +146,20 @@ const [platform] = platforms;
 	.tile small {
 		font-size: var(--sl-text-xs);
 		line-height: 1.35;
+		color: var(--sl-color-gray-3);
+	}
+	.status {
+		justify-self: start;
+		margin-top: 0.15rem;
+		padding: 0.05rem 0.45rem;
+		font-size: 0.68rem;
+		font-weight: 600;
+		color: var(--sl-color-white);
+		border: 1px solid var(--pl-accent);
+		border-radius: 999px;
+	}
+	.status.none {
+		border-color: var(--pl-rule);
 		color: var(--sl-color-gray-3);
 	}
 	.tile:hover {
@@ -229,23 +241,23 @@ const [platform] = platforms;
 		color: var(--sl-color-gray-3);
 	}
 	.notes {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem 1rem;
-		align-items: baseline;
+		display: grid;
+		gap: 0.35rem;
 		padding: 0 0.25rem;
 		font-size: var(--sl-text-xs);
-		color: var(--sl-color-gray-3);
-	}
-	.notes[hidden] {
-		display: none;
+		color: var(--sl-color-gray-2);
 	}
 	.notes .h {
 		margin: 0;
 	}
 	.notes ul {
-		display: contents;
-		list-style: none;
+		display: grid;
+		gap: 0.3rem;
+		margin: 0;
+		padding-left: 1.1rem;
+	}
+	.notes ul:empty {
+		display: none;
 	}
 	.notes :global(li) {
 		margin: 0;

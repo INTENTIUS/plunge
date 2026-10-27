@@ -12,8 +12,8 @@ plunge drift --resource 'urn:pulumi:dev::app::aws:s3/bucket:Bucket::logs' --stre
 
 It reads the resource's and provider's records by key, without the snapshot,
 and configures the provider from its record. One Read gives the outputs to
-compare (`pkg/cmd/pulumi/drift/drift.go`). The program does not run, so inputs are not
-compared. It needs a `plunge+` backend.
+compare. The program does not run, so inputs are not compared. The command
+needs a `plunge+` backend.
 
 ## The stream
 
@@ -43,3 +43,5 @@ stream.
 
 choudoufu's `live-plan -resource=ADDR` plans one resource and its upstream
 cone. chant reads its drift record v1 the same way.
+
+Source: `pkg/cmd/pulumi/drift/drift.go`.

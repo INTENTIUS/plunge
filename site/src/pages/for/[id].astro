@@ -1,18 +1,23 @@
 ---
-// One page per tile under "You run today", per platform and per role, at
-// /plunge/for/<id>/, from data/rooms.ts (the home page's picker reads the
-// same file). The sidebar's "Start here" group lists these pages;
-// scripts/check-rooms.mjs fails the build when it misses one.
+// One page per room at /plunge/for/<id>/, from data/rooms.ts (the home page's
+// picker reads the same file). The sidebar's "Start here" group lists these
+// pages; scripts/check-rooms.mjs fails the build when it misses one. Old room
+// addresses redirect (OLD_ROOMS in rooms.ts).
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import Room from '../../components/Room.astro';
 import { ROOMS } from '../../data/rooms';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 export function getStaticPaths() {
 	return ROOMS.map((r) => ({ params: { id: r.id } }));
 }
 
-const r = ROOMS.find((x) => x.id === Astro.params.id)!;
+const i = ROOMS.findIndex((x) => x.id === Astro.params.id);
+const r = ROOMS[i];
+// Prev and Next walk the rooms in sidebar order and stop at the ends.
+const near = (x?: (typeof ROOMS)[number]) => (x ? { link: `${base}/for/${x.id}/`, label: x.title } : false);
 ---
-<StarlightPage frontmatter={{ title: r.title, description: r.lede, tableOfContents: false }}>
+<StarlightPage frontmatter={{ title: r.title, description: r.lede, tableOfContents: false, prev: near(ROOMS[i - 1]), next: near(ROOMS[i + 1]) }}>
 	<Room id={r.id} />
 </StarlightPage>
