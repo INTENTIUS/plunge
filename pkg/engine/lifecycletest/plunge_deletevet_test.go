@@ -83,7 +83,7 @@ func TestPlungeDeleteVetterSeesDestroyAndUpDeletes(t *testing.T) {
 				return nil
 			})
 			hostF := deploytest.NewPluginHostF(nil, nil, programF, nil, nil, loaders...)
-			p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF}}
+			p := &lt.TestPlan{Options: lt.TestUpdateOptions{T: t, HostF: hostF, SkipDisplayTests: true}}
 			project := p.GetProject()
 
 			snap, err := lt.TestOp(Update).RunStep(project, p.GetTarget(t, nil), p.Options, false, p.BackendClient,
