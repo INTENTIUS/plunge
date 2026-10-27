@@ -14,7 +14,7 @@
 
 // Package plunge is plunge's per-resource state backend (INTENTIUS/plunge#6).
 //
-// A stack's state is a set of records in a store with conditional writes (the vendored staterecord package):
+// A stack's state is a set of records in a store with conditional writes (choudoufu's public staterecord package):
 // one per URN, one per root Stack output, one immutable secrets configuration, one per snippet and extension. A
 // run writes only the records it changed, each conditioned on the version it read, and holds no stack lock. The
 // snapshot the engine sees is assembled from the records on every read, sorted so each resource follows what it
@@ -26,6 +26,10 @@
 //
 // Two engine seams on deploy.Target carry the rest: ProviderIDs derives a new provider's ID instead of a random
 // UUID (providerid.go), and DeleteGuard keeps a resource an older program version would delete (generation.go).
+// DeleteVetter refuses a run, destroy included, that would delete an object whose live marker does not name the
+// stack (deletevet.go, INTENTIUS/plunge#37), the delete half of a replacement included (INTENTIUS/plunge#51).
+// ImportVetter holds an `import:` to the marker rules: a create-only-tags type, or an object another stack's marker
+// names, is refused before the import step exists (importvet.go, INTENTIUS/plunge#51).
 //
 // docs/plunge/CONCURRENCY.md describes the behaviour for operators.
 package plunge

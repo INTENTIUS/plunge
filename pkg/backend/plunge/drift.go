@@ -37,8 +37,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	deployproviders "github.com/pulumi/pulumi/pkg/v3/resource/deploy/providers"

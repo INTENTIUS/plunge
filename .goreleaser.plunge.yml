@@ -16,6 +16,10 @@
 #   ./scripts/prep-for-goreleaser.sh
 #   PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/plunge-version.sh plunge) \
 #     goreleaser release -f .goreleaser.plunge.yml
+#
+# Release tags are plunge-vX.Y.Z (INTENTIUS/plunge#33). plunge-release.yml passes the tag as
+# GORELEASER_CURRENT_TAG and PLUNGE_VERSION=X.Y.Z (scripts/plunge-version.sh drops the prefix). The tag
+# isn't semver with its prefix, so goreleaser warns and goes on; nothing below reads .Version or .Tag.
 dist: goreleaser
 version: 2
 
@@ -85,7 +89,7 @@ archives:
       strip_parent: true
   # Named from PLUNGE_VERSION, not .Tag: this tree carries upstream's tags (v3.*, pkg/v3.*, sdk/v3.*),
   # so outside a plunge tag push git describe finds pulumi's version, and a monorepo tag puts a slash
-  # in the name.
+  # in the name. A plunge-vX.Y.Z tag gives PLUNGE_VERSION X.Y.Z, so the archive is plunge-vX.Y.Z-<os>-<arch>.
   name_template: '{{ .ProjectName }}-v{{ .Env.PLUNGE_VERSION }}-{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}'
 
 snapshot:

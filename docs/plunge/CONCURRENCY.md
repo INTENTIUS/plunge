@@ -3,7 +3,8 @@
 What happens when two runs write one stack's state at the same time on the
 plunge record backend (`plunge+file://`, `plunge+s3://`, `plunge+azblob://`,
 `plunge+gs://`, `plunge+k8s://`). The backend is `pkg/backend/plunge`; the record store under it
-is choudoufu's `staterecord`, vendored at `pkg/backend/plunge/staterecord`.
+is choudoufu's public `staterecord` package (`github.com/intentius/choudoufu/pkg/staterecord`), a module
+dependency of `pkg/go.mod` since INTENTIUS/plunge#39.
 
 ## No stack lock
 
@@ -74,10 +75,34 @@ and never falls back to the shell's Azure login (INTENTIUS/plunge#35):
   setting is reported unreadable with the reason, and the open is refused
   unless `allow_insecure` names them.
 
+- The stack metadata half is the DIY backend's go-cloud bucket
+  (`gocloud.dev/blob/azureblob`), which builds its own client and refuses query
+  keys it does not know. The backend rewrites the metadata URL before opening
+  it (`pkg/backend/plunge/azblobmeta.go`): plunge's own keys are dropped, and
+  the endpoint is spelled in go-cloud's `domain`, `protocol`, `cdn` and
+  `localemu` keys so that go-cloud's service URL is exactly the record store's
+  endpoint. go-cloud signs with `AZURE_STORAGE_ACCOUNT` plus
+  `AZURE_STORAGE_KEY`, or `AZURE_STORAGE_SAS_TOKEN`; it does not read
+  `ARM_ACCESS_KEY` or `ARM_SAS_TOKEN`. With neither it would use
+  `AZURE_STORAGE_CONNECTION_STRING`, whose own endpoint replaces the URL's, or
+  build `DefaultAzureCredential`, so the open is refused by name in both cases.
+  It is also refused when the endpoint (or the blob URL a `metadata_host`'s
+  storage suffix gives) is not local (`localhost`, `*.localhost` or a loopback
+  address), when `AZURE_STORAGE_ACCOUNT` names another account than the URL,
+  and for an endpoint go-cloud cannot spell: on `127.0.0.1` or `localhost` it
+  puts the account in the path, so Azurite's form is
+  `http://127.0.0.1:10000/<account>`.
+- Without `endpoint` or `metadata_host`, go-cloud's own `domain`, `protocol`,
+  `cdn` and `localemu` keys, and `AZURE_STORAGE_DOMAIN`,
+  `AZURE_STORAGE_PROTOCOL`, `AZURE_STORAGE_IS_CDN` and
+  `AZURE_STORAGE_IS_LOCAL_EMULATOR`, are refused: they would move the stack
+  metadata while the records stayed on real Azure.
+
 For example, against floci-az:
 `plunge+azblob://records?storage_account=devacct&resource_group=rg&subscription_id=<sub>&metadata_host=localhost:4577&endpoint=https://devacct.blob.localhost:4577`
 with `ARM_TENANT_ID`, `ARM_CLIENT_ID` and `ARM_CLIENT_SECRET` set to floci-az's
-fakes.
+fakes, and `AZURE_STORAGE_ACCOUNT=devacct` with `AZURE_STORAGE_KEY` set to the
+account's key for the stack metadata.
 
 `plunge+s3://` and `plunge+gs://` check their bucket the same way when they
 open it. S3: `versioning`, `lifecycle` (a rule that expires noncurrent
@@ -87,6 +112,32 @@ versions under the records' prefix) and `public_access_block`; the
 `public_access_prevention` and `uniform_bucket_level_access`, plus
 `list_isolation`, which warns and never refuses. The names are the ones
 `allow_insecure` takes.
+
+Against an emulator, `plunge+s3://` and `plunge+gs://` follow plunge#35's
+rule and never build the SDK's default credential chain, which can reach the
+EC2 instance metadata service (169.254.169.254), SSO, STS, the GCE metadata
+server (metadata.google.internal) or oauth2.googleapis.com
+(INTENTIUS/plunge#50, `pkg/backend/plunge/localstores.go`):
+
+- `plunge+s3://` with an `endpoint` query key, or with `AWS_ENDPOINT_URL_S3` or
+  `AWS_ENDPOINT_URL` set, builds its client by hand with `AWS_ACCESS_KEY_ID`,
+  `AWS_SECRET_ACCESS_KEY` and an optional `AWS_SESSION_TOKEN`. A missing key,
+  or a `profile` query key (a profile outranks the environment's keys in the
+  SDK and can resolve through SSO or an assumed role), refuses the open.
+- `plunge+gs://` with `STORAGE_EMULATOR_HOST` set sends
+  `GOOGLE_OAUTH_ACCESS_TOKEN` as a static bearer token, else no credential.
+  The client is built with no credential lookup.
+- The stack metadata half is the DIY backend's go-cloud bucket, which builds
+  its own clients. The backend checks the metadata URL (the URL inside
+  `plunge+`, or `plunge+k8s://`'s `metadata` key) before opening it: an s3 URL
+  with a custom endpoint needs the two AWS keys (go-cloud's chain then takes
+  them and resolves nothing else), and a gs URL under `STORAGE_EMULATOR_HOST`
+  needs `GOOGLE_OAUTH_ACCESS_TOKEN` or `GOOGLE_CREDENTIALS`, which the DIY
+  backend reads before falling back to application default credentials.
+  go-cloud follows only `STORAGE_EMULATOR_HOST` and refuses query keys it does
+  not know, so a `plunge+gs://` `endpoint` key is refused by name.
+
+URLs naming none of these use the SDKs' default chains, as before.
 
 ## Races
 
@@ -193,7 +244,7 @@ Three limits apply inside covered types, and no record reason marks them:
 - The loser of a racing create is not retried inline. Its run fails with the
   cloud's already-exists error and the re-run binds the winner.
 - A covered type that no lister covers and whose import ID is more than its
-  name (a pulumi-aws multi-part identifier that `ccid.go` cannot translate,
+  name (a pulumi-aws multi-part identifier that choudoufu's `pkg/identity` cannot translate,
   see C2 below) has no by-name read: its record carries `ownership.unlisted`,
   and a winner that stopped before its record write is refused by the cloud on
   every re-run until it is imported by hand. The by-name read also skips a name set by a
@@ -227,7 +278,7 @@ quorum read, and keeps its claim.
 
 | Family | Listing | C2 |
 |---|---|---|
-| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (`pkg/backend/plunge/ccid.go`), or when its translation is written out from the Terraform importer (`ccid_hand.go`: EIP, ECS service, three GuardDuty detector children, QuickSight folder, three SageMaker domain children). `aws_budgets_budget_action` stays unlisted: its id starts with the account ID, which Cloud Control does not carry | claimed |
+| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (choudoufu `pkg/identity/cloudcontrol.go`, choudoufu#2286), or when its translation is written out from the Terraform importer (`cloudcontrol_hand.go`: EIP, ECS service, three GuardDuty detector children, QuickSight folder, three SageMaker domain children). `aws_budgets_budget_action` stays unlisted: its id starts with the account ID, which Cloud Control does not carry | claimed |
 | pulumi-azure, azure-native | ARM's own list, filtered by the `plunge-urn` tag | binds, consistency unmeasured (the measurement on a real subscription is the maintainer's) |
 | pulumi-kubernetes | a LIST of the kind by label selector, answered from a quorum read | claimed |
 | pulumi-gcp, Cloud Storage | the bucket list, which Google documents as strongly consistent | claimed |
@@ -248,12 +299,19 @@ provider's `endpoints` (`aws:endpoints` on a default provider): its
 `AWS_ENDPOINT_URL`, then the one URL every entry shares (a stack pointing
 every service at floci). A Google Cloud list uses the service's
 `<service>CustomEndpoint` input or its `GOOGLE_*_CUSTOM_ENDPOINT` variable, and
-Asset Inventory uses `cloudAssetCustomEndpoint`.
+Asset Inventory uses `cloudAssetCustomEndpoint`. An ARM list for an azure
+provider with a `metadataHost` (or `ARM_METADATA_HOSTNAME`) goes to the ARM
+endpoint that host's `/metadata/endpoints` names, with a token from the login
+endpoint and audience it names. The token comes from a client secret in the
+environment only (`ARM_TENANT_ID`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`),
+never azidentity's default chain; without the three the listing is skipped.
+When the metadata host is local, an ARM or login endpoint it names that is not
+local skips the listing too.
 
 When the configuration names custom endpoints and none that the listing can
 use (an `aws:endpoints` with several URLs and no `cloudcontrol` entry, a google
-provider with custom endpoints for other services, an azure provider with a
-`metadataHost`, which the ARM lister does not resolve), the listing is
+provider with custom endpoints for other services, an azure provider with
+custom endpoints other than a `metadataHost`), the listing is
 skipped. plunge warns once, naming the stack and the service, records the
 reason in `ownership.unlisted`, and runs no bind or collision check for those
 creates. It never falls back to the cloud's public endpoint. The sweep for
@@ -291,6 +349,83 @@ whether or not C2 is claimed for it. Cloud Asset Inventory is not, since a
 lagging index can still list an object that was just deleted. A type with no lister is not swept. An object another
 run created a moment ago and has not recorded yet is reported too, so check
 with a second run before deleting anything.
+
+## Deletes: the marker decides
+
+plunge implements per-resource records that hold the full state, with
+ownership markers binding creates and, since INTENTIUS/plunge#37, vetting
+deletes. A record is never read as permission to delete, the same rule as
+choudoufu's `internal/live/doc.go`. Before any delete step exists, every
+object the run would delete is checked against its live marker. This
+includes `destroy`, which the program-stamp guard above exempts.
+
+| The live object | Outcome |
+|---|---|
+| Carries this stack's `plunge-stack` and `plunge-urn` markers | Deleted |
+| Has a marker naming another stack, or another resource of this stack | The run is refused |
+| Is of a type that takes markers, but carries none | The run is refused. Tags stripped by hand are not consent to delete |
+| Is of a type that carries no marker | Deleted on the record's word; the record's `ownership` entry says `"by": "record"` and why |
+| Is gone | Nothing to delete, as before |
+
+The refusal (`DeleteRefusedError`) names each URN, its object ID, what its
+marker says (another stack's name, or nothing), its record key and the
+command that removes the record (`plunge state delete '<urn>'`). No delete
+runs. Ruled 2026-10-26: refuse, like choudoufu, for both cases.
+
+Record-owned types are the ones whose ownership only the record can carry:
+a type with no tags (labels) argument, a tags property of a shape plunge does
+not write, a type whose schema could not be read, and a type `pkg/identity`
+classes markerless (choudoufu's record-backed types). The injector writes
+the `ownership` entry for each when the resource is created or updated. A
+record with no entry (written before entries, or with `PLUNGE_MARKERS=false`)
+is classed from the provider's schema at delete time.
+
+Where the marker comes from: with refresh on (the default for update and
+preview), the refreshed outputs hold the tags or labels, so the check makes
+no provider call. With refresh off (`PLUNGE_REFRESH=false`, or a `destroy`
+without `--refresh`), each marked object is read once through its provider's
+Read, the call a refresh makes under the stack's provider configuration, so
+it goes only to the endpoints the stack names (INTENTIUS/plunge#27).
+
+When it refuses: in `destroy`, before any step but the refresh. In `up`,
+deletes are generated after the program's registrations, so the refusal
+comes after its creates and updates and before any delete. `plunge up`
+previews first and the preview runs the same check, so without
+`--skip-preview` the run is refused at the preview. `PLUNGE_MARKERS=false`
+turns markers off, the check included.
+
+A replacement's delete is checked the same way (INTENTIUS/plunge#51). When
+the engine decides to replace a resource, before the replacement's first
+step, the original object is checked, and so is every dependent a
+delete-before-replace deletes first. A pending delete that an earlier run's
+replacement left in the state is checked with the run's other deletes. The
+original shares its URN with the new object, so an original that carries this
+stack's markers is deleted as before. One whose marker names another stack, or
+that carries none, refuses the run, and nothing is created or deleted. If the
+object is this stack's, run an `up` that changes only its tags so the markers
+land in place, then make the change that replaces it.
+
+## Imports: the same rules as a marker write
+
+A resource the program registers with `import:` is not in the stack's state
+yet, so before INTENTIUS/plunge#51 the injector's create-only-tags refusal
+never saw it, and its markers were merged over whatever the live object's
+tags held. Now every import is checked before its step exists:
+
+| The type, and the live object | Outcome |
+|---|---|
+| A type whose tags can only be set at create | The run is refused by URN and type, before any provider call. Marking it would replace it |
+| Carries a marker naming another stack, or another resource of this stack | The run is refused; nothing is imported and the marker stays |
+| Carries no marker | Imported; the update that follows adds this stack's markers in place |
+| Already carries this resource's markers | Imported as is |
+| A type that carries no marker | Imported on the program's word, record-owned |
+
+The live object is read once, through its provider's Read under the stack's
+provider configuration, the same call the import step makes next. A create
+that the bind phase turned into an import was found by its own markers, so it
+is not read again. An object of a create-only type that already carries this
+resource's markers can still join the stack: drop `import:` and the bind
+phase finds it by its markers, where plunge can list the type.
 
 ## Pending operations
 

@@ -35,13 +35,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/azsweep"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/cloudcontrol"
+	"github.com/intentius/choudoufu/pkg/azsweep"
+	"github.com/intentius/choudoufu/pkg/cloudcontrol"
+	"github.com/intentius/choudoufu/pkg/gcpsweep"
+	"github.com/intentius/choudoufu/pkg/identity"
+	"github.com/intentius/choudoufu/pkg/kubesweep"
+	"github.com/intentius/choudoufu/pkg/registry"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcplist"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcpsweep"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/kubesweep"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/registry"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
@@ -63,7 +64,8 @@ func firstEnv(names ...string) string {
 // the consistent per-type listing choudoufu binds with; the Resource Groups Tagging API is not used here, because its
 // index lags.
 type cloudControlLister struct {
-	clients listerCache[cloudcontrol.Client]
+	clients  listerCache[cloudcontrol.Client]
+	accounts accountIDs
 }
 
 func (l *cloudControlLister) Consistent() bool { return true }
@@ -76,8 +78,10 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 		return false, fmt.Sprintf("Cloud Control cannot list %s without a parent's input", info.CFNType)
 	}
 	if info.Family == FamilyAWS {
-		// pulumi-aws's ID is the Terraform id. A single-part Cloud Control identifier is it; a multi-part one is
-		// translated through the type's import id grammar (ccid.go).
+		// pulumi-aws's ID is the Terraform id. A single-part Cloud Control identifier is it for most types, and
+		// is translated for the rest; a multi-part one is translated through the type's import id grammar or a
+		// written-out translation. The translation is choudoufu's pkg/identity (CloudControlTranslation,
+		// choudoufu#2286, moved there from this package).
 		if _, reason := awsIDTranslation(info); reason != "" {
 			return false, reason
 		}
@@ -85,27 +89,16 @@ func (l *cloudControlLister) Covers(info TypeInfo) (bool, string) {
 	return true, ""
 }
 
-// awsIDTranslation is how a pulumi-aws type's Cloud Control identifiers become Terraform ids: nil for a single-part
-// identifier, which is the id as it is.
-func awsIDTranslation(info TypeInfo) (*ccTranslation, string) {
+// awsIDTranslation is how a pulumi-aws type's Cloud Control identifiers become Terraform ids.
+func awsIDTranslation(info TypeInfo) (*identity.CloudControlID, string) {
 	roster, err := registry.Embedded()
 	if err != nil {
 		return nil, "choudoufu's registry could not be read: " + err.Error()
 	}
-	switch roster.IdentifierArity(info.CFNType) {
-	case 0:
+	if roster.IdentifierArity(info.CFNType) == 0 {
 		return nil, fmt.Sprintf("the registry has no primary identifier for %s", info.CFNType)
-	case 1:
-		return nil, ""
 	}
-	if t, ok := ccHandTranslation(info.TFType, info.CFNType); ok {
-		return t, ""
-	}
-	t, reason := ccTerraformID(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
-	if reason != "" {
-		return nil, reason
-	}
-	return &t, ""
+	return identity.CloudControlTranslation(info.TFType, info.CFNType, roster.PrimaryIdentifier(info.CFNType))
 }
 
 func (l *cloudControlLister) ListMarked(
@@ -125,25 +118,29 @@ func (l *cloudControlLister) ListMarked(
 	if err != nil {
 		return nil, err
 	}
-	descs, err := c.ListResources(ctx, info.CFNType)
-	if err != nil {
-		return nil, err
-	}
-	var translate *ccTranslation
+	var translate *identity.CloudControlID
 	if info.Family == FamilyAWS {
 		var reason string
 		if translate, reason = awsIDTranslation(info); reason != "" {
 			return nil, errors.New(reason)
 		}
 	}
+	// An id that starts with the account ID reads it with STS on the stack's own endpoint (accountid.go). A
+	// stack that names custom endpoints and none for STS skips the listing, as it would for Cloud Control.
+	translate, err = translate.ResolveAccount(ctx, l.accounts.source(req.URN, req.ProviderInputs, region))
+	if err != nil {
+		return nil, err
+	}
+	descs, err := c.ListResources(ctx, info.CFNType)
+	if err != nil {
+		return nil, err
+	}
 	var objs []LiveObject
 	for _, d := range descs {
 		tags, ok := cfnTags(d.Properties)
-		if prop := translate.needsModel(); prop != "" {
-			// The id is read from a model property (an ARN), which a list handler may leave out.
-			if _, has := d.Properties[prop]; !has {
-				ok = false
-			}
+		if translate.WantsModel(d.Identifier, d.Properties) {
+			// The id is read from a model property (an ARN, a name, an ID), which a list handler may leave out.
+			ok = false
 		}
 		if !ok {
 			// The list handler left the tags, or the property the id is read from, out: read the one resource.
@@ -159,10 +156,10 @@ func (l *cloudControlLister) ListMarked(
 		}
 		id := d.Identifier
 		if translate != nil {
-			tfID, ok := translate.translate(d.Identifier, d.Properties)
+			tfID, ok := translate.Translate(d.Identifier, d.Properties)
 			if !ok {
-				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s's "+
-					"Terraform id (it should have %d parts)", d.Identifier, info.CFNType, info.TFType, translate.arity)
+				return nil, fmt.Errorf("the Cloud Control identifier %q of %s cannot be translated to %s",
+					d.Identifier, info.CFNType, translate.Describe())
 			}
 			id = tfID
 		}
@@ -207,6 +204,8 @@ type armClient struct {
 	endpoint string
 	scope    string
 	cred     azcore.TokenCredential
+	// do sends the list calls; nil is http.DefaultClient.
+	do policy.Transporter
 }
 
 // armAPIVersion is the Resources API version the list calls are made at.
@@ -228,12 +227,6 @@ func (l *armLister) ListMarked(
 	ctx context.Context, info TypeInfo, req deploy.BindRequest, want map[string]string,
 ) ([]LiveObject, error) {
 	in := req.ProviderInputs
-	if host := azureMetadataHost(in); host != "" {
-		// The provider reads every endpoint from the metadata host (an emulator such as floci-az). The lister does
-		// not resolve one, and without it the call would go to the public cloud's ARM.
-		return nil, skipped(req.URN, "ARM", "the azure provider takes its endpoints from the metadata host %s, "+
-			"which plunge's ARM lister does not resolve", host)
-	}
 	sub := providerString(in, "subscriptionId")
 	if sub == "" {
 		sub = firstEnv("ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID")
@@ -241,24 +234,42 @@ func (l *armLister) ListMarked(
 	if sub == "" {
 		return nil, fmt.Errorf("no subscription: the provider sets no subscriptionId and ARM_SUBSCRIPTION_ID is unset")
 	}
-	a := azsweep.Attrs{
-		Provider:       azsweep.ProviderAzureRM,
-		SubscriptionID: sub,
-		TenantID:       providerString(in, "tenantId"),
-		ClientID:       providerString(in, "clientId"),
-		ClientSecret:   providerString(in, "clientSecret"),
-		Environment:    providerString(in, "environment"),
-	}
-	c, err := l.creds.get(sub+"|"+a.TenantID+"|"+a.ClientID+"|"+a.Environment, func() (*armClient, error) {
-		cred, ep, _, err := a.Credential(ctx, "plunge's marker bind")
+	var c *armClient
+	var err error
+	if host := azureMetadataHost(in); host != "" {
+		// The provider reads every endpoint from the metadata host (an emulator such as floci-az), and so does the
+		// lister, with a client secret from the environment and never the default credential chain
+		// (armendpoints.go, INTENTIUS/plunge#41).
+		c, err = l.creds.get("metadata|"+host+"|"+sub, func() (*armClient, error) {
+			mc, skip, err := armMetadataHostClient(ctx, req.URN, host)
+			if skip != nil {
+				return nil, skip
+			}
+			return mc, err
+		})
 		if err != nil {
 			return nil, err
 		}
-		return &armClient{endpoint: strings.TrimSuffix(ep.ResourceManager, "/"), scope: azsweep.Scope(ep.Audience),
-			cred: cred}, nil
-	})
-	if err != nil {
-		return nil, err
+	} else {
+		if skip := armCustomEndpointSkip(req.URN, in); skip != nil {
+			return nil, skip
+		}
+		a := azsweep.Attrs{
+			Provider:       azsweep.ProviderAzureRM,
+			SubscriptionID: sub,
+			TenantID:       providerString(in, "tenantId"),
+			ClientID:       providerString(in, "clientId"),
+			ClientSecret:   providerString(in, "clientSecret"),
+			Environment:    providerString(in, "environment"),
+		}
+		// plunge builds the credential (sweepconfig.go); armCustomEndpointSkip above keeps every custom-endpoint stack
+		// away from it.
+		c, err = l.creds.get(sub+"|"+a.TenantID+"|"+a.ClientID+"|"+a.Environment, func() (*armClient, error) {
+			return armProviderClient(a)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	// ARM filters on one tag; the first URN chunk narrows it, and filterMarked checks every marker.
 	filter := fmt.Sprintf("tagName eq '%s' and tagValue eq '%s'", markers.TagURN,
@@ -299,7 +310,11 @@ func (c *armClient) get(ctx context.Context, u string) (*armPage, error) {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+tok.Token)
-	resp, err := http.DefaultClient.Do(req)
+	var do policy.Transporter = http.DefaultClient
+	if c.do != nil {
+		do = c.do
+	}
+	resp, err := do.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -573,8 +588,22 @@ func (l *gcpLister) ListMarked(
 	if err := gcpImpersonationEndpoint(req, a); err != nil {
 		return nil, err
 	}
-	key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
-	c, err := l.clients.get(key, func() (*http.Client, error) { return gcpsweep.HTTPClient(ctx, a) })
+	// A stack naming custom endpoints gets a client whose credential never fetches a token from a non-local host
+	// (INTENTIUS/plunge#42, gcpauth.go); any other keeps the provider's own credential chain.
+	local, isLocal, err := gcpLocalAuthFor(req, a, p.t.Service.Host)
+	if err != nil {
+		return nil, err
+	}
+	var c *http.Client
+	if isLocal {
+		c, err = l.clients.get(local.cacheKey(), func() (*http.Client, error) { return local.client(ctx) })
+	} else {
+		key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
+		c, err = l.clients.get(key, func() (*http.Client, error) {
+			hc, _, err := gcpProviderHTTPClient(ctx, a)
+			return hc, err
+		})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -624,9 +653,28 @@ func (l *assetLister) ListMarked(
 	if a.Project == "" {
 		return nil, fmt.Errorf("no project: the provider sets no project and GOOGLE_PROJECT is unset")
 	}
-	c, err := l.clients.get(a.Project+"|"+a.ImpersonateServiceAccount, func() (*gcpsweep.Client, error) {
-		return gcpsweep.New(ctx, a)
-	})
+	local, isLocal, err := gcpLocalAuthFor(req, a, "cloudasset.googleapis.com")
+	if err != nil {
+		return nil, err
+	}
+	var c *gcpsweep.Client
+	if isLocal {
+		// INTENTIUS/plunge#42: the Cloud Asset client goes over plunge's own client, never a credential lookup
+		// (gcpauth.go); choudoufu's public gcpsweep looks up none when handed one (plunge#39).
+		c, err = l.clients.get(a.Project+"|"+local.cacheKey(), func() (*gcpsweep.Client, error) {
+			hc, err := local.client(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return gcpAssetClient(ctx, a, hc, gcpsweep.Credentials{
+				Source: gcpsweep.SourceCaller, Impersonate: local.impersonate,
+			})
+		})
+	} else {
+		c, err = l.clients.get(a.Project+"|"+a.ImpersonateServiceAccount, func() (*gcpsweep.Client, error) {
+			return gcpAssetClient(ctx, a, nil, gcpsweep.Credentials{})
+		})
+	}
 	if err != nil {
 		return nil, err
 	}

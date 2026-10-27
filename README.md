@@ -1,11 +1,29 @@
 # plunge
 
-Pulumi with per-resource ownership: marker tags and a per-resource record store instead of one locked
-checkpoint. plunge is to Pulumi what choudoufu is to Terraform: the engine tier for Pulumi teams on
-chant. The plan is in INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
+Pulumi with per-resource ownership. plunge runs the same programs, SDKs, language hosts and providers
+as stock Pulumi, and changes where a stack's state lives and how a run decides what it owns:
 
-At this stage (P-L0, INTENTIUS/plunge#3) plunge is stock Pulumi under another name. It runs the same
-programs, SDKs, language hosts and providers. The state backend rewrite comes in later milestones.
+- Each taggable resource carries two markers, `plunge-stack` and `plunge-urn`, written in its create
+  call (tags on AWS and Azure, digests in labels on Google Cloud and Kubernetes).
+- A `plunge+<store>` backend (`file`, `s3`, `gs`, `azblob`, `k8s`) keeps one record per resource, each
+  write conditional, with no stack lock.
+- An unnamed resource of a covered type gets the same name on every run, and a saved plan whose
+  records moved is refused (exit 40). Every delete is checked against the live marker (built for
+  INTENTIUS/plunge#37, waiting for its run).
+- `plunge stack adopt` moves a stock stack onto records; `plunge drift --resource` reads one resource's
+  drift with one provider Read.
+
+The ownership model comes from chant, whose identity markers decide what a deployment owns. plunge
+carries it into Pulumi as choudoufu carries it into OpenTofu. Both are engines for chant (a chant
+workspace runs a plunge stack as a member), and each also works standalone. The plan is in
+INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
+
+Documentation: https://intentius.io/plunge. Its [claims page](https://intentius.io/plunge/claims/) lists
+the runs recorded so far and the issue holding each run still to come. The site's source is in
+`site/`, and the design details are in `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`.
+To preview the site locally, run `just site-serve` (live reload) or `just site-preview` (the built
+site as it will be published); both serve http://127.0.0.1:4321/plunge/ and take another port as an
+argument. `just site` only builds it, with its link and contrast checks.
 
 ## Fork point
 
@@ -98,9 +116,10 @@ A host that is neither bundled nor on `PATH` is fetched the way upstream fetches
 build of that host, at plunge's Pulumi-compatible version, not one built from this tree. That is the
 same code while plunge's hosts don't diverge from upstream's.
 
-Releases are built by `.github/workflows/plunge-release.yml` when a `vX.Y.Z` tag is pushed. It runs
-goreleaser with `.goreleaser.plunge.yml` and publishes `plunge-vX.Y.Z-<os>-<arch>` archives on this
-repository's releases page. Windows binaries are unsigned. The snapshot build below shows the same
+Releases are built by `.github/workflows/plunge-release.yml` when a `plunge-vX.Y.Z` tag is pushed. A bare
+`vX.Y.Z` tag doesn't trigger it: those are upstream pulumi's tag names, which this tree carries once
+upstream is fetched (INTENTIUS/plunge#33). It runs goreleaser with `.goreleaser.plunge.yml` and publishes
+`plunge-vX.Y.Z-<os>-<arch>` archives on this repository's releases page. Windows binaries are unsigned. The snapshot build below shows the same
 artifact list without publishing anything.
 
 ```sh
@@ -137,10 +156,14 @@ fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG
 ### Scheduled upstream merge
 
 `scripts/plunge-upstream-merge.sh` does the same on a fresh branch. It fetches pulumi/pulumi master
-(fetch only; it never pushes there), cuts `upstream-merge/<date>-<upstream sha>` from
+(fetch only; it never pushes there, and it sets the `upstream` remote's push URL to `no-push://`,
+whether it adds the remote or finds one already there), cuts `upstream-merge/<date>-<upstream sha>` from
 `origin/integration/pulumi-engine` (`BASE` to change it), merges with a merge commit, moves any workflow
-upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg` and
-`bin/plunge`. On a conflict it lists the files, aborts the merge and stops: a human resolves it. With
+upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg`, `sdk/pcl`,
+the three language hosts (with `GOTOOLCHAIN=go1.27.1`) and `bin/plunge`. A conflict only in upstream's
+generated Automation API or in go.mod/go.sum files is resolved (it takes upstream's, re-applies
+`scripts/plunge-go-mod-fork.txt`, then runs `go mod tidy` in every module `scripts/tidy.sh` covers). On
+any other conflict it lists the files, aborts the merge and stops: a human resolves it. With
 `--push` it pushes the branch to origin, and only `upstream-merge/*` branches. It never merges into the
 integration branch or main. Results go to `plunge-upstream-merge-out/`: `report.md`, and `verdict.txt`
 with one line, `UPSTREAM-MERGE UP-TO-DATE|MERGED|CONFLICT|BUILD-FAILED|ERROR ...`.

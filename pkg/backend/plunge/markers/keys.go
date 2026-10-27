@@ -15,9 +15,10 @@
 // Package markers is plunge's ownership-marker vocabulary (INTENTIUS/plunge#7): the tag keys, how a URN is carried
 // in tag values and in label values, and reading them back off a live object.
 //
-// It is a leaf package. The marker injector, the bind and collision listers and the vendored cloud sweeps all
-// import it, so every reader and writer means the same thing by a marker, the way choudoufu's
-// internal/live/markers is the one implementation its own readers and writers share.
+// It is a leaf package. The marker injector and the bind and collision listers import it, and choudoufu's public
+// sweeps (github.com/intentius/choudoufu/pkg/gcpsweep and the rest) are handed its keys and LabelValue through
+// markerkeys.Keys (pkg/backend/plunge/sweepconfig.go), so every reader and writer means the same thing by a marker,
+// the way choudoufu's internal/live/markers is the one implementation its own readers and writers share.
 //
 // Two encodings, one per family shape:
 //
@@ -121,6 +122,21 @@ func For(urn resource.URN, enc Encoding) (map[string]string, error) {
 		runes = runes[n:]
 	}
 	return out, nil
+}
+
+// LabelValue is the value key carries under the label encoding, for value as a caller names it: a TagStack value
+// "<project>/<stack>" becomes its 16-character digest and a TagURN value "urn:pulumi:..." its 32-character digest,
+// as For writes them. Any other value is taken to be a label spelling already and is returned as given; a digest is
+// lower-case hex, so it never has the "/" of a stack value or the "urn:pulumi:" of a URN. It is the encoder plunge
+// hands choudoufu's sweeps (markerkeys.Keys.Encode, INTENTIUS/plunge#39), so a caller may name either spelling.
+func LabelValue(key, value string) string {
+	switch {
+	case key == TagStack && strings.Contains(value, "/"):
+		return digest(value, 16)
+	case key == TagURN && strings.HasPrefix(value, "urn:pulumi:"):
+		return digest(value, 32)
+	}
+	return value
 }
 
 // IsMarkerKey reports whether key is one of plunge's marker keys (case-insensitively, since Azure keeps a key in

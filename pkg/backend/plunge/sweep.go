@@ -35,8 +35,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
@@ -120,6 +120,7 @@ func sweepUnrecorded(
 	for urn := range targets {
 		known[urn] = true
 	}
+	aliases := recordAliases(states, targets)
 
 	urns := make([]resource.URN, 0, len(targets))
 	for urn := range targets {
@@ -174,7 +175,7 @@ func sweepUnrecorded(
 			continue
 		}
 		for _, o := range objs {
-			if recorded[o.ID] || reported[o.ID] {
+			if recorded[o.ID] || aliases[t.info.Type][string(o.ID)] || reported[o.ID] {
 				continue
 			}
 			reported[o.ID] = true
@@ -190,6 +191,88 @@ func sweepUnrecorded(
 		return found[i].ID < found[j].ID
 	})
 	return found, notes, nil
+}
+
+// recordAliases are, by type, the other names the records give each recorded object of a swept type: the string
+// values of its ARN, URL and name outputs, and of the outputs its import id row in pkg/identity names. A listing
+// translates each Cloud Control identifier to pulumi-aws's id before the lookup (pkg/identity's
+// CloudControlTranslation), and this is the second chance for an identifier the listing could not translate: an
+// emulator that lists a queue by its name, or a function by its ARN, still names an object a record holds, and that
+// object is not reported (INTENTIUS/plunge#28).
+// Each name is unique among a type's objects, so a match is the recorded object itself.
+func recordAliases(
+	states []apitype.ResourceV3, targets map[resource.URN]sweepTarget,
+) map[tokens.Type]map[string]bool {
+	keys := map[tokens.Type][]string{}
+	for _, t := range targets {
+		if _, ok := keys[t.info.Type]; ok {
+			continue
+		}
+		keys[t.info.Type] = aliasOutputs(t.info)
+	}
+	out := map[tokens.Type]map[string]bool{}
+	for _, s := range states {
+		ks, ok := keys[s.Type]
+		if !ok || s.ID == "" {
+			continue
+		}
+		for _, k := range ks {
+			v, _ := s.Outputs[k].(string)
+			if v == "" || resource.ID(v) == s.ID {
+				continue
+			}
+			if out[s.Type] == nil {
+				out[s.Type] = map[string]bool{}
+			}
+			out[s.Type][v] = true
+		}
+	}
+	return out
+}
+
+// aliasOutputs are the Pulumi output names recordAliases reads for info's type.
+func aliasOutputs(info TypeInfo) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(tf string) {
+		k := lowerCamel(tf)
+		if k == "" || k == "id" || seen[k] {
+			return
+		}
+		seen[k] = true
+		out = append(out, k)
+	}
+	for _, k := range []string{"arn", "url", "name"} {
+		add(k)
+	}
+	if info.Identity != nil {
+		for _, a := range info.Identity.IdentityAttrs {
+			add(a)
+		}
+		for _, c := range info.Identity.Components {
+			if c.Cloud == "" && len(c.Attrs) == 1 {
+				add(c.Attrs[0])
+			}
+		}
+	}
+	return out
+}
+
+// lowerCamel is a Terraform attribute name in the bridge's Pulumi spelling: "function_name" is "functionName".
+func lowerCamel(tf string) string {
+	parts := strings.Split(tf, "_")
+	var b strings.Builder
+	for i, p := range parts {
+		if p == "" {
+			continue
+		}
+		if i == 0 {
+			b.WriteString(p)
+			continue
+		}
+		b.WriteString(strings.ToUpper(p[:1]) + p[1:])
+	}
+	return b.String()
 }
 
 // listsAnIndex reports whether lister would list info's type through a lagging index rather than the service's own

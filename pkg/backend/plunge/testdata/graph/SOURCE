@@ -1,0 +1,4 @@
+Copied from INTENTIUS/chant at dba9edb8b52ad7be5dbd1e6bbc03547e1e5bae94 (origin/integration/consolidation-graph; schema added by 424482c54, chant#4527):
+  packages/core/src/graph-schema/graph.schema.json -> graph.schema.json
+  packages/core/src/graph-schema/fixtures/plunge.engine-graph.json -> plunge.engine-graph.json
+Do not edit by hand; re-copy when chant regenerates the schema.

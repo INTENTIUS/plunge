@@ -43,10 +43,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/engine"
 	lt "github.com/pulumi/pulumi/pkg/v3/engine/lifecycletest/framework"
 	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"
@@ -139,6 +139,8 @@ type runConfig struct {
 	persist bool              // write records through the record persister
 	base    *deploy.Snapshot  // the snapshot to run against in place of the records' (a stock back-out run)
 	marks   *ledger           // receives the run's ledger, when set
+	vet     bool              // set Target.DeleteVetter and Target.ImportVetter, as the plunge backend does
+	destroy bool              // run a destroy in place of an update
 }
 
 // run is one engine run against the records in store, returning the engine's events.
@@ -182,11 +184,16 @@ func run(
 		target.Binder = newBinder(cat, marks, listers)
 		target.Autonames = newAutonamePolicy(cat, marks)
 	}
+	if cfg.vet {
+		target.DeleteVetter = newDeleteVetter(newCatalog(), l)
+		target.ImportVetter = newImportVetter(newCatalog(), marks)
+	}
 
 	var manager *backend.SnapshotManager
 	if cfg.persist && !cfg.dryRun {
 		sm := b64.NewBase64SecretsManager()
-		persister := newRecordPersister(ctx, store, l, Generation{Commit: "c1", Time: 100}, true, sm.Decrypter())
+		persister := newRecordPersister(ctx, store, l, Generation{Commit: "c1", Time: 100}, !cfg.destroy,
+			sm.Decrypter())
 		persister.ownership = marks
 		manager = backend.NewSnapshotManager(persister, sm, snap, nil)
 	}
@@ -223,7 +230,12 @@ func run(
 			return host, nil
 		},
 	}
-	_, _, updateErr := engine.Update(lt.NewUpdateInfo(project, target), engineCtx, opts, cfg.dryRun)
+	var updateErr error
+	if cfg.destroy {
+		_, _, updateErr = engine.Destroy(lt.NewUpdateInfo(project, target), engineCtx, opts, cfg.dryRun)
+	} else {
+		_, _, updateErr = engine.Update(lt.NewUpdateInfo(project, target), engineCtx, opts, cfg.dryRun)
+	}
 	var closeErr error
 	if manager != nil {
 		closeErr = manager.Close()

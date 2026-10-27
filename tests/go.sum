@@ -383,8 +383,8 @@ github.com/iancoleman/strcase v0.3.0 h1:nTXanmYxhfFAMjZL34Ov6gkzEsSJZ5DbhxWjvSAS
 github.com/iancoleman/strcase v0.3.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/intentius/choudoufu v0.31.1-0.20261025204848-9807fdc1fa59 h1:sMFfCPGKAJ1N3ZnE1I+6D81DjwNfz4pf5W6NAv5w2wk=
-github.com/intentius/choudoufu v0.31.1-0.20261025204848-9807fdc1fa59/go.mod h1:ekwPqFVSxJrDurPRoaUOzggZ9SqVC4Mbm25LGOojXZQ=
+github.com/intentius/choudoufu v0.31.1-0.20261027044621-69ee0b226713 h1:pdBFEkmlkuhqZCWrpd6zqLsBvel5X/Zo4cKiR0ZRGJo=
+github.com/intentius/choudoufu v0.31.1-0.20261027044621-69ee0b226713/go.mod h1:ekwPqFVSxJrDurPRoaUOzggZ9SqVC4Mbm25LGOojXZQ=
 github.com/iwdgo/sigintwindows v0.2.2 h1:P6oWzpvV7MrEAmhUgs+zmarrWkyL77ycZz4v7+1gYAE=
 github.com/iwdgo/sigintwindows v0.2.2/go.mod h1:70wPb8oz8OnxPvsj2QMUjgIVhb8hMu5TUgX8KfFl7QY=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=

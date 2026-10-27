@@ -23,10 +23,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	sdkDisplay "github.com/pulumi/pulumi/pkg/v3/display"
 	"github.com/pulumi/pulumi/pkg/v3/engine"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
@@ -95,6 +95,16 @@ func New(ctx context.Context, d diag.Sink, plungeURL string, project *workspace.
 	if err != nil {
 		return nil, err
 	}
+	// An azblob:// metadata URL drops plunge's own query keys, which go-cloud refuses, and gets go-cloud's keys for
+	// the record store's endpoint, or is refused when it would leave the machine (azblobmeta.go).
+	if meta, err = azblobMetadataURL(ctx, plungeURL, meta); err != nil {
+		return nil, err
+	}
+	// Refused before the DIY backend's go-cloud bucket builds a default credential chain for an emulator's
+	// endpoint (INTENTIUS/plunge#50).
+	if err := refuseDefaultChains(plungeURL, meta); err != nil {
+		return nil, err
+	}
 	inner, err := diy.New(ctx, d, meta, project)
 	if err != nil {
 		return nil, err
@@ -120,9 +130,10 @@ func Login(ctx context.Context, d diag.Sink, plungeURL string, project *workspac
 }
 
 // URL is the plunge URL this backend was opened with, normalized through the DIY backend's own URL where the DIY
-// URL is inside it. A plunge+k8s:// URL keeps its metadata URL in a query key, so it is returned as given.
+// URL is inside it. A plunge+k8s:// URL keeps its metadata URL in a query key, and a plunge+azblob:// URL's DIY URL
+// is rewritten for go-cloud (azblobmeta.go), so both are returned as given.
 func (b *plungeBackend) URL() string {
-	if isK8sURL(b.url) {
+	if isK8sURL(b.url) || isAzblobURL(b.url) {
 		return b.url
 	}
 	return URLPrefix + b.Backend.URL()
@@ -465,13 +476,19 @@ func (b *plungeBackend) apply(
 	// autonaming policy (autoname.go, claim C1) runs before each resource's Check.
 	var marks *ledger
 	var listers map[Family]Lister
+	cat := newCatalog()
 	if programDriven(kind) && markersEnabled() {
 		marks = newLedger()
-		cat := newCatalog()
 		listers = b.listers()
 		target.Markers = newMarkerPolicy(cat, snap, marks, b.d)
 		target.Binder = newBinder(cat, marks, listers)
 		target.Autonames = newAutonamePolicy(cat, marks)
+		// The import vet (importvet.go, INTENTIUS/plunge#51): an `import:` is held to the injector's rules.
+		target.ImportVetter = newImportVetter(cat, marks)
+	}
+	// The delete vet (deletevet.go, INTENTIUS/plunge#37): the live marker decides every delete, destroy included.
+	if (programDriven(kind) || kind == apitype.DestroyUpdate) && markersEnabled() {
+		target.DeleteVetter = newDeleteVetter(cat, l)
 	}
 	update := engine.UpdateInfo{Root: op.Root, Project: op.Proj, Target: target}
 

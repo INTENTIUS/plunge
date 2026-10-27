@@ -152,3 +152,91 @@ func (f unmeasuredLister) ListMarked(
 ) ([]LiveObject, error) {
 	return filterMarked(f.objs, want), nil
 }
+
+// INTENTIUS/plunge#28: an identifier the listing could not translate to pulumi-aws's id still finds its record, by
+// the record's ARN, URL or name output. A recorded function an emulator lists by its ARN, and recorded queues it
+// lists by name, raise no warning; a queue no record names is still reported.
+func TestSweepMatchesRecordsByTheirOtherNames(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	const fnType, queueType = "aws:lambda/function:Function", "aws:sqs/queue:Queue"
+	fnURN := resource.NewURN("test", "test", "", fnType, "handler")
+	queueURN := resource.NewURN("test", "test", "", queueType, "events")
+	fnInfo := TypeInfo{Type: fnType, Family: FamilyAWS, Property: "tags", Shape: ShapeMap,
+		TFType: "aws_lambda_function", CFNType: "AWS::Lambda::Function", Listable: true}
+	queueInfo := TypeInfo{Type: queueType, Family: FamilyAWS, Property: "tags", Shape: ShapeMap,
+		TFType: "aws_sqs_queue", CFNType: "AWS::SQS::Queue", Listable: true}
+	const fnARN = "arn:aws:lambda:us-east-1:000000000000:function:rec-r2-4507-handler"
+	const queueURL = "http://sqs.us-east-1.localhost:4566/000000000000/events"
+
+	for _, tc := range []struct {
+		name   string
+		urn    resource.URN
+		info   TypeInfo
+		state  apitype.ResourceV3
+		listed []resource.ID
+		want   []resource.ID
+	}{
+		{"function listed by ARN", fnURN, fnInfo, apitype.ResourceV3{
+			URN: fnURN, Type: fnType, Custom: true, ID: "rec-r2-4507-handler",
+			Outputs: map[string]any{"name": "rec-r2-4507-handler", "arn": fnARN},
+		}, []resource.ID{fnARN}, nil},
+		{"function listed by name", fnURN, fnInfo, apitype.ResourceV3{
+			URN: fnURN, Type: fnType, Custom: true, ID: "rec-r2-4507-handler",
+			Outputs: map[string]any{"name": "rec-r2-4507-handler", "arn": fnARN},
+		}, []resource.ID{"rec-r2-4507-handler"}, nil},
+		{"queue listed by name", queueURN, queueInfo, apitype.ResourceV3{
+			URN: queueURN, Type: queueType, Custom: true, ID: queueURL,
+			Outputs: map[string]any{"name": "events", "url": queueURL,
+				"arn": "arn:aws:sqs:us-east-1:000000000000:events"},
+		}, []resource.ID{"events"}, nil},
+		{"an unrecorded queue beside a recorded one", queueURN, queueInfo, apitype.ResourceV3{
+			URN: queueURN, Type: queueType, Custom: true, ID: queueURL,
+			Outputs: map[string]any{"name": "events", "url": queueURL},
+		}, []resource.ID{"events", "events-2"}, []resource.ID{"events-2"}},
+	} {
+		store := newCountingStore(t)
+		l, err := load(ctx, store, testKeys)
+		require.NoError(t, err, tc.name)
+		p := newRecordPersister(ctx, store, l, Generation{}, true, nil)
+		require.NoError(t, p.Save(apitype.TypedDeployment{Deployment: &apitype.DeploymentV3{
+			Resources: []apitype.ResourceV3{tc.state},
+		}}), tc.name)
+
+		want, err := markers.For(tc.urn, markers.EncodingTags)
+		require.NoError(t, err, tc.name)
+		var objs []LiveObject
+		for _, id := range tc.listed {
+			objs = append(objs, LiveObject{ID: id, Tags: want})
+		}
+		marks := newLedger()
+		marks.noteMarked(tc.urn, tc.info, nil)
+		found, notes, err := sweepUnrecorded(ctx, store, testKeys, marks,
+			map[Family]Lister{FamilyAWS: &fakeLister{objs: objs}})
+		require.NoError(t, err, tc.name)
+		assert.Empty(t, notes, tc.name)
+		var got []resource.ID
+		for _, f := range found {
+			got = append(got, f.ID)
+		}
+		assert.Equal(t, tc.want, got, tc.name)
+	}
+}
+
+// The other names are read per type: a function's ARN does not hide an unrecorded queue that happens to share it.
+func TestRecordAliasesArePerType(t *testing.T) {
+	t.Parallel()
+	const fnType, queueType = "aws:lambda/function:Function", "aws:sqs/queue:Queue"
+	fnURN := resource.NewURN("test", "test", "", fnType, "handler")
+	queueURN := resource.NewURN("test", "test", "", queueType, "events")
+	targets := map[resource.URN]sweepTarget{
+		fnURN:    {info: TypeInfo{Type: fnType, Family: FamilyAWS}},
+		queueURN: {info: TypeInfo{Type: queueType, Family: FamilyAWS}},
+	}
+	aliases := recordAliases([]apitype.ResourceV3{
+		{URN: fnURN, Type: fnType, ID: "handler", Outputs: map[string]any{"name": "handler", "arn": "shared"}},
+	}, targets)
+	assert.True(t, aliases[tokens.Type(fnType)]["shared"])
+	assert.False(t, aliases[tokens.Type(queueType)]["shared"])
+	assert.False(t, aliases[tokens.Type(fnType)]["handler"], "the ID itself is not an alias")
+}

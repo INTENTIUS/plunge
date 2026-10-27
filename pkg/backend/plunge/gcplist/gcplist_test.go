@@ -29,7 +29,7 @@ import (
 )
 
 // TestCoveredTypesMatchTheSharedList: plunge lists exactly the types in testdata/covered-types.txt, the copy of
-// choudoufu's internal/live/gcpsweep/testdata/covered-types.txt that choudoufu tests its own set against
+// choudoufu's pkg/gcpsweep/testdata/covered-types.txt that choudoufu tests its own set against
 // (INTENTIUS/plunge#15's ruling: the same per-service listers in both repos). When choudoufu's list changes, copy the
 // file here.
 func TestCoveredTypesMatchTheSharedList(t *testing.T) {

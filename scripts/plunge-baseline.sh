@@ -73,8 +73,18 @@ export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1
 export AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null AWS_EC2_METADATA_DISABLED=true
 export PULUMI_SKIP_UPDATE_CHECK=true PULUMI_SKIP_CONFIRMATIONS=true
 unset PULUMI_ACCESS_TOKEN PULUMI_BACKEND_URL
+# pulumi-gcp lists the project's regions when a provider configures, and that lookup ignores every custom
+# endpoint, so with floci-gcp it went to compute.googleapis.com (a 401 with the corpus's fake token,
+# INTENTIUS/plunge#42). gcp-yaml's stack sets gcp:skipRegionValidation for the default provider; an explicit
+# provider can't take it as a property and reads this variable instead.
+export PULUMI_GCP_SKIP_REGION_VALIDATION=true
 
 mkdir -p "${OUT}"
+# The scrub above unset CLOUDSDK_CONFIG too, which would send gcloud's library back to ~/.config/gcloud and its
+# application-default credentials. An empty directory instead: no ADC in reach of any GCP call. The same for the
+# Azure CLI's login, for every program (azure_setup below names the same directory).
+mkdir -p "${OUT}/.gcloud-no-login" "${OUT}/.azure-no-login"
+export CLOUDSDK_CONFIG="${OUT}/.gcloud-no-login" AZURE_CONFIG_DIR="${OUT}/.azure-no-login"
 VERDICTS="${OUT}/verdicts.txt"
 : > "${VERDICTS}"
 

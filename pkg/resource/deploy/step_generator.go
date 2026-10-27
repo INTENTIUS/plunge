@@ -104,6 +104,8 @@ type stepGenerator struct {
 	// URNs whose delete-before-replace plunge's autonaming policy forced, warned about once at replacement
 	// (plunge_autonaming.go).
 	plungeDeleteFirst map[resource.URN]bool
+	// Objects whose delete half of a replacement plunge's delete vet already asked about (plunge_deletevet.go).
+	plungeVetted map[string]bool
 
 	// the set of resources that need to be destroyed in this deployment after running other steps on them.
 	toDelete []*pkgresource.State
@@ -1223,6 +1225,12 @@ func (sg *stepGenerator) continueStepsFromRefresh(
 	}
 	isImport := goal.Custom && goal.ID != "" && (old == nil || old.External || oldImportID != goal.ID)
 	if isImport {
+		// plunge (INTENTIUS/plunge#51): an import of a create-only-tags type, or of an object another stack's marker
+		// names, is refused before its step exists.
+		if err := sg.vetPlungeImport(ctx, urn, goal, prov); err != nil {
+			return nil, false, err
+		}
+
 		// TODO(seqnum) Not sure how sequence numbers should interact with imports
 
 		// Return an ImportStep or an ImportReplacementStep
@@ -2116,6 +2124,11 @@ func (sg *stepGenerator) continueStepsFromDiff(diffEvent ContinueResourceDiffEve
 				}
 			}
 
+			// plunge (INTENTIUS/plunge#51): the delete half of a replacement goes through the delete vet too.
+			if err := sg.vetPlungeReplaced(old, nil); err != nil {
+				return nil, err
+			}
+
 			sg.replaces[urn] = true
 
 			// If we are going to perform a replacement, we need to recompute the default values.  The above logic
@@ -2195,6 +2208,9 @@ func (sg *stepGenerator) continueStepsFromDiff(diffEvent ContinueResourceDiffEve
 					return nil, err
 				}
 				toReplace = append(toReplace, replacedWith...)
+				if err := sg.vetPlungeReplaced(nil, toReplace); err != nil {
+					return nil, err
+				}
 
 				// Deletions must occur in reverse dependency order, and `deps` is returned in dependency
 				// order, so we iterate in reverse.
@@ -2516,6 +2532,10 @@ func (sg *stepGenerator) GenerateDeletes(targetsOpt UrnTargets, excludesOpt UrnT
 
 	// Resources the target's DeleteGuard keeps, with everything they need to stay valid in the snapshot.
 	guarded := sg.guardedFromDelete(isTargeted)
+	// plunge (INTENTIUS/plunge#37): the live marker, not the record, decides each delete; a refusal stops the run.
+	if err := sg.vetPlungeDeletes(isTargeted, guarded); err != nil {
+		return nil, nil, err
+	}
 
 	// Doesn't matter what order we build this list of steps in as we'll sort them in ScheduleDeletes.
 	deleteSteps := []Step{}

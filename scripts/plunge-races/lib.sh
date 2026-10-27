@@ -68,6 +68,18 @@ verdict() {
   echo "VERDICT $1 $2 $3 $4" | tee -a "${VERDICTS}"
 }
 
+# secure_bucket <bucket>: the settings plunge+s3:// checks on open (INTENTIUS/plunge#20, #34), so the race runs with
+# no PLUNGE_ALLOW_INSECURE waiver: versioning on, an enabled lifecycle rule with no filter that expires noncurrent
+# versions after 30 days, and all four public access block settings on. The rule deletes no current object.
+secure_bucket() {
+  awsf s3api put-bucket-versioning --bucket "$1" --versioning-configuration Status=Enabled >/dev/null
+  awsf s3api put-bucket-lifecycle-configuration --bucket "$1" --lifecycle-configuration \
+    '{"Rules":[{"ID":"records-noncurrent","Status":"Enabled","Filter":{"Prefix":""},"NoncurrentVersionExpiration":{"NoncurrentDays":30}}]}' \
+    >/dev/null
+  awsf s3api put-public-access-block --bucket "$1" --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null
+}
+
 # race_begin <name>: a fresh bucket, prefix and backend for one race. Sets RACE, WORK, BUCKET, PREFIX, BACKEND.
 race_begin() {
   RACE="$1"
@@ -78,12 +90,15 @@ race_begin() {
   BUCKET="plr-${RACE}-${stamp}"
   PREFIX="plr${RACE//[^a-z0-9]/}${stamp}"
   awsf s3api create-bucket --bucket "${BUCKET}" >/dev/null
+  secure_bucket "${BUCKET}"
   BACKEND="plunge+s3://${BUCKET}?region=us-east-1&endpoint=${FLOCI}&s3ForcePathStyle=true"
   echo "== ${RACE}: bucket ${BUCKET}, prefix ${PREFIX}" | tee "${WORK}/race.txt"
 }
 
 # write_program <dir> <resource>...: the race program with only the named resources. Every physical name carries
-# ${PREFIX}. Knobs are stack config: retentionA, retentionB, retentionW.
+# ${PREFIX}. Knobs are stack config: retentionA, retentionB, retentionW. native-site and native-role are aws-native
+# types (INTENTIUS/plunge#36), created through Cloud Control; their names are their primary identifiers, so plunge's
+# C1 autonaming covers them as it covers site and role.
 write_program() {
   local dir="$1"
   shift
@@ -92,9 +107,13 @@ write_program() {
 import sys, pathlib
 d, prefix, names = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3:]
 V = "      version: 7.51.1\n"
+N = "      version: 1.83.1\n"
+POLICY = '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
 res = {
   "site": "  site:\n    type: aws:s3:Bucket\n    properties:\n      bucket: ${prefix}-site\n      tags: {race: plunge}\n    options:\n" + V,
   "role": "  role:\n    type: aws:iam:Role\n    properties:\n      name: ${prefix}-app\n      assumeRolePolicy: '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}'\n      tags: {race: plunge}\n    options:\n" + V,
+  "native-site": "  native-site:\n    type: aws-native:s3:Bucket\n    properties:\n      bucketName: ${prefix}-nsite\n      tags: [{key: race, value: plunge}]\n    options:\n" + N,
+  "native-role": "  native-role:\n    type: aws-native:iam:Role\n    properties:\n      roleName: ${prefix}-napp\n      assumeRolePolicyDocument: " + POLICY + "\n      tags: [{key: race, value: plunge}]\n    options:\n" + N,
   "net": "  net:\n    type: aws:ec2:Vpc\n    properties:\n      cidrBlock: 10.77.0.0/16\n      tags: {race: plunge}\n    options:\n" + V,
   "queue-a": "  queue-a:\n    type: aws:sqs:Queue\n    properties:\n      name: ${prefix}-a\n      messageRetentionSeconds: ${retentionA}\n      tags: {race: plunge}\n    options:\n" + V,
   "queue-b": "  queue-b:\n    type: aws:sqs:Queue\n    properties:\n      name: ${prefix}-b\n      messageRetentionSeconds: ${retentionB}\n      tags: {race: plunge}\n    options:\n" + V,
@@ -137,6 +156,7 @@ config:
       s3: ${FLOCI}
       sqs: ${FLOCI}
       sts: ${FLOCI}
+  aws-native:region: us-east-1
 YAML
     local kv
     for kv in "$@"; do
@@ -226,6 +246,14 @@ ops = sorted({s.get("op") for s in doc.get("steps") or []} - {"same"})
 summary = {k: v for k, v in (doc.get("changeSummary") or {}).items() if k != "same"}
 sys.exit(0 if not ops and not summary else 1)
 PY
+}
+
+# real_cloud_rejections <log>...: the lines in the logs where a real AWS endpoint answered or refused our test keys.
+# The aws-native provider takes its endpoint from AWS_ENDPOINT_URL (exported above), not from stack config, so a
+# race over aws-native types checks for these before reading anything else.
+real_cloud_rejections() {
+  grep -hE 'UnrecognizedClientException|InvalidClientTokenId|SignatureDoesNotMatch|ExpiredToken|https://[a-z0-9.-]+\.amazonaws\.com' "$@" \
+    2>/dev/null || true
 }
 
 # lockish_keys: every key in the race bucket that looks like a lock, plus the DIY backend's lock directory.
