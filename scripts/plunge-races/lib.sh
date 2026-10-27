@@ -68,6 +68,18 @@ verdict() {
   echo "VERDICT $1 $2 $3 $4" | tee -a "${VERDICTS}"
 }
 
+# secure_bucket <bucket>: the settings plunge+s3:// checks on open (INTENTIUS/plunge#20, #34), so the race runs with
+# no PLUNGE_ALLOW_INSECURE waiver: versioning on, an enabled lifecycle rule with no filter that expires noncurrent
+# versions after 30 days, and all four public access block settings on. The rule deletes no current object.
+secure_bucket() {
+  awsf s3api put-bucket-versioning --bucket "$1" --versioning-configuration Status=Enabled >/dev/null
+  awsf s3api put-bucket-lifecycle-configuration --bucket "$1" --lifecycle-configuration \
+    '{"Rules":[{"ID":"records-noncurrent","Status":"Enabled","Filter":{"Prefix":""},"NoncurrentVersionExpiration":{"NoncurrentDays":30}}]}' \
+    >/dev/null
+  awsf s3api put-public-access-block --bucket "$1" --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null
+}
+
 # race_begin <name>: a fresh bucket, prefix and backend for one race. Sets RACE, WORK, BUCKET, PREFIX, BACKEND.
 race_begin() {
   RACE="$1"
@@ -78,6 +90,7 @@ race_begin() {
   BUCKET="plr-${RACE}-${stamp}"
   PREFIX="plr${RACE//[^a-z0-9]/}${stamp}"
   awsf s3api create-bucket --bucket "${BUCKET}" >/dev/null
+  secure_bucket "${BUCKET}"
   BACKEND="plunge+s3://${BUCKET}?region=us-east-1&endpoint=${FLOCI}&s3ForcePathStyle=true"
   echo "== ${RACE}: bucket ${BUCKET}, prefix ${PREFIX}" | tee "${WORK}/race.txt"
 }

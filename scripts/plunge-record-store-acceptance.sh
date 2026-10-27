@@ -7,6 +7,8 @@
 #
 # Usage:
 #   scripts/plunge-record-store-acceptance.sh
+#   STORE_URL='plunge+gs://plunge-acceptance/run-1' STORAGE_EMULATOR_HOST=localhost:4588 \
+#     scripts/plunge-record-store-acceptance.sh                       # the GCS leg, on floci-gcp
 #
 # Environment:
 #   PLUNGE      plunge binary                                    (default: bin/plunge)
@@ -15,12 +17,28 @@
 #   BUCKET      the bucket, for the default URL                  (default: plunge-acceptance)
 #   OUT         output directory                                 (default: plunge-acceptance-out/<UTC timestamp>)
 #   PULUMI_CONFIG_PASSPHRASE                                     (default: plunge-acceptance)
+#   STORAGE_EMULATOR_HOST  floci-gcp as host:port, for a plunge+gs:// STORE_URL (loopback only; the GCS client
+#                          and the DIY backend then send no credentials)
+#   GCS_PROJECT            the project a new GCS bucket is created in        (default: plc-corpus)
 #   PLUNGE_ACCEPTANCE_REAL_STORE=yes  allow a store that is not on loopback (a real bucket; it costs money)
 #
 # The default STORE_URL is
 #   plunge+s3://$BUCKET/<run id>?endpoint=$S3_ENDPOINT&s3ForcePathStyle=true&region=us-east-1
 # with a fresh prefix per run, so runs never share records. The bucket is created with the aws CLI when it is
 # missing and the aws CLI is on PATH. A plunge+file:// STORE_URL works too, for a dry rehearsal of the script.
+#
+# Opening a plunge+s3:// or plunge+gs:// store checks the bucket's settings and refuses one that fails them
+# (INTENTIUS/plunge#20), so the script sets them and the run needs no allow_insecure / PLUNGE_ALLOW_INSECURE
+# waiver (INTENTIUS/plunge#34):
+#   S3   versioning Enabled; an enabled lifecycle rule with no filter expiring noncurrent versions after 30 days;
+#        all four public access block settings on
+#   GCS  Object Versioning; a Delete rule for versions 30 days after they become noncurrent (it never matches a
+#        live object); public access prevention enforced; uniform bucket-level access
+# On loopback it sets them on every run, on a bucket it created or found. On a real store it sets them only on a
+# bucket it created itself, and leaves an existing real bucket's settings to its owner (an open then says which
+# setting fails). A plunge+gs:// store on loopback is one whose STORAGE_EMULATOR_HOST is loopback; the bucket is
+# created and configured through floci-gcp's JSON API. A real GCS bucket is created with gcloud when it is
+# missing and gcloud is on PATH.
 #
 # The program is a Pulumi YAML project of pulumi-random RandomStrings (no cloud at all: the record store is
 # the only thing under test). Its plugin is downloaded into $OUT/home on first use.
@@ -79,6 +97,14 @@ esac
 store_is_local() {
   case "${STORE_URL}" in
     plunge+file://*) return 0 ;;
+    plunge+gs://*)
+      # The GCS client and the DIY backend's gcsblob both go to STORAGE_EMULATOR_HOST when it is set, and to
+      # storage.googleapis.com when it is not.
+      case "${STORAGE_EMULATOR_HOST:-}" in
+        localhost:[0-9]*|127.0.0.1:[0-9]*) return 0 ;;
+        *) return 1 ;;
+      esac
+      ;;
   esac
   python3 - "${STORE_URL}" <<'EOF'
 import sys, urllib.parse
@@ -107,6 +133,11 @@ export PULUMI_BACKEND_URL="${STORE_URL}"
 
 mkdir -p "${OUT}"
 export PULUMI_HOME="${OUT}/home"
+if [ "${PLUNGE_ACCEPTANCE_REAL_STORE:-}" != "yes" ]; then
+  # No application-default credentials in reach either: gcloud's configuration is an empty directory.
+  mkdir -p "${OUT}/gcloud"
+  export CLOUDSDK_CONFIG="${OUT}/gcloud"
+fi
 VERDICTS="${OUT}/verdicts.txt"
 : > "${VERDICTS}"
 echo "${STORE_URL}" > "${OUT}/store-url.txt"
@@ -127,14 +158,75 @@ print(u.netloc, u.path.strip("/"), q.get("endpoint", [""])[0])
 EOF
 }
 
+# The GCS bucket and object prefix of the store, when it is GCS.
+gs_parts() {
+  python3 - "${STORE_URL}" <<'EOF'
+import sys, urllib.parse
+u = urllib.parse.urlparse(sys.argv[1][len("plunge+"):])
+if u.scheme != "gs":
+    sys.exit(1)
+print(u.netloc, u.path.strip("/"))
+EOF
+}
+
+S3_BUCKET="" S3_PREFIX="" S3_EP="" GS_BUCKET="" GS_PREFIX=""
 if parts="$(s3_parts)"; then
   read -r S3_BUCKET S3_PREFIX S3_EP <<< "${parts}"
   if command -v aws >/dev/null; then
     ep_args=()
     [ -n "${S3_EP}" ] && ep_args=(--endpoint-url "${S3_EP}")
+    created=no
     if ! aws "${ep_args[@]}" s3api head-bucket --bucket "${S3_BUCKET}" >/dev/null 2>&1; then
       aws "${ep_args[@]}" s3api create-bucket --bucket "${S3_BUCKET}" >/dev/null
+      created=yes
     fi
+    if store_is_local || [ "${created}" = yes ]; then
+      aws "${ep_args[@]}" s3api put-bucket-versioning --bucket "${S3_BUCKET}" \
+        --versioning-configuration Status=Enabled
+      aws "${ep_args[@]}" s3api put-bucket-lifecycle-configuration --bucket "${S3_BUCKET}" --lifecycle-configuration \
+        '{"Rules":[{"ID":"records-noncurrent","Status":"Enabled","Filter":{"Prefix":""},"NoncurrentVersionExpiration":{"NoncurrentDays":30}}]}'
+      aws "${ep_args[@]}" s3api put-public-access-block --bucket "${S3_BUCKET}" --public-access-block-configuration \
+        BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+      echo "s3 bucket ${S3_BUCKET}: versioning, lifecycle and public access block set" >> "${OUT}/bucket-setup.txt"
+    fi
+  fi
+elif parts="$(gs_parts)"; then
+  read -r GS_BUCKET GS_PREFIX <<< "${parts}"
+  if store_is_local; then
+    # floci-gcp's JSON API: create the bucket with its settings, or patch them onto one that is there.
+    python3 -I - "${STORAGE_EMULATOR_HOST}" "${GS_BUCKET}" "${GCS_PROJECT:-plc-corpus}" "${OUT}/bucket-setup.txt" <<'EOF'
+import json, sys, urllib.error, urllib.parse, urllib.request
+host, bucket, project, log = sys.argv[1:5]
+base = f"http://{host}/storage/v1/b"
+settings = {
+    "versioning": {"enabled": True},
+    "lifecycle": {"rule": [{"action": {"type": "Delete"}, "condition": {"daysSinceNoncurrentTime": 30}}]},
+    "iamConfiguration": {"uniformBucketLevelAccess": {"enabled": True}, "publicAccessPrevention": "enforced"},
+}
+def call(method, url, body):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method=method,
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req) as r:
+        return json.load(r)
+try:
+    call("POST", f"{base}?project={urllib.parse.quote(project)}", dict(settings, name=bucket))
+    how = "created"
+except urllib.error.HTTPError as e:
+    if e.code != 409:
+        sys.exit(f"creating gs://{bucket} on {host}: HTTP {e.code}: {e.read().decode(errors='replace')}")
+    call("PATCH", f"{base}/{urllib.parse.quote(bucket, safe='')}", settings)
+    how = "patched"
+with open(log, "a") as f:
+    f.write(f"gs bucket {bucket} {how} on {host}: versioning, noncurrent lifecycle, public access prevention "
+            "enforced, uniform bucket-level access\n")
+EOF
+  elif command -v gcloud >/dev/null && ! gcloud storage buckets describe "gs://${GS_BUCKET}" >/dev/null 2>&1; then
+    lifecycle="${OUT}/gcs-lifecycle.json"
+    echo '{"rule":[{"action":{"type":"Delete"},"condition":{"daysSinceNoncurrentTime":30}}]}' > "${lifecycle}"
+    gcloud storage buckets create "gs://${GS_BUCKET}" ${GCS_PROJECT:+--project "${GCS_PROJECT}"} \
+      --uniform-bucket-level-access --public-access-prevention
+    gcloud storage buckets update "gs://${GS_BUCKET}" --versioning --lifecycle-file "${lifecycle}"
+    echo "gs bucket ${GS_BUCKET} created with gcloud and its settings set" >> "${OUT}/bucket-setup.txt"
   fi
 fi
 
@@ -267,6 +359,31 @@ list_resource_records() {
       [ -n "${S3_EP}" ] && ep_args=(--endpoint-url "${S3_EP}")
       aws "${ep_args[@]}" s3api list-objects-v2 --bucket "${S3_BUCKET}" --prefix "${prefix}" \
         --query 'Contents[].Key' --output text | tr '\t' '\n' | grep -v '^None$'
+      ;;
+    plunge+gs://*)
+      # floci-gcp only: a real bucket's listing needs credentials this script does not hold.
+      store_is_local || return 1
+      local prefix="${suffix}"
+      [ -n "${GS_PREFIX}" ] && prefix="${GS_PREFIX}/${suffix}"
+      python3 -I - "${STORAGE_EMULATOR_HOST}" "${GS_BUCKET}" "${prefix}" <<'EOF'
+import json, sys, urllib.parse, urllib.request
+host, bucket, prefix = sys.argv[1:4]
+token = ""
+while True:
+    q = {"prefix": prefix, "fields": "items(name),nextPageToken"}
+    if token:
+        q["pageToken"] = token
+    url = f"http://{host}/storage/v1/b/{urllib.parse.quote(bucket, safe='')}/o?{urllib.parse.urlencode(q)}"
+    with urllib.request.urlopen(url) as r:
+        page = json.load(r)
+    for o in page.get("items") or []:
+        name = o["name"]
+        if "." not in name.rsplit("/", 1)[-1]:
+            print(name)
+    token = page.get("nextPageToken") or ""
+    if not token:
+        break
+EOF
       ;;
     *) return 1 ;;
   esac
