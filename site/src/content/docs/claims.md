@@ -2,37 +2,36 @@
 title: Claims and runs
 description: The four recorded plunge runs, with their dates and files, and every capability that waits for a run, with its issue.
 prompt: |
-  Read https://intentius.io/plunge/claims/. For each recorded run, open its files and check they say what the page says. Report any difference. Change no files.
+  Read https://intentius.io/plunge/claims/. For each recorded run, open its files and check they match the page. Report any difference. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-plunge follows choudoufu's rule: a promise with no proof is a GitHub issue,
-never a claim. A claim on this site is backed by one of the runs below, each a
-real CLI run with its output committed. Unit tests are code evidence and are
-named where they exist, but a capability with tests and no run is listed in
-the second table, with the issue that holds its run.
+Under choudoufu's rule, which plunge follows, a promise with no proof is a GitHub issue.
+Every claim here rests on a run below, a real CLI run with its output
+committed. A capability with unit tests and no run sits in the second table
+with its issue.
 
 ## Recorded runs
 
-All four ran on 2026-10-26 against local emulators (choudoufu's pinned floci,
-floci-gcp and floci-az images), with file backends and fake credentials. None
-touched a real cloud.
+All four ran on 2026-10-26 on local emulators (choudoufu's pinned floci,
+floci-gcp and floci-az images) with file backends and fake credentials, and
+none touched a real cloud.
 
-| Run | What it shows | Where the recording is |
+| Run | Result | Recording |
 |---|---|---|
 | Stock parity: `scripts/plunge-baseline.sh` runs `plunge preview` and stock `pulumi preview` (v3.272.0) on the seven corpus programs | `gcp-yaml` matches. The five `aws-*` programs and `azure-yaml` differ only in the names of autonamed resources, where plunge proposes its deterministic name and stock Pulumi a random one | [`tests/plunge-corpus/baseline-verdicts.txt`](https://github.com/INTENTIUS/plunge/blob/main/tests/plunge-corpus/baseline-verdicts.txt) and each program's `baseline/plunge-compare.txt`, commit 72050545c0, plunge built from d7653de7f5 ([#3](https://github.com/INTENTIUS/plunge/issues/3)) |
 | `plunge up` of `tests/plunge-corpus/aws-ts` on `plunge+file://`, then `plunge stack export` and `plunge stack output --json` | Every taggable resource's inputs carry `plunge-stack` and `plunge-urn`. The bucket policy, which has no tags argument, carries none. Unnamed queues and topics got `<name>-<7 hex>` names. The secret output prints as `"[secret]"` and the export holds its ciphertext | chant [`lexicons/pulumi/src/testdata/plunge-outputs/`](https://github.com/INTENTIUS/chant/tree/main/lexicons/pulumi/src/testdata/plunge-outputs), plunge 30806be26b, floci |
 | `plunge drift --resource <urn> --stream` on three resources of the same stack, after a tag was changed through floci's API | One drifted bucket with the changed tag as before and after, one role in sync, one component reported `not-observed` with `unsupported-kind`. Each settle line counts one provider Read (none for the component) and zero stack refreshes | chant [`lexicons/pulumi/src/testdata/plunge-drift/`](https://github.com/INTENTIUS/chant/tree/main/lexicons/pulumi/src/testdata/plunge-drift), plunge 30806be26b, floci |
 | `plunge stack adopt --json` on a stock pulumi v3.272.0 stack of `aws-ts` | `would-adopt` (nothing written), `adopted` with `--yes`, `already-adopted` on a re-run, and `refused` with `adopted-from-another-checkpoint` after a stock refresh changed the checkpoint | behold [`src/__fixtures__/plunge-adopt-30806be26b/`](https://github.com/INTENTIUS/behold/tree/main/src/__fixtures__/plunge-adopt-30806be26b), plunge 30806be26b, floci |
 
-Each AWS run is on floci, so it shows plunge's behaviour against an emulator
-of AWS, not against AWS itself.
+Each AWS run is on floci, so it shows plunge's behaviour on an AWS emulator
+and none on AWS itself.
 
 ## Built, waiting for a run
 
-Each row is in the code. "Unit-tested" means its tests ran green when the
-engine tier shipped (main 61f622536b). "Tests written" means the tests exist on
-the integration branch and have not run yet.
+Each row is in the code. "Unit-tested" means its tests passed when the
+engine tier shipped (main 61f622536b); "Tests written" means they exist on the
+integration branch and have not run.
 
 | Capability | State | Run held by |
 |---|---|---|
@@ -57,8 +56,7 @@ the integration branch and have not run yet.
 ## Research and later work
 
 [#38](https://github.com/INTENTIUS/plunge/issues/38) asks whether records
-should hold less than the full state; its report recommends keeping them full.
+should hold less than the full state, and recommends keeping them full.
 [#39](https://github.com/INTENTIUS/plunge/issues/39) moves plunge onto
-choudoufu's public packages, and
-[#40](https://github.com/INTENTIUS/plunge/issues/40) emits a stack's graph from
-its records.
+choudoufu's public packages; [#40](https://github.com/INTENTIUS/plunge/issues/40)
+emits a stack's graph from its records.

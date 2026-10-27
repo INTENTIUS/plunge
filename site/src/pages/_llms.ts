@@ -26,10 +26,10 @@ export async function pages() {
 
 export const PREAMBLE = `# plunge
 
-> plunge is Pulumi that tags each resource with the stack that owns it and keeps one record per resource, with no stack lock.
+> Pulumi with resource level concurrency and no stack lock
 
 The source, and the reference material the site links to, is at https://github.com/INTENTIUS/plunge.
 
-A claim on this site is backed by a recorded run, listed with its date at https://intentius.io/plunge/claims/. Anything built but not yet run links to its GitHub issue.
+Every claim here has a recorded run, dated at https://intentius.io/plunge/claims/. Anything built but not yet run links to its GitHub issue.
 
-A page with a prompt carries it under "Optional: hand this page to your coding agent", and llms.txt lists it under the page. Every prompt forbids \`plunge up\`, \`plunge destroy\`, \`plunge stack adopt --yes\` and merges; those stay with the person.`;
+A page's prompt sits under "Optional: hand this page to your coding agent" and in llms.txt under the page. Every prompt forbids \`plunge up\`, \`plunge destroy\`, \`plunge stack adopt --yes\` and merges, which stay with the person.`;

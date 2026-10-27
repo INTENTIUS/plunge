@@ -10,32 +10,32 @@ plunge stack adopt --json --stack dev        # classify, write nothing
 plunge stack adopt --json --yes --stack dev  # adopt
 ```
 
-Every resource keeps its ID and gets its own record. The next `plunge up`
-adds `plunge-stack` and `plunge-urn` to each taggable resource's tags in
-place ([Migrate a stock stack](/plunge/use/migrate/)).
+Each resource keeps its ID and gets a record. The next `plunge up` tags each
+taggable resource with `plunge-stack` and `plunge-urn` in place
+([Migrate](/plunge/use/migrate/)).
 
-## What is refused
+## Refusals
 
 A pulumi-aws provider whose `ignoreTags` or `defaultTags` would hide or
-override the `plunge-` keys is refused by name (`marker-hiding-provider-config`).
-So is an aws-native resource whose tags are create-only (`tagUpdatable: false`),
-since marking it would replace it (`create-only-tags`).
+override the `plunge-` keys is refused (`marker-hiding-provider-config`). So
+is an aws-native resource with create-only tags (`tagUpdatable: false`),
+which marking would replace (`create-only-tags`).
 
 ## Types with no tags
 
 A type with no tags argument, such as `aws:s3/bucketPolicy:BucketPolicy`,
-is record-owned: its record carries its ownership, and at adoption its fate is
-`pending` until the first run classes it from the schema.
+is record-owned, with fate `pending` at adoption until the first run classes
+it from the schema.
 
-## What has run
+## Recorded runs
 
-On 2026-10-26, against a stock pulumi v3.272.0 stack of the `aws-ts` corpus
-program on floci: `would-adopt`, `adopted`, `already-adopted`, and `refused`
-with `adopted-from-another-checkpoint` ([Claims and runs](/plunge/claims/)). Every resource was
-`pending`, since adoption loads no provider schema.
+On 2026-10-26 a stock pulumi v3.272.0 `aws-ts` stack on floci gave
+`would-adopt`, `adopted`, `already-adopted`, and `refused` with
+`adopted-from-another-checkpoint` ([Claims and runs](/plunge/claims/)). With no
+provider schema loaded, every resource was `pending`.
 
-The first `plunge up` after adoption and the back-out to stock wait for their
-run on [#7](https://github.com/INTENTIUS/plunge/issues/7).
+The first `plunge up` after adoption and the back-out to stock wait on
+[#7](https://github.com/INTENTIUS/plunge/issues/7).
 
 ## Leaving
 

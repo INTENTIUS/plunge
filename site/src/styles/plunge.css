@@ -271,7 +271,7 @@ h1#_top {
 	white-space: nowrap;
 }
 
-/* Code shows exactly what was typed: no ligatures turning ~> or -> into arrows. */
+/* Code shows the typed text exactly: no ligatures turning ~> or -> into arrows. */
 code, pre, kbd, samp {
 	font-variant-ligatures: none;
 	font-feature-settings: 'calt' 0, 'liga' 0;

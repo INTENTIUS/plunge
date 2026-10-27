@@ -11,19 +11,17 @@ The label's value is a digest, so a policy names the digest, not the stack:
 printf %s 'myproject/prod' | shasum -a 256 | cut -c1-16
 ```
 
-That is how `pkg/backend/plunge/markers/keys.go` computes it: the first 16
+`pkg/backend/plunge/markers/keys.go` computes the same value, the first 16
 hex characters of the SHA-256 of `<project>/<stack>`.
 
 ## The record store's own fence
 
 `plunge+k8s://` labels each record Secret with an estate (the `estate` query
-key, else the namespace). choudoufu's estate-boundary
-ValidatingAdmissionPolicy, embedded in choudoufu's `staterecord` package
-(`pkg/staterecord/estate-boundary.yaml` in choudoufu), fences writes to those
-Secrets by that label.
+key, else the namespace), and choudoufu's ValidatingAdmissionPolicy
+`pkg/staterecord/estate-boundary.yaml` fences writes by it.
 
 ## Objects plunge creates
 
-choudoufu's policy reads its own `tofu-estate` label. A policy reading
-`plunge-stack` on the objects plunge creates is not written, and nothing has
-run. [#45](https://github.com/INTENTIUS/plunge/issues/45) holds it.
+choudoufu's policy reads its own `tofu-estate` label. No policy reading
+`plunge-stack` on plunge's objects is written or run yet;
+[#45](https://github.com/INTENTIUS/plunge/issues/45) holds it.

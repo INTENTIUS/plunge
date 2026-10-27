@@ -1,6 +1,6 @@
 // A docs page as plain Markdown, for llms-full.txt and the "Copy page as
 // Markdown" button. MDX import lines and component tags are code, not text; a
-// tab's label stays as a bold line so what each tab is for is still named.
+// tab's label stays as a bold line so each tab's purpose is still named.
 import { SITE } from './prompts';
 
 export function pageUrl(id: string): string {

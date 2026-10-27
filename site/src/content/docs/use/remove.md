@@ -9,14 +9,13 @@ prompt: |
 ## Destroy the object
 
 Delete the resource from the program and run `plunge up`. Since
-[#37](https://github.com/INTENTIUS/plunge/issues/37), plunge first checks the
-live object's marker: it deletes the object only when the marker names this
-stack and this resource, and refuses the run otherwise
-([Deletes](../../how-it-works/deletes/)). That check is built and waits for
-its run.
+[#37](https://github.com/INTENTIUS/plunge/issues/37), plunge deletes the object
+only when its live marker names this stack and resource, and refuses the run
+otherwise ([Deletes](../../how-it-works/deletes/)); the check is built and
+waits for its run.
 
-A run of an older checkout of the program does not delete a resource a newer
-run created; it keeps it and warns, naming both program stamps.
+A run of an older program checkout keeps a resource a newer run created and
+warns, naming both stamps.
 
 ## Keep the object, drop the record
 
@@ -24,10 +23,9 @@ run created; it keeps it and warns, naming both program stamps.
 plunge state delete '<urn>'
 ```
 
-This is the command a delete refusal names. How `plunge state delete`, the
-other `state` subcommands and `--target` write records, and what they leave on
-the live object's markers, is not documented or tested yet
-([#47](https://github.com/INTENTIUS/plunge/issues/47)). An object left running
-with this stack's markers is reported after each update as an
-`unrecorded marked object`; remove its `plunge-*` tags yourself if you mean to
-keep it outside the stack.
+A delete refusal names this command. How it and the other `state` subcommands
+and `--target` change records and live markers is untested and undocumented
+([#47](https://github.com/INTENTIUS/plunge/issues/47)). Each
+update reports a running object with this stack's markers as an
+`unrecorded marked object`; remove its `plunge-*` tags to keep it outside the
+stack.

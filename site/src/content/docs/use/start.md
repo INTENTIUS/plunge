@@ -8,8 +8,7 @@ prompt: |
 
 ## Install
 
-There is no plunge release yet ([#13](https://github.com/INTENTIUS/plunge/issues/13)).
-Build it from a checkout:
+Build plunge from a checkout; there is no release yet ([#13](https://github.com/INTENTIUS/plunge/issues/13)):
 
 ```sh
 make plunge                  # bin/plunge, both versions stamped (needs mise)
@@ -18,9 +17,9 @@ go build -C pkg -o ../bin/plunge -ldflags "$(./scripts/plunge-version.sh ldflags
 make plunge_language_hosts   # the bundled dotnet and yaml hosts
 ```
 
-`plunge version` prints plunge's own version and the Pulumi version it is
-compatible with. Invoked through a symlink named `pulumi`, it prints only the
-latter, which is what the Automation API reads.
+`plunge version` prints plunge's version and its compatible Pulumi version.
+Through a symlink named `pulumi` it prints only the Pulumi version, which the
+Automation API reads.
 
 ## Choose a backend
 
@@ -32,10 +31,9 @@ latter, which is what the Automation API reads.
 | an Azure storage account | `plunge+azblob://container/prefix?storage_account=acct&resource_group=rg&subscription_id=<sub>` |
 | a Kubernetes namespace | `plunge+k8s://namespace/prefix?metadata=s3://bucket/meta` |
 
-A bucket must have versioning, a noncurrent-version lifecycle rule and its
-public access blocked before the store opens
-([What you set up by hand](../setup/)). The local store holds a lock file for
-one write at a time on one host only.
+The store opens a bucket only with versioning on, a noncurrent-version
+lifecycle rule and public access blocked ([Set up by hand](../setup/)). The
+local store's lock file allows one write at a time, on one host.
 
 ```sh
 plunge login 'plunge+s3://my-records/prod?region=us-east-1'
@@ -53,17 +51,17 @@ backend:
 
 ## Check the markers
 
-After the first update, list the stack's objects by its marker. On AWS:
+After the first update, list the stack's objects by marker, for example on AWS:
 
 ```sh
 aws resourcegroupstaggingapi get-resources \
   --tag-filters Key=plunge-stack,Values=<project>/dev
 ```
 
-On GCP and Kubernetes the label holds a digest, not the name
+On GCP and Kubernetes the label holds a digest in place of the name
 ([Identity](../../how-it-works/identity/)).
 
-## What has run
+## Recorded runs
 
 The local store has recorded runs on floci. The S3, GCS, Azure Blob and
 Kubernetes stores wait for theirs

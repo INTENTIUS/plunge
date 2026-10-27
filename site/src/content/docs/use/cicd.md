@@ -14,26 +14,24 @@ plunge preview --stack prod --save-plan plan.json
 plunge up --stack prod --plan plan.json --yes
 ```
 
-The saved plan carries the version of each record it read. If any has moved
-since, `plunge up --plan` is refused by name and exits 40, before anything
-changes. Treat 40 as "plan again" ([Resource-level concurrency](../../how-it-works/concurrency/#saved-plans)).
+The saved plan holds the version of each record it read. If any has moved,
+`plunge up --plan` is refused by name with exit 40 before anything changes;
+plan again ([Resource-level concurrency](../../how-it-works/concurrency/#saved-plans)).
 
 ## Credentials
 
-Give the job read and write on the record prefix and read on the bucket's
-settings. Give `plunge+azblob://` its key, SAS token or client secret in the
-environment, never in the URL.
+The job needs read and write on the record prefix and read on the bucket's
+settings. `plunge+azblob://` takes its key, SAS token or client secret from the
+environment only.
 
 ## Program stamps
 
-A run stamps each record with the program's commit and commit time from git.
-A shallow clone works, since the commit time is in the record itself. A run
-with no stamp (no git checkout and no `PLUNGE_PROGRAM_COMMIT` and
-`PLUNGE_PROGRAM_TIME`) deletes only records that carry no stamp either, so it
-keeps resources a stamped run created, with a warning. Set both variables
-when the job has no git checkout.
+A run stamps each record with the program's git commit and commit time; a
+shallow clone works. Without a git checkout, set `PLUNGE_PROGRAM_COMMIT` and
+`PLUNGE_PROGRAM_TIME`. An unstamped run deletes only unstamped records, and
+keeps resources a stamped run created, with a warning.
 
 ## One update at a time
 
-Serialize updates against one stack in CI anyway, where the real mutex has
-always been. Two stacks need none.
+Serialize updates to one stack in CI anyway, where the real mutex has always
+been; separate stacks need no serializing.

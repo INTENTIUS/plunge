@@ -6,14 +6,13 @@ prompt: |
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-`plunge stack adopt --json` prints what the adoption did or would do as one
-JSON document on stdout and never prompts. The contract is
-[docs/plunge/ADOPT.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/ADOPT.md);
-chant and behold read it.
+`plunge stack adopt --json` prints the adoption's result, actual or planned,
+as one JSON document on stdout, without prompting. chant and behold read it; the contract is
+[docs/plunge/ADOPT.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/ADOPT.md).
 
 - `--json` alone classifies the checkpoint and writes nothing.
 - `--json --yes` adopts and prints the result.
-- A refused adoption prints the document with its refusals and exits 1, with nothing on stderr. Any other failure is an ordinary error on stderr and no document.
+- A refusal prints the document and exits 1, stderr empty. Other failures print an error on stderr and no document.
 
 ## Version v1
 
@@ -40,9 +39,8 @@ chant and behold read it.
 }
 ```
 
-That is the start of the recorded `would-adopt.json` in behold's
-[fixture](https://github.com/INTENTIUS/behold/tree/main/src/__fixtures__/plunge-adopt-30806be26b),
-2026-10-26.
+That is the start of the recorded `would-adopt.json` (2026-10-26) in behold's
+[fixture](https://github.com/INTENTIUS/behold/tree/main/src/__fixtures__/plunge-adopt-30806be26b).
 
 | Field | Meaning |
 |---|---|
@@ -71,5 +69,5 @@ That is the start of the recorded `would-adopt.json` in behold's
 | `foreign-records` | the stack already has records that are not this checkpoint's |
 | `empty-checkpoint` | the checkpoint holds no resources |
 
-Treat an unknown code as a refusal you cannot explain, and an unknown `adopt`
-version as a document you cannot read.
+Treat an unknown code as an unexplained refusal, and an unknown `adopt`
+version as an unreadable document.

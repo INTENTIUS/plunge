@@ -10,11 +10,11 @@ plunge stack adopt --json --stack dev        # classify, write nothing
 plunge stack adopt --json --yes --stack dev  # adopt
 ```
 
-Every resource keeps its ID and gets its own record. The next `plunge up`
-adds both tags in place ([Migrate a stock stack](/plunge/use/migrate/)).
-A type with no tags argument, such as a subnet, is record-owned.
+Each resource keeps its ID and gets a record; the next `plunge up` adds the
+tags ([Migrate a stock stack](/plunge/use/migrate/)). A type with no tags
+argument, such as a subnet, is record-owned.
 
-## What has run
+## Recorded runs
 
-Nothing on Azure. Adoption is unit-tested, and the corpus run waits on
+None on Azure. Adoption is unit-tested; the corpus run waits on
 [#7](https://github.com/INTENTIUS/plunge/issues/7).

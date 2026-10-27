@@ -13,4 +13,4 @@ prompt: |
 | Listing (C2) | a LIST of the kind by label selector, collision claim made |
 | Record store | `plunge+k8s://`, one Secret per record |
 
-Source: `pkg/backend/plunge/catalog.go`, choudoufu's `pkg/kubesweep`.
+The rows come from `pkg/backend/plunge/catalog.go` and choudoufu's `pkg/kubesweep`.

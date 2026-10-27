@@ -13,5 +13,5 @@ prompt: |
 | Listing (C2), other services | the service's own list (`gcplist`): 156 types, the same set choudoufu lists; binds, consistency unmeasured |
 | Fallback | Cloud Asset Inventory, which lags its services; binds only, and the sweep skips it |
 
-The corpus runs pulumi-gcp 10.2.0. floci-gcp's list paths for Cloud SQL, GKE
-and Assured Workloads are unmeasured ([#32](https://github.com/INTENTIUS/plunge/issues/32)).
+The corpus runs pulumi-gcp 10.2.0, and floci-gcp's list paths for Cloud SQL,
+GKE and Assured Workloads are unmeasured ([#32](https://github.com/INTENTIUS/plunge/issues/32)).
