@@ -139,8 +139,11 @@ fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG
 `scripts/plunge-upstream-merge.sh` does the same on a fresh branch. It fetches pulumi/pulumi master
 (fetch only; it never pushes there), cuts `upstream-merge/<date>-<upstream sha>` from
 `origin/integration/pulumi-engine` (`BASE` to change it), merges with a merge commit, moves any workflow
-upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg` and
-`bin/plunge`. On a conflict it lists the files, aborts the merge and stops: a human resolves it. With
+upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg`, `sdk/pcl`,
+the three language hosts (with `GOTOOLCHAIN=go1.27.1`) and `bin/plunge`. A conflict only in upstream's
+generated Automation API or in go.mod/go.sum files is resolved (it takes upstream's, re-applies
+`scripts/plunge-go-mod-fork.txt`, then runs `go mod tidy` in every module `scripts/tidy.sh` covers). On
+any other conflict it lists the files, aborts the merge and stops: a human resolves it. With
 `--push` it pushes the branch to origin, and only `upstream-merge/*` branches. It never merges into the
 integration branch or main. Results go to `plunge-upstream-merge-out/`: `report.md`, and `verdict.txt`
 with one line, `UPSTREAM-MERGE UP-TO-DATE|MERGED|CONFLICT|BUILD-FAILED|ERROR ...`.
