@@ -256,6 +256,8 @@ type StepEventMetadata struct {
 	Logical bool `json:"logical,omitempty"`
 	// Provider actually performing the step.
 	Provider string `json:"provider"`
+	// PlungeTimings is plunge's per-call timings for this step (INTENTIUS/plunge#55); absent on any other backend.
+	PlungeTimings []PlungeTiming `json:"plungeTimings,omitempty"`
 }
 
 // StepEventStateMetadata is the more detailed state information for a resource as it relates to

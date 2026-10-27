@@ -27,6 +27,7 @@ import (
 
 	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
+	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/providers"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
@@ -99,6 +100,9 @@ type recordPersister struct {
 	// so a record keeps exactly the pending operations the deployment gives it. ImportDeployment sets it, which is
 	// how a user clears a crashed run's pending operation (docs/plunge/CONCURRENCY.md).
 	authoritative bool
+	// timings, when set, receives the duration of every resource record write and delete (timings.go,
+	// INTENTIUS/plunge#55).
+	timings *deploy.Timings
 }
 
 // InFlightDependencyError refuses to begin an operation on a resource linked to a resource another run has an
@@ -562,7 +566,9 @@ func (p *recordPersister) write(key string, w *desired) error {
 	}
 
 	p.writes++
+	start := time.Now()
 	version, err := p.store.PutIfVersion(p.ctx, key, encoded, expected)
+	p.timeRecord(w.resource, "write", start, err)
 	if err != nil {
 		var conflict *staterecord.VersionConflictError
 		if !errors.As(err, &conflict) {
@@ -660,7 +666,9 @@ func (p *recordPersister) remove(key string) error {
 	}
 
 	p.writes++
+	start := time.Now()
 	err := p.store.Delete(p.ctx, key, k.version)
+	p.timeRecord(k.resource, "delete", start, err)
 	if err != nil {
 		var conflict *staterecord.VersionConflictError
 		if !errors.As(err, &conflict) {

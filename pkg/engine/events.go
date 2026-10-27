@@ -385,6 +385,8 @@ type StepEventMetadata struct {
 	Logical      bool                           // true if this step represents a logical operation in the program.
 	Provider     string                         // the provider that performed this step.
 	Untargeted   bool                           // true if this same-step's resource was not included in the operation.
+
+	PlungeTimings []apitype.PlungeTiming // plunge's per-call timings for this step (INTENTIUS/plunge#55); nil elsewhere.
 }
 
 func (m *StepEventMetadata) LockState() {
@@ -616,7 +618,7 @@ func (e *eventEmitter) resourceOperationFailedEvent(
 	contract.Requiref(e != nil, "e", "!= nil")
 
 	e.sendEvent(NewEvent(ResourceOperationFailedPayload{
-		Metadata: makeStepEventMetadata(step.Op(), step, debug, showSecrets),
+		Metadata: withPlungeTimings(makeStepEventMetadata(step.Op(), step, debug, showSecrets), step),
 		Status:   status,
 		Steps:    steps,
 		Awaited:  awaited,
@@ -629,7 +631,7 @@ func (e *eventEmitter) resourceOutputsEvent(
 	contract.Requiref(e != nil, "e", "!= nil")
 
 	e.sendEvent(NewEvent(ResourceOutputsEventPayload{
-		Metadata: makeStepEventMetadata(op, step, debug, showSecrets),
+		Metadata: withPlungeTimings(makeStepEventMetadata(op, step, debug, showSecrets), step),
 		Planning: planning,
 		Debug:    debug,
 		Internal: internal,

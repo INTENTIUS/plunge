@@ -674,6 +674,9 @@ func NewDeployment(
 	if target.ProviderIDs != nil {
 		reg.SetIDGenerator(target.ProviderIDs)
 	}
+	if target.Timings != nil {
+		reg.SetProviderWrapper(target.Timings.Wrap) // INTENTIUS/plunge#55
+	}
 
 	deployment := &Deployment{
 		ctx:                             ctx,
