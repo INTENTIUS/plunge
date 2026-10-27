@@ -1,23 +1,20 @@
 ---
 title: Pending operations and crashes
-description: What a crashed run leaves on a resource's record, what it blocks, and how to clear it.
+description: The pending operations a crashed run leaves on a resource's record, the runs they block, and how to clear them.
 prompt: |
   Follow https://intentius.io/plunge/use/pending/. Run `plunge stack export` for this stack and list every pending operation with its URN. Change nothing.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-A run marks each operation it begins on a custom resource as a pending
-operation in that resource's record, and removes it when the operation ends.
-A run that crashes leaves its pending operations where they are.
+A run records each operation on a custom resource as pending in its record
+until the operation ends. A crash leaves them in place.
 
-They stay on the URN until a run acts on that resource. Another run that does
-not touch it carries the record forward unchanged, since it cannot tell a
-crashed run's operation from one still in flight. Until it is cleared, a run
-that would change a resource depending on it is refused
-(`InFlightDependencyError`, naming both resources).
+They stay until a run acts on that resource; other runs carry the record
+forward, unable to tell a crashed operation from one in flight. Until cleared,
+a run changing a dependent is refused (`InFlightDependencyError`, naming
+both).
 
-There is no stack lock to release: `pulumi cancel` and lock files have no
-part in it.
+No stack lock needs releasing; `pulumi cancel` and lock files play no part.
 
 ## Clear one
 
@@ -36,12 +33,11 @@ plunge stack export --file state.json
 plunge stack import --file state.json
 ```
 
-An import writes the stack's whole state as given, so run it only when no
-other run is in flight on the stack.
+An import writes the whole stack state as given; run it only with no other
+run in flight on the stack.
 
-## What has run
+## Recorded runs
 
 The refusal is unit-tested
-(`TestDependentOfAnotherRunsInFlightResourceIsRefused`). A crash and re-run
-on floci is race C6, which waits on
-[#7](https://github.com/INTENTIUS/plunge/issues/7).
+(`TestDependentOfAnotherRunsInFlightResourceIsRefused`). A crash and re-run on
+floci, race C6, waits on [#7](https://github.com/INTENTIUS/plunge/issues/7).

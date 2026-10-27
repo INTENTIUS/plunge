@@ -10,7 +10,7 @@ Everything else is stock Pulumi's CLI, under the name `plunge`.
 
 ## Commands plunge adds
 
-| Command | What it does |
+| Command | Effect |
 |---|---|
 | `plunge stack adopt [--file F] [--json] [--yes] [--stack S]` | Moves a stock stack's checkpoint onto records. `--json` prints [the adopt document](adopt-json/) and never prompts; alone it writes nothing. A refusal exits non-zero (`pkg/cmd/pulumi/stack/stack_adopt.go`) |
 | `plunge drift --resource URN [--stream] [--member M] [--stack S]` | One resource's drift from one provider Read, as chant drift record v1 with `--stream` ([Drift of one resource](../how-it-works/drift/)) |
@@ -30,8 +30,8 @@ Refused on a plunge stack by name (`UnsupportedOnRecordsError`):
 | `plunge+azblob://container/prefix` | `storage_account`, `resource_group`, `subscription_id`, `endpoint`, `metadata_host`, `allow_insecure` |
 | `plunge+k8s://namespace/prefix` | `metadata` (required), `kubeconfig`, `context`, `in_cluster`, `estate` |
 
-Source: `pkg/backend/plunge/url.go`, `azblobstore.go`, `azblobmeta.go`, `localstores.go`. A `plunge+gs://` URL takes its
-emulator from `STORAGE_EMULATOR_HOST`, not a query key.
+Source: `pkg/backend/plunge/url.go`, `azblobstore.go`, `azblobmeta.go`, `localstores.go`. A `plunge+gs://` URL reads its
+emulator from `STORAGE_EMULATOR_HOST`, which has no query key.
 
 ## Environment variables
 
@@ -76,7 +76,7 @@ A test fails if an upstream merge adds a code equal to 40.
 
 ## Automation API
 
-The generated wrappers are upstream's. plunge's two commands are hand-written
+The generated wrappers are upstream's; plunge's two commands are hand-written
 beside them:
 
 | Language | Where |

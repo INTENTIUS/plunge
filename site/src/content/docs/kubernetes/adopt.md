@@ -10,18 +10,16 @@ plunge stack adopt --json --stack dev        # classify, write nothing
 plunge stack adopt --json --yes --stack dev  # adopt
 ```
 
-Every object keeps its ID and gets its own record. The next `plunge up` adds
-the two labels to each object's `metadata.labels` in place
-([Migrate a stock stack](/plunge/use/migrate/)).
+Each object keeps its ID and gets a record. The next `plunge up` adds both
+labels to `metadata.labels` in place ([Migrate](/plunge/use/migrate/)).
 
-Helm releases and the YAML and Kustomize resources have no object metadata of
-their own to label, so they are left unmarked. A provider setting that would
-hide labels starting with `plunge-` is refused by name.
+Helm releases and YAML and Kustomize resources have no metadata of their own
+and stay unmarked. A provider setting hiding `plunge-` labels is refused by name.
 
-## What has run
+## Recorded runs
 
-Nothing on Kubernetes. No corpus program uses pulumi-kubernetes. Adoption is
-unit-tested on other families, and the corpus run waits on [#7](https://github.com/INTENTIUS/plunge/issues/7).
+No corpus program uses pulumi-kubernetes, so none. Adoption is unit-tested
+on other families; the corpus run waits on [#7](https://github.com/INTENTIUS/plunge/issues/7).
 
 ## Leaving
 

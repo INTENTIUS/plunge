@@ -10,20 +10,19 @@ prompt: |
 plunge drift --resource 'urn:pulumi:dev::app::aws:s3/bucket:Bucket::logs' --stream
 ```
 
-It reads the resource's record and its provider's record by key, without
-assembling the stack's snapshot, configures the provider from its record,
-calls Read once, and compares the live outputs with the recorded ones
-(`pkg/cmd/pulumi/drift/drift.go`). The program does not run, so its inputs
-are not compared. It needs a `plunge+` backend.
+It reads the resource's and provider's records by key, without the snapshot,
+and configures the provider from its record. One Read gives the outputs to
+compare (`pkg/cmd/pulumi/drift/drift.go`). The program does not run, so inputs are not
+compared. It needs a `plunge+` backend.
 
 ## The stream
 
 With `--stream` the output is chant's
 [drift record v1](https://github.com/INTENTIUS/chant/blob/main/docs/src/content/docs/reference/drift-record.mdx)
-NDJSON on stdout: a `drift-start` line, the resource's `drift-record` line,
-and a `drift-settle` line whose `reads` counts the record reads, the provider
-Reads and the stack refreshes. `--member` sets chant's member name, which
-defaults to the stack name.
+NDJSON on stdout, a `drift-start` line and the resource's `drift-record`
+line followed by `drift-settle`. Its `reads` counts record reads, provider
+Reads and refreshes. `--member`
+sets chant's member name (default: the stack name).
 
 ## The recorded run
 
@@ -37,10 +36,10 @@ changed through floci's API (chant
 | the role `app-role` | `in-sync` | 3 records, 1 provider Read, 0 refreshes |
 | the component `docs` | `not-observed`, `unsupported-kind`: a component has no provider Read | 1 record, 0 provider Reads, 0 refreshes |
 
-A URN the stack holds no record for exits 1 with `the stack holds no record
-for <urn>` and prints no stream.
+An unrecorded URN exits 1 with `the stack holds no record for <urn>` and no
+stream.
 
 ## Against choudoufu
 
 choudoufu's `live-plan -resource=ADDR` plans one resource and its upstream
-cone. Both emit drift record v1, so chant reads either the same way.
+cone. chant reads its drift record v1 the same way.

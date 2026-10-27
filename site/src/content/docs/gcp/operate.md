@@ -7,32 +7,29 @@ prompt: |
 ---
 ## Rename
 
-A Pulumi rename is an `aliases` entry; what plunge does with the label and the
-record key is open on [#46](https://github.com/INTENTIUS/plunge/issues/46).
+A Pulumi rename is an `aliases` entry; plunge's handling of the label and the
+record key on a rename is open on [#46](https://github.com/INTENTIUS/plunge/issues/46).
 
 ## Remove
 
-Delete the resource from the program and update. plunge checks the live
-labels before it deletes ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+Delete it from the program and update; plunge checks the live labels first ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
 
 ## Plan, review, update
 
 `plunge preview --save-plan plan.json`, then `plunge up --plan plan.json`.
-A moved record refuses the update by name, exit 40.
+A moved record refuses it by name, exit 40.
 
 ## Two runs at once
 
-There is no stack lock. Before a create, plunge lists the type through its
-own service and binds a marked object it finds. Only the Cloud Storage bucket
-list backs the collision claim; other services bind with consistency
-unmeasured, and a type outside the service lists goes through Cloud Asset
-Inventory, which lags and binds only.
+There is no stack lock. Before a create, plunge binds a marked object found
+in the type's service list. Only the Cloud Storage bucket list backs the
+collision claim. The other service lists bind with unmeasured consistency; for
+unlisted types the fallback is Cloud Asset Inventory, which lags and only binds.
 
 ## Endpoints and tokens
 
-A Google list uses the service's `<service>CustomEndpoint` input or its
-`GOOGLE_*_CUSTOM_ENDPOINT` variable; a stack naming custom endpoints for other
-services only skips the listing with a warning ([#27](https://github.com/INTENTIUS/plunge/issues/27)). When every named
-endpoint is local, the listers send no credential, or the stack's static
-`accessToken`, and fetch no token from Google ([#42](https://github.com/INTENTIUS/plunge/issues/42), built, tests written
-and not run).
+A list uses the service's `<service>CustomEndpoint` input or
+`GOOGLE_*_CUSTOM_ENDPOINT`; custom endpoints for other services only skip it
+with a warning ([#27](https://github.com/INTENTIUS/plunge/issues/27)). With all named endpoints local, the listers
+send no credential (or only a static `accessToken`) and fetch no Google token
+([#42](https://github.com/INTENTIUS/plunge/issues/42), built, tests not run).

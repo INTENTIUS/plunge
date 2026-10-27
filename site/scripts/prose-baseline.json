@@ -1,49 +1,9 @@
 {
- "site/src/content/docs/aws/compatibility.md": {
-  "discourse/punchy-fragments": 1
- },
- "site/src/content/docs/aws/proof.md": {
-  "tricolon/comma-series": 2
- },
- "site/src/content/docs/azure/operate.md": {
-  "tricolon/comma-series": 1
- },
- "site/src/content/docs/gcp/compatibility.md": {
-  "discourse/punchy-fragments": 1
- },
- "site/src/content/docs/gcp/operate.md": {
-  "tricolon/comma-series": 1
- },
  "site/src/content/docs/how-it-works/concurrency.md": {
   "tricolon/comma-series": 1
  },
- "site/src/content/docs/how-it-works/deletes.md": {
-  "tricolon/comma-series": 1
- },
- "site/src/content/docs/how-it-works/drift.md": {
-  "tricolon/comma-series": 1
- },
- "site/src/content/docs/how-it-works/identity.md": {
-  "tricolon/comma-series": 1
- },
- "site/src/content/docs/how-it-works/index.md": {
-  "tricolon/comma-series": 1
- },
- "site/src/content/docs/how-it-works/names.md": {
-  "tricolon/comma-series": 1
- },
  "site/src/content/docs/how-it-works/records.md": {
-  "dead-metaphor/rare-lemma": 1,
-  "tricolon/comma-series": 2
- },
- "site/src/content/docs/kubernetes/compatibility.md": {
-  "discourse/punchy-fragments": 1
- },
- "site/src/content/docs/use/bucket.md": {
-  "tricolon/comma-series": 1
- },
- "site/src/content/docs/use/setup.md": {
-  "tricolon/comma-series": 2
+  "dead-metaphor/rare-lemma": 1
  },
  "site/src/data/rooms.ts": {
   "discourse/staccato-register": 1,
@@ -54,9 +14,8 @@
   "repetition/near-duplicate": 2
  },
  "README.md": {
-  "tricolon/comma-series": 5,
-  "claude/colon-reveal": 4,
-  "repetition/near-duplicate": 1,
+  "tricolon/comma-series": 4,
+  "claude/colon-reveal": 3,
   "discourse/punchy-fragments": 1
  }
 }

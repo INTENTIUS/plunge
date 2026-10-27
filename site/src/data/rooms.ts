@@ -3,8 +3,8 @@
 // or a full https:// address; scripts/check-rooms.mjs fails the build on one
 // that does not resolve.
 //
-// A "does" line names what has a recorded run (/claims/) or says it waits for
-// one and which issue holds it (INTENTIUS/plunge#44).
+// A "works" line names a behaviour with a recorded run (/claims/) or says it
+// waits for one and which issue holds it (INTENTIUS/plunge#44).
 
 export type Link = { label: string; href: string };
 export type Platform = 'aws' | 'kubernetes' | 'gcp' | 'azure';
@@ -48,8 +48,8 @@ export const ROLES: { label: string; room: string }[] = [
 
 const migrate = { label: 'Migrate a stock stack', href: '/use/migrate/' };
 const start = { label: 'Start a new stack', href: '/use/start/' };
-const setup = { label: 'What you set up by hand', href: '/use/setup/' };
-const whatItIs = { label: 'What it is', href: '/how-it-works/' };
+const setup = { label: 'Set up by hand', href: '/use/setup/' };
+const overview = { label: 'Overview', href: '/how-it-works/' };
 const records = { label: 'Records', href: '/how-it-works/records/' };
 const concurrency = { label: 'Resource-level concurrency', href: '/how-it-works/concurrency/' };
 const reference = { label: 'Commands, URLs and variables', href: '/reference/' };
@@ -72,7 +72,7 @@ export const ROOMS: Room[] = [
 		],
 		first: migrate,
 		howto: [migrate, setup, { label: 'Run it from CI', href: '/use/cicd/' }],
-		explain: [whatItIs, records],
+		explain: [overview, records],
 		reference: [{ label: 'The adopt document', href: '/reference/adopt-json/' }, reference],
 	},
 	{
@@ -84,11 +84,11 @@ export const ROOMS: Room[] = [
 			'A stock pulumi stack export gives the deployment plunge stack adopt --file takes',
 		],
 		differs: [
-			'plunge has no hosted service. What leaving Pulumi Cloud costs, and what chant covers, is tracked feature by feature on #8.',
+			'plunge has no hosted service. #8 lists each Pulumi Cloud feature you lose and whether chant covers it.',
 		],
-		first: { label: 'What leaving costs (#8)', href: issue(8) },
+		first: { label: 'Leaving Pulumi Cloud (#8)', href: issue(8) },
 		howto: [migrate, start],
-		explain: [whatItIs],
+		explain: [overview],
 		reference: [{ label: 'The adopt document', href: '/reference/adopt-json/' }, reference],
 	},
 	{
@@ -103,7 +103,7 @@ export const ROOMS: Room[] = [
 		differs: [],
 		first: { label: 'Drift of one resource', href: '/how-it-works/drift/' },
 		howto: [start, { label: 'Tutorial', href: '/use/tutorial/' }],
-		explain: [whatItIs, records],
+		explain: [overview, records],
 		reference: [
 			{ label: 'chant drift record v1', href: 'https://github.com/INTENTIUS/chant/blob/main/docs/src/content/docs/reference/drift-record.mdx' },
 			reference,
@@ -121,7 +121,7 @@ export const ROOMS: Room[] = [
 		differs: [],
 		first: start,
 		howto: [{ label: 'Tutorial', href: '/use/tutorial/' }, setup],
-		explain: [whatItIs, records, { label: 'Names', href: '/how-it-works/names/' }],
+		explain: [overview, records, { label: 'Names', href: '/how-it-works/names/' }],
 		reference: [reference],
 	},
 	{
@@ -187,7 +187,7 @@ export const ROOMS: Room[] = [
 	{
 		id: 'security',
 		title: 'Security and access',
-		lede: 'You decide who may change what.',
+		lede: 'You decide who may change which resources.',
 		works: [
 			'The plunge-stack marker is a tag or label your cloud IAM can condition on',
 			'An S3, GCS or Azure Blob store refuses to open without versioning and a public access block, unless you waive the setting by name',
@@ -195,7 +195,7 @@ export const ROOMS: Room[] = [
 		],
 		differs: [
 			'No gate has been run against plunge markers yet (#45).',
-			'Records hold the full state, outputs included, as a checkpoint does. Guard the store as you guard a state file.',
+			'Records hold the full state, outputs included, so guard the store as you guard a state file.',
 		],
 		first: { label: 'Identity', href: '/how-it-works/identity/' },
 		howto: [
@@ -220,7 +220,7 @@ export const ROOMS: Room[] = [
 		differs: [],
 		first: claims,
 		howto: [{ label: 'Tutorial', href: '/use/tutorial/' }, start],
-		explain: [whatItIs, concurrency],
+		explain: [overview, concurrency],
 		reference: [{ label: 'The corpus', href: repo('tests/plunge-corpus/README.md') }, reference],
 	},
 	{
@@ -235,7 +235,7 @@ export const ROOMS: Room[] = [
 		differs: [],
 		first: { label: 'llms.txt', href: '/llms.txt' },
 		howto: [{ label: 'Tutorial', href: '/use/tutorial/' }, { label: 'Run it from CI', href: '/use/cicd/' }],
-		explain: [whatItIs],
+		explain: [overview],
 		reference: [{ label: 'The adopt document', href: '/reference/adopt-json/' }, reference],
 	},
 	{
@@ -245,7 +245,7 @@ export const ROOMS: Room[] = [
 		works: [
 			"plunge-only code lives in new files beside upstream's",
 			'Upstream pulumi is merged in, never rebased',
-			'plunge-sdk-check asks the engine what each SDK release needs',
+			'plunge-sdk-check asks the engine which features each SDK release needs',
 		],
 		differs: [],
 		first: { label: 'The README', href: repo('README.md') },

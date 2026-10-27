@@ -7,30 +7,27 @@ prompt: |
 ---
 ## Rename
 
-A Pulumi rename is an `aliases` entry; what plunge does with the tag and the
-record key is open on [#46](https://github.com/INTENTIUS/plunge/issues/46).
+A Pulumi rename is an `aliases` entry; plunge's handling of the tag and the
+record key on a rename is open on [#46](https://github.com/INTENTIUS/plunge/issues/46).
 
 ## Remove
 
-Delete the resource from the program and update. plunge checks the live tags
-before it deletes ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+Delete it from the program and update; plunge checks the live tags first ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
 
 ## Plan, review, update
 
 `plunge preview --save-plan plan.json`, then `plunge up --plan plan.json`.
-A moved record refuses the update by name, exit 40.
+A moved record refuses it by name, exit 40.
 
 ## Two runs at once
 
-There is no stack lock. Before a create, plunge lists the type through ARM,
-filtered by the `plunge-urn` tag, and binds a marked object it finds. ARM's
-list consistency is unmeasured, so this binds and does not back the collision
-claim ([#15](https://github.com/INTENTIUS/plunge/issues/15)).
+There is no stack lock. Before a create, plunge binds a marked object that
+ARM lists by `plunge-urn`. ARM's list consistency is unmeasured, so the
+collision claim excludes it ([#15](https://github.com/INTENTIUS/plunge/issues/15)).
 
 ## Emulators
 
-With the azure provider's `metadataHost` (or `ARM_METADATA_HOSTNAME`), the ARM
-lister reads that host's `/metadata/endpoints` and lists through the ARM and
-login endpoints it names, with a client secret from the environment only
-([#41](https://github.com/INTENTIUS/plunge/issues/41), built, tests written and not run). Without the three `ARM_*`
-variables it skips the listing with a warning and calls nothing.
+With `metadataHost` (or `ARM_METADATA_HOSTNAME`), the ARM lister lists through
+the ARM and login endpoints in that host's `/metadata/endpoints`, taking a
+client secret only from the environment ([#41](https://github.com/INTENTIUS/plunge/issues/41), built, tests not run).
+Lacking the three `ARM_*` variables, it warns and calls nothing.
