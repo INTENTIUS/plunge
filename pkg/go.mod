@@ -61,7 +61,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
 	github.com/iancoleman/strcase v0.3.0
-	github.com/intentius/choudoufu v0.31.1-0.20261027011605-b47315e7c8c8
+	github.com/intentius/choudoufu v0.31.1-0.20261027044621-69ee0b226713
 	github.com/jedib0t/go-pretty/v6 v6.7.10
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51

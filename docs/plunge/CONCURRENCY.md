@@ -244,7 +244,7 @@ Three limits apply inside covered types, and no record reason marks them:
 - The loser of a racing create is not retried inline. Its run fails with the
   cloud's already-exists error and the re-run binds the winner.
 - A covered type that no lister covers and whose import ID is more than its
-  name (a pulumi-aws multi-part identifier that `ccid.go` cannot translate,
+  name (a pulumi-aws multi-part identifier that choudoufu's `pkg/identity` cannot translate,
   see C2 below) has no by-name read: its record carries `ownership.unlisted`,
   and a winner that stopped before its record write is refused by the cloud on
   every re-run until it is imported by hand. The by-name read also skips a name set by a
@@ -278,7 +278,7 @@ quorum read, and keeps its claim.
 
 | Family | Listing | C2 |
 |---|---|---|
-| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (`pkg/backend/plunge/ccid.go`), or when its translation is written out from the Terraform importer (`ccid_hand.go`: EIP, ECS service, three GuardDuty detector children, QuickSight folder, three SageMaker domain children). `aws_budgets_budget_action` stays unlisted: its id starts with the account ID, which Cloud Control does not carry | claimed |
+| pulumi-aws, aws-native | Cloud Control `ListResources` on the CloudFormation type. A pulumi-aws type with a multi-part identifier is covered when choudoufu's `pkg/identity` row spells its Terraform id from exactly those parts, and the identifier is translated to it (choudoufu `pkg/identity/cloudcontrol.go`, choudoufu#2286), or when its translation is written out from the Terraform importer (`cloudcontrol_hand.go`: EIP, ECS service, three GuardDuty detector children, QuickSight folder, three SageMaker domain children). `aws_budgets_budget_action` stays unlisted: its id starts with the account ID, which Cloud Control does not carry | claimed |
 | pulumi-azure, azure-native | ARM's own list, filtered by the `plunge-urn` tag | binds, consistency unmeasured (the measurement on a real subscription is the maintainer's) |
 | pulumi-kubernetes | a LIST of the kind by label selector, answered from a quorum read | claimed |
 | pulumi-gcp, Cloud Storage | the bucket list, which Google documents as strongly consistent | claimed |

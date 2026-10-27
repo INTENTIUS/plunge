@@ -195,9 +195,10 @@ func sweepUnrecorded(
 
 // recordAliases are, by type, the other names the records give each recorded object of a swept type: the string
 // values of its ARN, URL and name outputs, and of the outputs its import id row in pkg/identity names. A listing
-// translates each Cloud Control identifier to pulumi-aws's id before the lookup (ccid_single.go), and this is the
-// second chance for an identifier the listing could not translate: an emulator that lists a queue by its name, or a
-// function by its ARN, still names an object a record holds, and that object is not reported (INTENTIUS/plunge#28).
+// translates each Cloud Control identifier to pulumi-aws's id before the lookup (pkg/identity's
+// CloudControlTranslation), and this is the second chance for an identifier the listing could not translate: an
+// emulator that lists a queue by its name, or a function by its ARN, still names an object a record holds, and that
+// object is not reported (INTENTIUS/plunge#28).
 // Each name is unique among a type's objects, so a match is the recorded object itself.
 func recordAliases(
 	states []apitype.ResourceV3, targets map[resource.URN]sweepTarget,

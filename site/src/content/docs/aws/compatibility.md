@@ -18,11 +18,12 @@ The corpus runs pulumi-aws 7.51.1.
 
 Cloud Control returns each type's primary identifier, which is not always
 pulumi-aws's ID. A multi-part identifier is translated where choudoufu's
-`pkg/identity` spells the Terraform ID from those parts (`ccid.go`), or by a
-hand-written rule (`ccid_hand.go`). Translations for single-part identifiers
-(`ccid_single.go`, [#28](https://github.com/INTENTIUS/plunge/issues/28)) and for `aws_budgets_budget_action`, which needs
+`pkg/identity` spells the Terraform ID from those parts, or by a
+hand-written rule. Translations for single-part identifiers
+([#28](https://github.com/INTENTIUS/plunge/issues/28)) and for `aws_budgets_budget_action`, which needs
 the account ID from the stack's own STS ([#31](https://github.com/INTENTIUS/plunge/issues/31)), are built with tests written
-and not run.
+and not run. The translation lives in choudoufu's `pkg/identity` (`CloudControlTranslation`,
+[choudoufu#2286](https://github.com/INTENTIUS/choudoufu/issues/2286)); plunge reads the account ID.
 
 ## Types with no tags
 
