@@ -6,10 +6,9 @@ prompt: |
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-These are the settings the store checks when it opens
-([What you set up by hand](../setup/)). The commands are the ones plunge's
-scripts use (`scripts/plunge-races/lib.sh`,
-`scripts/plunge-record-store-acceptance.sh`).
+These commands set up the settings the store checks on open
+([Set up by hand](../setup/)), as plunge's scripts do
+(`scripts/plunge-races/lib.sh`, `scripts/plunge-record-store-acceptance.sh`).
 
 ## S3
 
@@ -23,7 +22,7 @@ aws s3api put-public-access-block --bucket $B --public-access-block-configuratio
   BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 ```
 
-Add `bucket_owner=<account id>` to the URL to make every request carry S3's
+With `bucket_owner=<account id>` in the URL, every request carries S3's
 `ExpectedBucketOwner`.
 
 ## GCS
@@ -37,13 +36,12 @@ gcloud storage buckets update gs://$B --versioning --lifecycle-file lifecycle.js
 
 ## Azure Blob
 
-Turn on blob versioning, add a lifecycle rule that deletes previous versions,
-and turn off anonymous blob access on the storage account. Give the URL
-`storage_account`, `resource_group` and `subscription_id` so the store can
-read those settings through ARM.
+Enable blob versioning, add a lifecycle rule deleting previous versions, and
+disable anonymous blob access. The store reads these through ARM using the
+URL's `storage_account`, `resource_group` and `subscription_id`.
 
-## What has run
+## Recorded runs
 
-These commands are in scripts written for
+None yet. The commands come from scripts for
 [#6](https://github.com/INTENTIUS/plunge/issues/6) and
-[#34](https://github.com/INTENTIUS/plunge/issues/34), which have not run yet.
+[#34](https://github.com/INTENTIUS/plunge/issues/34), which wait for their run.

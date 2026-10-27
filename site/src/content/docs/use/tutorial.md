@@ -7,11 +7,11 @@ prompt: |
 ---
 
 The recorded `plunge-outputs` and `plunge-drift` files came from a run like
-this one ([Claims and runs](../../claims/)), with its own name prefix. Everything runs
-on your machine against the floci AWS emulator. Nothing reaches AWS.
+this, with its own name prefix ([Claims and runs](../../claims/)). It all runs
+locally against the floci AWS emulator, and nothing reaches AWS.
 
-You need Docker, Go, Node.js and a plunge checkout. There is no plunge release
-yet ([#13](https://github.com/INTENTIUS/plunge/issues/13)), so you build it.
+You need Docker, Go, Node.js and a plunge checkout to build from, since there is
+no release yet ([#13](https://github.com/INTENTIUS/plunge/issues/13)).
 
 ## 1. Build plunge
 
@@ -53,8 +53,8 @@ npm ci
 plunge stack init floci --secrets-provider passphrase
 ```
 
-`PULUMI_BACKEND_URL` keeps the backend to this shell. `plunge login` would
-set it for your user.
+`PULUMI_BACKEND_URL` sets the backend for this shell; `plunge login` sets it
+for your user.
 
 ## 5. Preview and update
 
@@ -63,7 +63,7 @@ plunge preview --stack floci
 plunge up --stack floci
 ```
 
-plunge refreshes before both, so the plan diffs against what floci holds.
+plunge refreshes before both, so the plan diffs against floci's live state.
 
 ## 6. See the markers and the records
 
@@ -74,15 +74,13 @@ ls "${PULUMI_BACKEND_URL#plunge+file://}/.pulumi/records/stacks/corpus-aws-ts/fl
 ```
 
 Every taggable resource carries `plunge-stack = corpus-aws-ts/floci` and its
-`plunge-urn`. The bucket policy has no tags argument and carries none; its
-record holds its ownership. There is one record per URN. The queues are named
-`events-<hash>` and `worker-0-<hash>`, the same on every run
-([Names](../../how-it-works/names/)).
+`plunge-urn`. The bucket policy takes no tags, so its record holds its
+ownership. Each URN has one record. The queues are `events-<hash>` and
+`worker-0-<hash>` on every run ([Names](../../how-it-works/names/)).
 
 After the update plunge lists each marked type and warns about marked objects
-no record names. On floci it can warn about recorded queues by the wrong ID;
-the fix is written and waits for its run
-([#28](https://github.com/INTENTIUS/plunge/issues/28)).
+with no record. On floci it can wrongly warn about recorded queues by ID; the
+fix waits for its run ([#28](https://github.com/INTENTIUS/plunge/issues/28)).
 
 ## 7. Read one resource's drift
 

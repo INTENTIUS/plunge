@@ -1,46 +1,45 @@
 # plunge
 
-Pulumi with per-resource ownership. plunge runs the same programs, SDKs, language hosts and providers
-as stock Pulumi, and changes where a stack's state lives and how a run decides what it owns:
+Pulumi with resource level concurrency and no stack lock. plunge runs stock Pulumi's programs, SDKs,
+language hosts and providers, and changes where state lives and how a run decides ownership:
 
 - Each taggable resource carries two markers, `plunge-stack` and `plunge-urn`, written in its create
   call (tags on AWS and Azure, digests in labels on Google Cloud and Kubernetes).
 - A `plunge+<store>` backend (`file`, `s3`, `gs`, `azblob`, `k8s`) keeps one record per resource, each
   write conditional, with no stack lock.
 - An unnamed resource of a covered type gets the same name on every run, and a saved plan whose
-  records moved is refused (exit 40). Every delete is checked against the live marker (built for
+  records moved is refused (exit 40). Each delete is checked against the live marker (built for
   INTENTIUS/plunge#37, waiting for its run).
 - `plunge stack adopt` moves a stock stack onto records; `plunge drift --resource` reads one resource's
   drift with one provider Read.
 
-The ownership model comes from chant, whose identity markers decide what a deployment owns. plunge
-carries it into Pulumi as choudoufu carries it into OpenTofu. Both are engines for chant (a chant
-workspace runs a plunge stack as a member), and each also works standalone. The plan is in
-INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
+The ownership model is chant's identity markers, carried into Pulumi as choudoufu carries them into
+OpenTofu. Both are chant engines (a chant workspace runs a plunge stack as a member) that also work
+standalone, planned in INTENTIUS/plunge#2 with the design record in INTENTIUS/plunge#9.
 
-Documentation: https://intentius.io/plunge. Its [claims page](https://intentius.io/plunge/claims/) lists
-the runs recorded so far and the issue holding each run still to come. The site's source is in
-`site/`, and the design details are in `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`.
-To preview the site locally, run `just site-serve` (live reload) or `just site-preview` (the built
-site as it will be published); both serve http://127.0.0.1:4321/plunge/ and take another port as an
-argument. `just site` only builds it, with its link and contrast checks.
+The documentation at https://intentius.io/plunge is built from `site/`, and its
+[claims page](https://intentius.io/plunge/claims/) lists the recorded runs and the issue for each run
+still to come. Design details are in
+`docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`. `just site-serve` (live reload) and
+`just site-preview` (the built site) serve http://127.0.0.1:4321/plunge/, or another port given as an
+argument; `just site` builds it with its link and contrast checks.
 
 ## Fork point
 
 Forked from [pulumi/pulumi](https://github.com/pulumi/pulumi) master at `7e12743da8` (2026-10-25,
-after the 3.272.0 release), with upstream history kept. The `upstream` remote points at pulumi/pulumi
-and upstream is merged in, never rebased.
+after the 3.272.0 release), with upstream history kept. The `upstream` remote points at pulumi/pulumi,
+merged in, never rebased.
 
-Choices made to keep those merges cheap:
+Choices that keep those merges cheap:
 
-- Go module paths stay `github.com/pulumi/pulumi/...`, and the CLI's main package stays at
-  `pkg/cmd/pulumi`. Only the output name changes, to `plunge`.
+- Go module paths stay `github.com/pulumi/pulumi/...` and the CLI's main package stays at
+  `pkg/cmd/pulumi`; only the output name changes, to `plunge`.
 - plunge-only code goes in new files where it can: `pkg/plunge/`, `build/plunge.mk`,
   `.goreleaser.plunge.yml`, `scripts/plunge-*.sh`. Upstream's `.goreleaser.yml` and Makefile targets
-  are left in place.
-- Plugin protocol names are unchanged. Language hosts are still `pulumi-language-<lang>` and providers
-  `pulumi-resource-<name>`, because SDKs and providers look them up by those names.
-- Upstream's GitHub workflows are kept, inactive, in `.github/upstream-workflows/`. See the README there.
+  stay.
+- Plugin protocol names are unchanged: SDKs and providers look up `pulumi-language-<lang>` hosts and
+  `pulumi-resource-<name>` providers.
+- Upstream's GitHub workflows sit, inactive, in `.github/upstream-workflows/` (see the README there).
 
 ## Versions
 
@@ -48,8 +47,8 @@ A plunge build carries two versions:
 
 - plunge's own, from `.plunge-version` (or `PLUNGE_VERSION`), and
 - the Pulumi-compatible version, the newest upstream release merged in (the top heading of
-  `CHANGELOG.md`, or `PULUMI_VERSION`). This is what the engine reports wherever upstream reports
-  "the CLI version": a project's `requiredPulumiVersion`, a plugin's `pulumiVersionRange`, and the
+  `CHANGELOG.md`, or `PULUMI_VERSION`). The engine reports it wherever upstream reports "the CLI
+  version": a project's `requiredPulumiVersion`, a plugin's `pulumiVersionRange`, and the
   `RequirePulumiVersion` RPC that SDKs call (`pulumi.requirePulumiVersion` and friends).
 
 `scripts/plunge-version.sh plunge|pulumi|ldflags` prints them.
@@ -62,18 +61,17 @@ $ plunge version --pulumi-compatible
 v3.272.0
 ```
 
-Invoked through a symlink named `pulumi` (for Automation API, which runs `pulumi version` and parses
-a bare semver), `version` prints only the Pulumi-compatible version.
+Through a symlink named `pulumi`, `version` prints only the Pulumi-compatible version, the bare semver
+Automation API parses.
 
 plunge doesn't run upstream's update check, which would point at pulumi's releases and installers.
 
 The generated Automation API wrappers (`sdk/go/auto/automation`, `sdk/nodejs/automation/interface`,
 `sdk/python/lib/pulumi/automation/interface`) are upstream's, regenerated on each upstream merge.
-plunge's own commands, `drift` and `stack adopt`, are in hand-written files beside them: Go's
-`API.Drift` and `API.StackAdopt` in `sdk/go/auto/automation/plunge_commands.go` (options in
-`optplungedrift` and `optplungestackadopt`), and a `PlungeAPI` class, the generated API plus `drift`
-and `stackAdopt` / `stack_adopt`, in `sdk/nodejs/automation/plunge.ts` and
-`sdk/python/lib/pulumi/automation/plunge.py`.
+plunge's `drift` and `stack adopt` are hand-written beside them: Go's `API.Drift` and
+`API.StackAdopt` in `sdk/go/auto/automation/plunge_commands.go` (options in `optplungedrift` and
+`optplungestackadopt`), and a `PlungeAPI` class (the generated API plus `drift` and `stackAdopt` /
+`stack_adopt`) in `sdk/nodejs/automation/plunge.ts` and `sdk/python/lib/pulumi/automation/plunge.py`.
 
 ## Building
 
@@ -86,41 +84,35 @@ make plunge_language_hosts   # fetch the bundled dotnet and yaml hosts into bin/
 mise run plunge-build        # bin/plunge without make
 ```
 
-`make plunge` needs mise's protoc. On a fresh checkout it first runs `proto/generate.sh` (the
-`.make/proto` step), which looks protoc up with `mise where protoc` and also needs mise's
-protoc-gen-go, protoc-gen-go-grpc and the node protoc plugins. The generated protobuf code is
-committed, so building the binary itself doesn't need protoc. Without mise, build it directly:
+`make plunge` needs mise's protoc. On a fresh checkout its `.make/proto` step runs
+`proto/generate.sh`, which also needs mise's protoc-gen-go and protoc-gen-go-grpc and the node protoc
+plugins. The generated code is committed, so building without mise needs no protoc:
 
 ```sh
 go build -C pkg -o ../bin/plunge -ldflags "$(./scripts/plunge-version.sh ldflags)" ./cmd/pulumi
 ```
 
-Dropping the `-ldflags` leaves both versions empty, which turns the version checks off, as on an
-upstream dev build.
+Without `-ldflags` both versions are empty and the version checks are off, as on an upstream dev build.
 
 The language hosts are separate Go modules and build with a plain `go build`, for example
 `go build -C sdk/nodejs/cmd/pulumi-language-nodejs -o ../../../../bin/pulumi-language-nodejs .`.
-Build to `bin/` (ignored) or to `-o /dev/null`. A `go build` with no `-o` leaves the binary in the
-source directory; `.gitignore` covers those paths so one isn't committed by accident.
+Build to `bin/` (ignored) or `-o /dev/null`; `.gitignore` also covers the binary a bare `go build`
+leaves in the source directory.
 
 ## Language hosts
 
-The release archive is laid out like upstream's. It bundles the in-repo hosts (nodejs, bun, python,
-go, pcl) built from this tree, plus the dotnet and yaml hosts at the versions pinned in
-`scripts/get-language-providers.sh`, downloaded from their pulumi releases. Java and HCL are not
-bundled: the CLI installs them on first use at the versions pinned in `pkg/util/plugin.go`
-(`knownLanguageRuntimes`). The bundled hosts sit next to the `plunge` binary, which is where the CLI
-looks for them.
+The release archive follows upstream's layout: next to the `plunge` binary, where the CLI looks, sit
+the in-repo hosts (nodejs, bun, python, go, pcl) built from this tree and the dotnet and yaml hosts from
+their pulumi releases at the versions in `scripts/get-language-providers.sh`. The CLI installs Java and
+HCL on first use, at the versions in `pkg/util/plugin.go` (`knownLanguageRuntimes`).
 
-A host that is neither bundled nor on `PATH` is fetched the way upstream fetches it: stock pulumi's
-build of that host, at plunge's Pulumi-compatible version, not one built from this tree. That is the
-same code while plunge's hosts don't diverge from upstream's.
+A host neither bundled nor on `PATH` is fetched as upstream fetches it: stock pulumi's build at
+plunge's Pulumi-compatible version, the same code while plunge's hosts match upstream's.
 
-Releases are built by `.github/workflows/plunge-release.yml` when a `plunge-vX.Y.Z` tag is pushed. A bare
-`vX.Y.Z` tag doesn't trigger it: those are upstream pulumi's tag names, which this tree carries once
-upstream is fetched (INTENTIUS/plunge#33). It runs goreleaser with `.goreleaser.plunge.yml` and publishes
-`plunge-vX.Y.Z-<os>-<arch>` archives on this repository's releases page. Windows binaries are unsigned. The snapshot build below shows the same
-artifact list without publishing anything.
+Pushing a `plunge-vX.Y.Z` tag runs `.github/workflows/plunge-release.yml`; a bare `vX.Y.Z` tag, upstream
+pulumi's naming, doesn't (INTENTIUS/plunge#33). It runs goreleaser with `.goreleaser.plunge.yml` and
+publishes unsigned-on-Windows `plunge-vX.Y.Z-<os>-<arch>` archives on this repository's releases page.
+The snapshot build below lists the same artifacts and publishes nothing.
 
 ```sh
 ./scripts/prep-for-goreleaser.sh
@@ -131,17 +123,16 @@ PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/
 ## Baseline against stock Pulumi
 
 `scripts/plunge-baseline.sh` runs `plunge preview` and stock `pulumi preview` on each program in
-`tests/plunge-corpus/` against the local emulators and compares the two. The acceptance for P-L0 is
-that they match at a later upstream merge, not only at the fork point. The maintainer runs it; see the
-script's header for its inputs.
+`tests/plunge-corpus/` against the local emulators and compares them. P-L0 accepts a match at a later
+upstream merge as well as at the fork point. The maintainer runs it with the inputs its header documents.
 
 ## Record store acceptance
 
 `scripts/plunge-record-store-acceptance.sh` is the maintainer's run of the record backend on a real
-store (INTENTIUS/plunge#6). It defaults to floci's S3 on localhost, refuses a store that is not on
-loopback unless `PLUNGE_ACCEPTANCE_REAL_STORE=yes`, and writes `VERDICT` lines for two concurrent
-updates on disjoint resources, one record per URN in the store listing, and an older program's run
-leaving a newer run's resource in place. See the script's header for its inputs and outputs.
+store (INTENTIUS/plunge#6), by default floci's S3 on localhost; a store off loopback needs
+`PLUNGE_ACCEPTANCE_REAL_STORE=yes`. Its `VERDICT` lines cover two concurrent updates on disjoint
+resources, one record per URN in the store listing, and an older program's run leaving a newer run's
+resource in place. Inputs and outputs are in the script's header.
 
 ## Merging upstream
 
@@ -151,37 +142,36 @@ git merge upstream/master
 ```
 
 Then check that no new workflow landed in `.github/workflows` (the `plunge-upstream-guard` workflow
-fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG.md` on its own.
+fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG.md` by itself.
 
 ### Scheduled upstream merge
 
-`scripts/plunge-upstream-merge.sh` does the same on a fresh branch. It fetches pulumi/pulumi master
-(fetch only; it never pushes there, and it sets the `upstream` remote's push URL to `no-push://`,
-whether it adds the remote or finds one already there), cuts `upstream-merge/<date>-<upstream sha>` from
-`origin/integration/pulumi-engine` (`BASE` to change it), merges with a merge commit, moves any workflow
-upstream added into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg`, `sdk/pcl`,
-the three language hosts (with `GOTOOLCHAIN=go1.27.1`) and `bin/plunge`. A conflict only in upstream's
-generated Automation API or in go.mod/go.sum files is resolved (it takes upstream's, re-applies
-`scripts/plunge-go-mod-fork.txt`, then runs `go mod tidy` in every module `scripts/tidy.sh` covers). On
-any other conflict it lists the files, aborts the merge and stops: a human resolves it. With
-`--push` it pushes the branch to origin, and only `upstream-merge/*` branches. It never merges into the
-integration branch or main. Results go to `plunge-upstream-merge-out/`: `report.md`, and `verdict.txt`
-with one line, `UPSTREAM-MERGE UP-TO-DATE|MERGED|CONFLICT|BUILD-FAILED|ERROR ...`.
+`scripts/plunge-upstream-merge.sh` does the same on a fresh branch. It fetches pulumi/pulumi master,
+setting the `upstream` push URL to `no-push://`, cuts `upstream-merge/<date>-<upstream sha>` from
+`origin/integration/pulumi-engine` (or `BASE`), merges with a merge commit, moves any new upstream
+workflow into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg`, `sdk/pcl`, the
+three language hosts (with `GOTOOLCHAIN=go1.27.1`) and `bin/plunge`. Conflicts confined to upstream's
+generated Automation API or go.mod/go.sum files take upstream's side, then it re-applies
+`scripts/plunge-go-mod-fork.txt` and runs `go mod tidy` in each module `scripts/tidy.sh` covers. Any
+other conflict aborts the merge with the file list, for a human. `--push` pushes only
+`upstream-merge/*` branches to origin; it never merges into the integration branch or main. Results go
+to `plunge-upstream-merge-out/`: `report.md`, and `verdict.txt` with one line,
+`UPSTREAM-MERGE UP-TO-DATE|MERGED|CONFLICT|BUILD-FAILED|ERROR ...`.
 
-The `plunge-upstream-merge` workflow runs it every Monday with `--push` and opens an issue with the
-report. It opens no PR. Pushing upstream's history needs a token with the `workflows` permission, so set
-the `PLUNGE_MERGE_TOKEN` secret; GITHUB_TOKEN can't push commits that touch `.github/workflows`.
-Scheduled workflows only run from the default branch, so the schedule starts once the file is on main.
+The `plunge-upstream-merge` workflow runs it every Monday with `--push` and opens an issue (no PR) with
+the report. GITHUB_TOKEN can't push commits touching `.github/workflows`, so set `PLUNGE_MERGE_TOKEN`
+to a token with the `workflows` permission. The schedule starts once the file is on main, the default
+branch.
 
 ### SDK check
 
-SDKs ask the engine what it supports, either through GetDeploymentInfo's `SupportedFeatures` (current
-SDKs) or through `SupportsFeature("<id>")` (older ones, and the fallback). `pkg/cmd/plunge-sdk-check`
-takes the latest release of each SDK (nodejs and python from npm and PyPI, go from the Go proxy, dotnet
-from NuGet with the source at its pulumi-dotnet tag, java's sources jar from Maven Central, and yaml
-through the Go SDK version pulumi-yaml's `go.mod` pins), reads the features its code asks for, and asks
-plunge's resource monitor the same questions through its own handlers (`deploy.QueryMonitorFeatures`).
-It also compares the SDK's minimum CLI version with plunge's Pulumi-compatible version.
+SDKs query engine features through GetDeploymentInfo's `SupportedFeatures` (current SDKs) or
+`SupportsFeature("<id>")` (older ones, and the fallback). `pkg/cmd/plunge-sdk-check` takes each SDK's
+latest release (nodejs and python from npm and PyPI, go from the Go proxy, dotnet from NuGet with the
+source at its pulumi-dotnet tag, java's sources jar from Maven Central, yaml through the Go SDK version
+pulumi-yaml's `go.mod` pins), puts the features its code asks for to plunge's resource monitor
+(`deploy.QueryMonitorFeatures`), and compares its minimum CLI version with plunge's Pulumi-compatible
+version.
 
 ```sh
 cd pkg
@@ -203,9 +193,9 @@ FEATURE-MISSING <lang> <version> <feature> (...)
 SDK-ERROR <lang> ...                          the release couldn't be fetched, or no feature checks were found
 ```
 
-A feature named by an enum value plunge's proto doesn't have yet is `FEATURE-MISSING` with the note
-"unknown to plunge's proto; merge upstream". The `plunge-sdk-check` workflow runs the check daily and
-keeps one open issue for `FEATURE-MISSING`, `VERSION-TOO-OLD` and `SDK-ERROR` lines.
+An enum value missing from plunge's proto gives `FEATURE-MISSING` with the note "unknown to plunge's
+proto; merge upstream". The daily `plunge-sdk-check` workflow keeps one open issue for
+`FEATURE-MISSING`, `VERSION-TOO-OLD` and `SDK-ERROR` lines.
 
 Upstream's README follows.
 

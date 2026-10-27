@@ -1,6 +1,6 @@
 ---
-// One room, from data/rooms.ts, in fixed sections: who it is for, what works,
-// what differs, first step, a link to the claims, then the pages to read in
+// One room, from data/rooms.ts, in fixed sections: who it is for, features,
+// differences, first step, a link to the claims, then the pages to read in
 // order: how-to, explanation, reference.
 import { room } from '../data/rooms';
 
@@ -19,11 +19,11 @@ const href = (h: string) => (/^https?:/.test(h) ? h : `${base}${h}`);
 	</section>
 	<div class="cols">
 		<section id="works">
-			<h2>What it does</h2>
+			<h2>Features</h2>
 			<ul>{r.works.map((w) => <li>{w}</li>)}</ul>
 		</section>
 		<section id="differs">
-			<h2>What differs</h2>
+			<h2>Differences</h2>
 			{r.differs.length ? <ul>{r.differs.map((d) => <li>{d}</li>)}</ul> : <p>Nothing beyond the pages below.</p>}
 		</section>
 		<section id="first" class="first">
@@ -31,7 +31,7 @@ const href = (h: string) => (/^https?:/.test(h) ? h : `${base}${h}`);
 			<p><a href={href(r.first.href)}>{r.first.label}</a></p>
 		</section>
 	</div>
-	<p id="proof"><a href={CLAIMS}>What has been run, and what waits for a run</a></p>
+	<p id="proof"><a href={CLAIMS}>Claims and runs</a></p>
 	<section id="read" class="read">
 		<h2>Then read</h2>
 		<dl>

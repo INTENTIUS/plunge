@@ -7,27 +7,26 @@ prompt: |
 ---
 ## Rename
 
-A Pulumi rename is an `aliases` entry. What plunge does with the
-`plunge-urn` label and the record key is open on [#46](https://github.com/INTENTIUS/plunge/issues/46).
+A Pulumi rename is an `aliases` entry. Its effect on the `plunge-urn` label
+and the record key is open on [#46](https://github.com/INTENTIUS/plunge/issues/46).
 
 ## Remove
 
-Delete the object from the program and update. plunge checks the live
-object's labels before it deletes ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+Delete the object from the program and update; plunge checks the live
+object's labels first ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
 
 ## Plan, review, update
 
-`plunge preview --save-plan plan.json`, then `plunge up --plan plan.json`.
-A moved record refuses the update by name, exit 40.
+Run `plunge preview --save-plan plan.json`, then `plunge up --plan plan.json`,
+which is refused by name, exit 40, if a record has moved.
 
 ## Two runs at once
 
 There is no stack lock. Before a create, plunge LISTs the kind by label
-selector, which the API server answers from a quorum read, so a create that
-landed is seen. One object found is bound; two are refused by name.
-Kubernetes names are not autonamed by plunge: `metadata.name` keeps upstream's
-behaviour, so C1 does not cover them. Unit-tested on other families; nothing
-has run on a cluster.
+selector, answered from a quorum read, so a landed create is seen. One object
+found is bound; two are refused by name. plunge leaves `metadata.name` to
+upstream's behaviour, so C1 does not cover it. This is unit-tested on other
+families and has not run on a cluster.
 
 ## Records in the cluster
 

@@ -5,8 +5,8 @@ prompt: |
   Follow https://intentius.io/plunge/aws/gate/. Draft an IAM policy scoping one role to this stack and show it to me.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
-The create call writes `plunge-stack`, so an IAM policy can condition on it.
-The value is `<project>/<stack>`, readable as written.
+The create call writes `plunge-stack` as `<project>/<stack>`, so an IAM
+policy can condition on it.
 
 ```json
 {
@@ -37,14 +37,14 @@ The value is `<project>/<stack>`, readable as written.
 Which actions honour `aws:ResourceTag` and `aws:RequestTag` differs by
 service; the service authorization reference lists them.
 
-## What has run
+## Recorded runs
 
-Nothing. No policy has been run against plunge's markers on floci or AWS.
-[#45](https://github.com/INTENTIUS/plunge/issues/45) holds that run. Until then this page shows the shape of the policy
-and makes no claim that it fences plunge's writes.
+None. No policy has been run against plunge's markers on floci or AWS;
+[#45](https://github.com/INTENTIUS/plunge/issues/45) holds that run. Until it
+lands, this page shows the policy's shape and claims no fencing of plunge's writes.
 
 ## Guarding the marker
 
-An SCP that denies removing tags whose key starts with `plunge-` keeps the
-markers on resources in member accounts. plunge itself refuses a provider
-configuration that would hide them ([Adopt](/plunge/aws/adopt/)).
+An SCP denying removal of `plunge-` tag keys keeps the markers in member
+accounts. plunge refuses a provider configuration that would hide them
+([Adopt](/plunge/aws/adopt/)).

@@ -10,11 +10,11 @@ prompt: |
 | pulumi-azure | map `tags`, from the bridge's Terraform schema | not covered: `pkg/identity` has no azurerm rows | ARM, filtered by `plunge-urn`; binds, consistency unmeasured |
 | azure-native | map `tags`, from its schema distilled once per version and cached (`PLUNGE_AZURE_NATIVE_CACHE`) | not covered: no autoname schema is read | ARM, as above |
 
-The corpus runs pulumi-azure 6.10.0, as ruled on [#16](https://github.com/INTENTIUS/plunge/issues/16). Azure keeps a tag key
-in its writer's casing, so plunge compares marker keys without case.
+The corpus runs pulumi-azure 6.10.0 ([#16](https://github.com/INTENTIUS/plunge/issues/16)), and since Azure keeps a tag key
+as its writer cased it, plunge ignores case in marker keys.
 
 ## Record store
 
-`plunge+azblob://` checks blob versioning, a lifecycle rule for previous
-versions, and anonymous access when it opens. With `endpoint` or
-`metadata_host` it talks only to the endpoints the URL names ([#35](https://github.com/INTENTIUS/plunge/issues/35)).
+On open, `plunge+azblob://` checks blob versioning and anonymous access and
+looks for a lifecycle rule on old versions. With `endpoint` or `metadata_host`
+it calls only the URL's endpoints ([#35](https://github.com/INTENTIUS/plunge/issues/35)).

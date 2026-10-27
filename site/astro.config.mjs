@@ -66,7 +66,7 @@ export default defineConfig({
 				ThemeProvider: './src/components/ThemeProvider.astro',
 				ThemeSelect: './src/components/ThemeSelect.astro',
 			},
-			description: 'plunge is Pulumi that tags each resource with the stack that owns it and keeps one record per resource, with no stack lock.',
+			description: 'Pulumi with resource level concurrency and no stack lock',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/INTENTIUS/plunge' }],
 			editLink: {
 				baseUrl: 'https://github.com/INTENTIUS/plunge/edit/main/site/',
@@ -75,7 +75,7 @@ export default defineConfig({
 			// How it works, Use, Reference. Every group but Start here starts collapsed.
 			sidebar: [
 				// The room pages under /for/ (src/pages/for/[id].astro), in the order of
-				// src/data/rooms.ts: what you run today, where it runs, then the roles.
+				// src/data/rooms.ts: the stack you run today, where it runs, then the roles.
 				// scripts/check-rooms.mjs fails the build when this list and rooms.ts disagree.
 				{
 					label: 'Start here',
@@ -113,7 +113,7 @@ export default defineConfig({
 					label: 'How it works',
 					collapsed: true,
 					items: [
-						{ label: 'What it is', slug: 'how-it-works' },
+						{ label: 'Overview', slug: 'how-it-works' },
 						{ label: 'Identity', slug: 'how-it-works/identity' },
 						{ label: 'Records', slug: 'how-it-works/records' },
 						{ label: 'Names', slug: 'how-it-works/names' },
@@ -128,7 +128,7 @@ export default defineConfig({
 					items: [
 						{ label: 'Tutorial', slug: 'use/tutorial' },
 						{ label: 'Start a new stack', slug: 'use/start' },
-						{ label: 'What you set up by hand', slug: 'use/setup' },
+						{ label: 'Set up by hand', slug: 'use/setup' },
 						{ label: 'Migrate a stock stack', slug: 'use/migrate' },
 						{ label: 'Pending operations and crashes', slug: 'use/pending' },
 						{ label: 'Rename a resource', slug: 'use/rename' },

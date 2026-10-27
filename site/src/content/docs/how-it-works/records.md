@@ -1,16 +1,16 @@
 ---
 title: Records
-description: What a record holds, the five stores, how each write is conditioned, and what the store checks when it opens.
+description: Record contents, the five stores, each store's conditional write, and the checks a store runs when it opens.
 prompt: |
   Read https://intentius.io/plunge/how-it-works/records/ and say which plunge+ store fits this team, and which query keys its URL needs. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
 A plunge stack's state is a set of records in a store with conditional
-writes. The store is choudoufu's public `staterecord` package
-(`github.com/intentius/choudoufu/pkg/staterecord`), which plunge imports as a module.
+writes: choudoufu's public `staterecord` package
+(`github.com/intentius/choudoufu/pkg/staterecord`), imported as a module.
 
-## What a record is
+## Record keys
 
 | Key under `stacks/<project>/<stack>/` | Holds |
 |---|---|
@@ -19,19 +19,16 @@ writes. The store is choudoufu's public `staterecord` package
 | `secrets` | the secrets configuration, created once and never rewritten |
 | `snippets/<uuid>`, `extensions/<ref>` | one PCL snippet, one extension blob |
 
-A run writes only the records whose content changed since it read them. A
-secret re-encrypted to a new ciphertext is compared by its plaintext, so it is
-no change.
+A run writes only records whose content changed since it read them. A
+re-encrypted secret is compared by plaintext, so a new ciphertext is no change.
 
 ## Records hold the full state
 
-A resource record holds what a checkpoint would hold for that resource:
-inputs, outputs, and secret values as ciphertext under the stack's secrets
-provider. Nothing in it is a cache you may lose, which differs from
-choudoufu, whose records hold only what a read of the live object leaves out.
-[#38](https://github.com/INTENTIUS/plunge/issues/38) asked whether plunge
-should follow; its report recommends keeping full records. Guard the store as
-you guard a state file.
+A resource record holds its checkpoint content: inputs, outputs, and secrets
+as ciphertext under the stack's secrets provider. None of it is a disposable
+cache, unlike choudoufu, whose records hold only the state a live read leaves
+out; [#38](https://github.com/INTENTIUS/plunge/issues/38)'s report recommends
+keeping full records. Guard the store like a state file.
 
 ## The five stores
 
@@ -43,21 +40,19 @@ you guard a state file.
 | `plunge+azblob://container/prefix` | Azure Blob Storage | `If-None-Match: *`, then `If-Match` |
 | `plunge+k8s://namespace/prefix` | one Kubernetes Secret per record | a create that fails on an existing Secret, then the Secret's `resourceVersion` |
 
-For every store but Kubernetes, the URL after `plunge+` is a DIY backend URL,
-and the records sit under `.pulumi/records` beside its metadata. The DIY
-backend has no Kubernetes store, so `plunge+k8s://` names one for the
-metadata in its `metadata` query key
-(`plunge+k8s://records?metadata=s3://bucket/meta`); a URL without one is
-refused (`MissingMetadataURLError`). Its Secrets carry an estate label (the
-`estate` query key, else the namespace) that choudoufu's estate-boundary
-admission policy fences writes with. The query keys for each store are in the
+Except for Kubernetes, the URL after `plunge+` is a DIY backend URL, with
+records under `.pulumi/records` beside its metadata. The DIY backend has no
+Kubernetes store, so `plunge+k8s://` needs a `metadata` query key
+(`plunge+k8s://records?metadata=s3://bucket/meta`) or is refused
+(`MissingMetadataURLError`). Its Secrets carry an estate label (the `estate`
+key, else the namespace) that choudoufu's estate-boundary admission policy
+fences writes with. Query keys are in the
 [Reference](../../reference/#backend-urls).
 
 ## Checks when the store opens
 
-S3, GCS and Azure Blob stores read the bucket's settings when they open and
-refuse by name (`ContractRefusedError`, with the fix) when one fails or cannot
-be read:
+S3, GCS and Azure Blob stores read the bucket's settings on open and refuse
+by name (`ContractRefusedError`, with the fix) when one fails or is unreadable:
 
 | Store | Settings checked |
 |---|---|
@@ -65,40 +60,36 @@ be read:
 | GCS | `object_versioning`, `noncurrent_lifecycle`, `public_access_prevention`, `uniform_bucket_level_access`; `list_isolation` only warns |
 | Azure Blob | `blob_versioning`, `lifecycle_management` (a rule deleting previous versions), `public_access` |
 
-Naming a setting in the `allow_insecure` query key or `PLUNGE_ALLOW_INSECURE`
-proceeds past it. A lifecycle rule that deletes current records cannot be
-waived. [Record store bucket](../../use/bucket/) gives the commands.
+A setting named in the `allow_insecure` query key or `PLUNGE_ALLOW_INSECURE`
+is skipped, except a lifecycle rule deleting current records.
+[Record store bucket](../../use/bucket/) gives the commands.
 
-A store URL that names an emulator (an `endpoint` key on S3 or Azure Blob,
+A store URL naming an emulator (`endpoint` on S3 or Azure Blob,
 `metadata_host` on Azure Blob, `STORAGE_EMULATOR_HOST` for GCS) signs only with
-credentials from the environment and never builds the SDK's default
-credential chain, so an emulator run asks no metadata server, SSO, STS or OAuth
-host for a credential. With none set, the open is refused by name
+environment credentials, never the SDK's default chain, so it asks no metadata
+server, SSO, STS or OAuth host. Without them the open is refused by name
 ([#35](https://github.com/INTENTIUS/plunge/issues/35),
-[#50](https://github.com/INTENTIUS/plunge/issues/50)). The variables are on
-[Setup](../../use/setup/#credentials). The stack metadata beside the records
-is checked the same way before the DIY backend opens it: on Azure Blob it is
-sent to the record store's own endpoint, which must be local, with
+[#50](https://github.com/INTENTIUS/plunge/issues/50); variables on
+[Setup](../../use/setup/#credentials)). The stack metadata is checked the same
+way; on Azure Blob it goes to the record store's local endpoint with
 `AZURE_STORAGE_KEY` or `AZURE_STORAGE_SAS_TOKEN`.
 
 ## How a stack is read
 
-The snapshot is assembled from the records on every read, each resource after
-its parent, its provider and everything it depends on. A resource that refers
-to something no record holds is refused (`MissingReferenceError`, naming the
-resource, the reference and the record key).
+Every read assembles the snapshot from the records in dependency order, each
+resource after its parent and provider. A reference no record holds is refused
+(`MissingReferenceError`, naming the resource, reference and record key).
 
 ## No history
 
-There is no single update for a history entry to describe, so plunge keeps no
-stack history or checkpoint backups. `plunge stack history`,
-`plunge stack export --version` and `plunge stack rm --remove-backups` are
-refused (`UnsupportedOnRecordsError`). A bucket with object versioning keeps
-each record's earlier versions.
+No single update exists for a history entry to describe, so plunge keeps no
+stack history or backups and refuses `plunge stack history`,
+`plunge stack export --version` and `plunge stack rm --remove-backups`
+(`UnsupportedOnRecordsError`). Bucket versioning keeps earlier record versions.
 
-## What has run
+## Recorded runs
 
 The local store ran in the recorded `aws-ts` runs ([Claims and runs](../../claims/)).
-The S3, GCS, Azure Blob and Kubernetes stores are unit-tested, and their runs
-on emulators wait on [#6](https://github.com/INTENTIUS/plunge/issues/6) and
+The S3, GCS, Azure Blob and Kubernetes stores are unit-tested; their emulator
+runs wait on [#6](https://github.com/INTENTIUS/plunge/issues/6) and
 [#14](https://github.com/INTENTIUS/plunge/issues/14).
