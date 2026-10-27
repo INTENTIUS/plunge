@@ -23,6 +23,7 @@ package plunge
 // account ID ("account_id:action_id:budget_name"), which neither the identifier nor the Cloud Control model carries.
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -96,8 +97,34 @@ func (t *ccTranslation) needsModel() string {
 	return t.hand.prop
 }
 
+// wantsModel reports whether the listing should read the resource before translating identifier, because the list
+// handler's model lacks what the translation reads.
+func (t *ccTranslation) wantsModel(identifier string, props map[string]any) bool {
+	switch {
+	case t == nil:
+		return false
+	case t.single != nil:
+		return t.single.wantsModel(identifier, props)
+	case t.hand != nil && t.hand.prop != "":
+		_, has := props[t.hand.prop]
+		return !has
+	}
+	return false
+}
+
+// describe names the id the translation produces, for an error message.
+func (t *ccTranslation) describe(tfType string) string {
+	if t.single != nil {
+		return t.single.describe()
+	}
+	return fmt.Sprintf("%s's Terraform id (it should have %d parts)", tfType, t.arity)
+}
+
 // translate is the Terraform id of one listed object: identifier is its Cloud Control identifier, props its model.
 func (t *ccTranslation) translate(identifier string, props map[string]any) (string, bool) {
+	if t.single != nil {
+		return t.single.translate(identifier, props)
+	}
 	if t.hand == nil {
 		return t.apply(identifier)
 	}

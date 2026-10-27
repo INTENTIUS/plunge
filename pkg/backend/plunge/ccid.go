@@ -50,6 +50,8 @@ type ccTranslation struct {
 	arity    int
 	// hand is a written-out translation (ccid_hand.go), used in place of literals and index.
 	hand *ccHand
+	// single is a single-part identifier's translation (ccid_single.go), used in place of all of the above.
+	single *ccSingle
 }
 
 func (t ccTranslation) apply(identifier string) (string, bool) {
