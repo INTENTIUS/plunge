@@ -1,0 +1,258 @@
+---
+// The home page's picker, in choudoufu's picker shape: what you run today
+// and where it runs as two rows of tiles, and the roles as a line of links
+// at the end. A card gives the first step for that pick, and a line under it says what
+// differs. Every list comes from data/rooms.ts, the room pages' source. The
+// first pick is rendered on the server, so the card reads the same without
+// script.
+import Diver from "./Diver.astro";
+import { FROM, PLATFORMS, ROLES, room } from '../data/rooms';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const href = (h: string) => (/^https?:/.test(h) ? h : `${base}${h}`);
+const tiles = FROM.map((f) => {
+	const r = room(f.room);
+	return { id: f.id, label: f.label, room: href(`/for/${f.room}/`), title: r.title, differs: r.differs, first: { label: r.first.label, href: href(r.first.href) } };
+});
+const platforms = PLATFORMS.map((p) => {
+	const r = room(p.room);
+	return { id: p.id, label: p.label, room: href(`/for/${p.room}/`), title: r.title, differs: r.differs };
+});
+const data = { tiles, platforms };
+const [tile] = tiles;
+const [platform] = platforms;
+---
+<section class="pl-picker not-content" aria-label="Where to start">
+	<div class="tiles" role="group" aria-labelledby="pl-pick-from">
+		<span id="pl-pick-from" class="h">You run today</span>
+		{FROM.map((f, i) => (
+			<button type="button" class="tile" data-pick="tile" value={f.id} aria-pressed={String(i === 0)}>
+				<Diver size={24} />
+				<b>{f.label}</b>
+				<small>{f.blurb}</small>
+			</button>
+		))}
+	</div>
+	<div class="tiles" role="group" aria-labelledby="pl-pick-platform">
+		<span id="pl-pick-platform" class="h">Runs on</span>
+		{PLATFORMS.map((p, i) => (
+			<button type="button" class="tile" data-pick="platform" value={p.id} aria-pressed={String(i === 0)}>
+				<Diver size={24} />
+				<b>{p.label}</b>
+				<small>{p.blurb}</small>
+			</button>
+		))}
+	</div>
+	<div class="card" aria-live="polite">
+		<a class="go" data-first href={tile.first.href}>{tile.first.label}</a>
+		<p class="sub" data-more>Then read <a href={tile.room}>{tile.title}</a> and <a href={platform.room}>{platform.title}</a>.</p>
+	</div>
+	<div class="notes" data-notes hidden={!(tile.differs.length + platform.differs.length)}>
+		<p class="h">Differs</p>
+		<ul data-differs>{[...tile.differs, ...platform.differs].map((d) => <li>{d}</li>)}</ul>
+	</div>
+	<nav class="roles" aria-label="By role">
+		<span>Or start from your role</span>
+		{ROLES.map((r) => <a class="role" href={href(`/for/${r.room}/`)}><Diver size={16} />{r.label}</a>)}
+	</nav>
+	<script type="application/json" data-picker-data set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />
+</section>
+
+<script>
+	type Link = { label: string; href: string };
+	type Data = {
+		tiles: { id: string; label: string; room: string; title: string; differs: string[]; first: Link }[];
+		platforms: { id: string; label: string; room: string; title: string; differs: string[] }[];
+	};
+	const key = 'pl-picker';
+	for (const section of document.querySelectorAll<HTMLElement>('.pl-picker')) {
+		const data = JSON.parse(section.querySelector('[data-picker-data]')!.textContent!) as Data;
+		const pick: Record<string, string> = { tile: data.tiles[0].id, platform: data.platforms[0].id };
+		try {
+			const saved = JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, string>;
+			for (const k of Object.keys(pick)) if (saved[k]) pick[k] = saved[k];
+		} catch {}
+		const $ = <T extends Element = HTMLElement>(sel: string) => section.querySelector<T>(sel)!;
+		const li = (child: string | Node) => {
+			const el = document.createElement('li');
+			el.append(child);
+			return el;
+		};
+		const link = (label: string, href: string) => Object.assign(document.createElement('a'), { href, textContent: label });
+		const show = () => {
+			const tile = data.tiles.find((t) => t.id === pick.tile) ?? data.tiles[0];
+			const platform = data.platforms.find((p) => p.id === pick.platform) ?? data.platforms[0];
+			for (const b of section.querySelectorAll<HTMLButtonElement>('button[data-pick]')) {
+				b.setAttribute('aria-pressed', String(pick[b.dataset.pick!] === b.value));
+			}
+			const go = $<HTMLAnchorElement>('[data-first]');
+			go.href = tile.first.href;
+			go.textContent = tile.first.label;
+			$('[data-more]').replaceChildren('Then read ', link(tile.title, tile.room), ' and ', link(platform.title, platform.room), '.');
+			const differs = [...tile.differs, ...platform.differs];
+			$('[data-notes]').hidden = !differs.length;
+			$('[data-differs]').replaceChildren(...differs.map((d) => li(d)));
+			try {
+				localStorage.setItem(key, JSON.stringify(pick));
+			} catch {}
+		};
+		section.addEventListener('click', (e) => {
+			const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-pick]');
+			if (!b) return;
+			pick[b.dataset.pick!] = b.value;
+			show();
+		});
+		show();
+	}
+</script>
+
+<style>
+	.pl-picker {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.1rem;
+		width: 100%;
+		min-width: 0;
+		max-width: 64rem;
+		margin: 0 auto 3rem;
+		font-size: var(--sl-text-sm);
+		overflow-wrap: anywhere;
+	}
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.5rem;
+	}
+	.tile {
+		position: relative;
+		min-width: 0;
+		display: grid;
+		gap: 0.35rem;
+		align-content: start;
+		padding: 0.75rem;
+		text-align: left;
+		font: inherit;
+		color: var(--sl-color-white);
+		background: var(--pl-panel);
+		border: 1px solid var(--pl-rule);
+		border-top: 2px solid var(--pl-rule);
+		border-radius: 0.6rem;
+		cursor: pointer;
+	}
+	.tile :global(img) {
+		opacity: 0.4;
+	}
+	.tile b {
+		line-height: 1.3;
+	}
+	.tile small {
+		font-size: var(--sl-text-xs);
+		line-height: 1.35;
+		color: var(--sl-color-gray-3);
+	}
+	.tile:hover {
+		border-color: var(--pl-sand);
+	}
+	.tile[aria-pressed='true'] {
+		border-top-color: var(--pl-accent);
+		box-shadow: inset 0 0 0 1px var(--pl-accent);
+	}
+	.tile[aria-pressed='true'] :global(img) {
+		opacity: 1;
+	}
+	.tiles > .h {
+		grid-column: 1 / -1;
+		margin: 0;
+	}
+	.roles > span,
+	.h {
+		font-size: 0.68rem;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--sl-color-gray-3);
+	}
+	.roles {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
+	}
+	.roles > span {
+		margin-right: 0.25rem;
+	}
+	.role {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.4rem 0.8rem 0.4rem 0.5rem;
+		font-weight: 500;
+		color: var(--sl-color-white);
+		background: var(--pl-panel);
+		border: 1px solid var(--pl-rule);
+		border-radius: 0.5rem;
+		text-decoration: none;
+	}
+	.role:hover,
+	.role:focus-visible {
+		border-color: var(--pl-sand);
+	}
+	.card {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 1rem;
+		align-items: center;
+		padding: 1rem;
+		background: var(--pl-panel);
+		border: 1px solid var(--pl-rule);
+		border-top: 1px solid var(--pl-sand);
+		border-radius: 0.6rem;
+	}
+	.card :global(a) {
+		color: var(--pl-accent);
+	}
+	.go {
+		display: inline-block;
+		padding: 0.55rem 1rem;
+		font-weight: 600;
+		color: var(--sl-color-black) !important;
+		background: var(--pl-accent);
+		border-radius: 0.5rem;
+		text-decoration: none;
+	}
+	.go:hover {
+		filter: brightness(1.1);
+	}
+	.sub {
+		margin: 0;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+	.notes {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1rem;
+		align-items: baseline;
+		padding: 0 0.25rem;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+	.notes[hidden] {
+		display: none;
+	}
+	.notes .h {
+		margin: 0;
+	}
+	.notes ul {
+		display: contents;
+		list-style: none;
+	}
+	.notes :global(li) {
+		margin: 0;
+	}
+	@media (max-width: 52rem) {
+		.tiles {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+</style>

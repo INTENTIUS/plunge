@@ -1,0 +1,30 @@
+---
+// plunge's logo, the pixel-art cliff diver. The image is referenced by URL from
+// public/brand/, not imported. `size` is the rendered width and height in px.
+// 48 px and below use the tight crop on the diver (plunge-16/32/48.png), which
+// reads far better small; larger sizes use the full scene (plunge-64/128/160.png).
+// The art is opaque (sky and sea), unlike choudoufu's transparent cube, so it gets
+// a small radius and a hairline ring to sit well on both themes. Decorative by
+// default (alt=""), since a word beside it names plunge.
+interface Props {
+	size?: number;
+	alt?: string;
+	class?: string;
+}
+const { size = 32, alt = '', class: className } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const pick = size <= 16 ? 16 : size <= 32 ? 32 : size <= 48 ? 48 : size <= 64 ? 64 : size <= 128 ? 128 : 160;
+const src = `${base}/brand/plunge-${pick}.png`;
+---
+<img class:list={['pl-diver', className]} src={src} width={size} height={size} alt={alt} decoding="async" style={`--pl-diver-r:${Math.max(2, Math.round(size / 8))}px`} />
+
+<style>
+	.pl-diver {
+		display: inline-block;
+		max-width: none;
+		vertical-align: middle;
+		image-rendering: pixelated;
+		border-radius: var(--pl-diver-r, 4px);
+		box-shadow: 0 0 0 1px var(--pl-rule);
+	}
+</style>

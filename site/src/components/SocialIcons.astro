@@ -1,0 +1,26 @@
+---
+// The header's right side: a Docs link first, so the docs are one click from the
+// home page (whose splash layout hides the sidebar), then Starlight's own social
+// icons. Adapted from choudoufu's site.
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<a class="pl-docs" href={`${base}/use/start/`}>Docs</a>
+<Default />
+
+<style>
+	.pl-docs {
+		margin-right: 0.5rem;
+		padding: 0.3rem 0.8rem;
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		color: var(--sl-color-white);
+		text-decoration: none;
+		border: 1px solid var(--pl-rule);
+		border-radius: 999px;
+	}
+	.pl-docs:hover {
+		border-color: var(--pl-sand);
+	}
+</style>

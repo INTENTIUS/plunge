@@ -1,11 +1,24 @@
 # plunge
 
-Pulumi with per-resource ownership: marker tags and a per-resource record store instead of one locked
-checkpoint. plunge is to Pulumi what choudoufu is to Terraform: the engine tier for Pulumi teams on
-chant. The plan is in INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
+Pulumi with per-resource ownership. plunge runs the same programs, SDKs, language hosts and providers
+as stock Pulumi, and changes where a stack's state lives and how a run decides what it owns:
 
-At this stage (P-L0, INTENTIUS/plunge#3) plunge is stock Pulumi under another name. It runs the same
-programs, SDKs, language hosts and providers. The state backend rewrite comes in later milestones.
+- Each taggable resource carries two markers, `plunge-stack` and `plunge-urn`, written in its create
+  call (tags on AWS and Azure, digests in labels on Google Cloud and Kubernetes).
+- A `plunge+<store>` backend (`file`, `s3`, `gs`, `azblob`, `k8s`) keeps one record per resource, each
+  write conditional, with no stack lock.
+- An unnamed resource of a covered type gets the same name on every run, and a saved plan whose
+  records moved is refused (exit 40). Every delete is checked against the live marker (built for
+  INTENTIUS/plunge#37, waiting for its run).
+- `plunge stack adopt` moves a stock stack onto records; `plunge drift --resource` reads one resource's
+  drift with one provider Read.
+
+plunge is to Pulumi what choudoufu is to OpenTofu, and chant drives either. The plan is in
+INTENTIUS/plunge#2 and the design record in INTENTIUS/plunge#9.
+
+Documentation: https://intentius.io/plunge. Its [claims page](https://intentius.io/plunge/claims/) lists
+the runs recorded so far and the issue holding each run still to come. The site's source is in
+`site/`, and the design details are in `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`.
 
 ## Fork point
 
