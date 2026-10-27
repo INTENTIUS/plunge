@@ -8,9 +8,9 @@ prompt: |
 
 Stock Pulumi's `<name>-<random>` lets two concurrent creates make two
 objects. plunge uses `<name>-<hash>`, where the hash is
-seven hex digits of a SHA-256 over the project, stack, qualified type and name
-(`pkg/backend/plunge/autoname.go`). It is stable across runs and machines and
-differs between stacks in one account.
+seven hex digits of a SHA-256 over the project, stack, qualified type and name.
+It is stable across runs and machines and differs between stacks in one
+account.
 
 In the recorded `aws-ts` run, queue `events` became `events-76012a7` and
 topic `docs-notify` became `docs-notify-313a6f6`
@@ -55,3 +55,5 @@ window with neither object.
 Each resource record gives its name's source and whether C1 covers it, or
 why not (`ownership.autoname`: `by`, `name`, `c1`, `uncovered`).
 CONCURRENCY.md lists every `uncovered` reason.
+
+Source: `pkg/backend/plunge/autoname.go`.

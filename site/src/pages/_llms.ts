@@ -2,6 +2,7 @@
 // site. llms.txt lists every page; llms-full.txt carries their text.
 import { getCollection } from 'astro:content';
 import { bodyMarkdown, pageUrl } from '../markdown';
+import { neverLine } from '../prompts';
 
 // Sidebar order. A page not listed here comes after these, by id.
 const ORDER = ['use/start', 'how-it-works', 'claims'];
@@ -19,7 +20,8 @@ export async function pages() {
 			title: d.data.title,
 			description: d.data.description ?? '',
 			url: pageUrl(d.id),
-			prompt: d.data.prompt,
+			// Every prompt ends with neverLine; PREAMBLE says it once instead.
+			prompt: d.data.prompt?.replace(neverLine, '').trim(),
 			body: bodyMarkdown(d.body ?? ''),
 		}));
 }
@@ -28,8 +30,10 @@ export const PREAMBLE = `# plunge
 
 > Pulumi with resource level concurrency and no stack lock
 
+Status: v0.1.0, released 2026-10-27, early and not for production. Lock-free concurrent updates are unit-tested and have not run on a real store yet (https://github.com/INTENTIUS/plunge/issues/6). Every recorded run so far was on local emulators, and none on a real cloud.
+
 The source, and the reference material the site links to, is at https://github.com/INTENTIUS/plunge.
 
-Every claim here has a recorded run, dated at https://intentius.io/plunge/claims/. Anything built but not yet run links to its GitHub issue.
+https://intentius.io/plunge/claims/ gives each capability's status: run on an emulator, unit-tested, or not built. A recorded run has its date and files there, and anything else links to its GitHub issue.
 
-A page's prompt sits under "Optional: hand this page to your coding agent" and in llms.txt under the page. Every prompt forbids \`plunge up\`, \`plunge destroy\`, \`plunge stack adopt --yes\` and merges, which stay with the person.`;
+A page's prompt sits under "Optional: hand this page to your coding agent" and in llms.txt under the page. Every prompt ends with this rule, left out below: ${neverLine}`;

@@ -1,11 +1,28 @@
 ---
-// The home page under the hero and its lead: the picker, then a link to the
-// claims.
+// The home page under the hero: plunge in plain words, its status, the
+// picker, then a link to the claims. The status box here and the one on
+// /use/start/ say the same; keep them in step.
 import Picker from './Picker.astro';
 
-const CLAIMS = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/claims/`;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const CLAIMS = `${base}/claims/`;
+const G = `${base}/glossary/`;
 ---
 <div class="pl-landing not-content">
+	<section class="about" aria-label="About plunge">
+		<p>
+			plunge is a fork of <a href="https://github.com/pulumi/pulumi">Pulumi</a> with a drop-in CLI that runs your Pulumi programs, SDKs and providers as they are.
+			It keeps one <a href={`${G}#record`}>record</a> per resource in place of one state file per stack, and writes two ownership tags, its <a href={`${G}#marker`}>markers</a>, on each cloud object.
+			So two runs that change different resources of one stack do not wait for each other, and every delete first checks that the object's tags name this stack.
+		</p>
+	</section>
+	<aside class="status" aria-label="Status">
+		<p class="h">Status</p>
+		<p>
+			plunge v0.1.0 was released on 2026-10-27, and it is early. All proof so far comes from local emulators, chiefly <a href={`${G}#floci`}>floci</a>, a free AWS emulator that runs in Docker.
+			Nothing has run on a real cloud yet, so keep plunge away from production for now.
+		</p>
+	</aside>
 	<Picker />
 	<p class="claims"><a href={CLAIMS}>Claims and runs</a></p>
 </div>
@@ -13,7 +30,7 @@ const CLAIMS = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/claims/`;
 <style>
 	.pl-landing {
 		display: grid;
-		gap: 2.5rem;
+		gap: 2rem;
 		max-width: 64rem;
 		margin: 0 auto;
 		font-size: var(--sl-text-sm);
@@ -23,13 +40,38 @@ const CLAIMS = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/claims/`;
 	.pl-landing :global(.pl-picker) {
 		margin: 0;
 	}
-	.claims {
+	.pl-landing p {
 		margin: 0;
-		text-align: center;
 	}
+	.about {
+		font-size: var(--sl-text-base);
+		color: var(--sl-color-gray-2);
+	}
+	.status {
+		display: grid;
+		gap: 0.35rem;
+		padding: 0.9rem 1.1rem;
+		background: var(--pl-panel);
+		border: 1px solid var(--pl-rule);
+		border-left: 3px solid var(--pl-sand);
+		border-radius: 0.6rem;
+		color: var(--sl-color-gray-2);
+	}
+	.status .h {
+		font-size: 0.68rem;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--sl-color-gray-3);
+	}
+	.about a,
+	.status a,
 	.claims a {
 		color: var(--pl-accent);
 		text-decoration-color: color-mix(in srgb, var(--pl-accent) 35%, transparent);
+	}
+	.claims {
+		text-align: center;
 	}
 	.claims a:hover {
 		text-decoration-color: var(--pl-sand);

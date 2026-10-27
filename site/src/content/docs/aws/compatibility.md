@@ -34,7 +34,7 @@ recorded `aws-ts` run ([Claims and runs](/plunge/claims/)).
 
 ## Refused
 
-- a provider whose `ignoreTags` or `defaultTags` would hide the `plunge-` keys
+- a provider whose `ignoreTags` key or prefix matches `plunge-`, or whose `defaultTags` has an entry with a `plunge-` key
 - an aws-native resource with create-only tags, at adoption
 - a random `pulumi:autonaming` pattern on a covered type, unless `PLUNGE_ALLOW_RANDOM_AUTONAMES=true`
 

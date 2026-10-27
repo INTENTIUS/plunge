@@ -253,6 +253,15 @@ h1#_top {
 	max-width: 42rem;
 	text-wrap: pretty;
 }
+/* The status line under the tagline (src/pages/index.astro). */
+.hero .tagline .pl-hero-status {
+	margin-top: 0.75rem;
+	font-size: var(--sl-text-sm);
+	color: var(--sl-color-gray-2);
+}
+.hero .tagline .pl-hero-status a {
+	color: var(--pl-accent);
+}
 
 /* Splash sections: generous air between them, headings set large. */
 [data-has-hero] .sl-markdown-content h2:not(.not-content *) {

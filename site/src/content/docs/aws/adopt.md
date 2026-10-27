@@ -16,8 +16,9 @@ taggable resource with `plunge-stack` and `plunge-urn` in place
 
 ## Refusals
 
-A pulumi-aws provider whose `ignoreTags` or `defaultTags` would hide or
-override the `plunge-` keys is refused (`marker-hiding-provider-config`). So
+A pulumi-aws provider is refused (`marker-hiding-provider-config`) when an
+`ignoreTags` key or prefix matches `plunge-`, or when a `defaultTags` entry
+has a `plunge-` key. Other default tags are fine. So
 is an aws-native resource with create-only tags (`tagUpdatable: false`),
 which marking would replace (`create-only-tags`).
 

@@ -1,6 +1,6 @@
 ---
 title: Proof
-description: Recorded runs on Google Cloud and the runs still to come.
+description: The recorded run on floci-gcp, the Google Cloud emulator, and the runs still to come. Nothing has run on Google Cloud itself.
 prompt: |
   Follow https://intentius.io/plunge/gcp/proof/ and report which GCP claims have a recorded run. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.

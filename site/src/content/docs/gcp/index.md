@@ -11,4 +11,6 @@ Google label values are short and lower-case, so the `plunge-stack` and `plunge-
 - [Gate](/plunge/gcp/gate/): fence writes by the owning stack.
 - [Operate](/plunge/gcp/operate/): rename, remove, saved plans, two runs at once.
 - [Compatibility](/plunge/gcp/compatibility/): which providers and types take markers, and how they are listed.
-- [Proof](/plunge/gcp/proof/): recorded runs on GCP and the runs still to come.
+- [Proof](/plunge/gcp/proof/): the recorded run on floci-gcp, the Google Cloud emulator, and the runs still to come.
+
+Status: one preview is recorded on floci-gcp, and nothing has run on Google Cloud itself.

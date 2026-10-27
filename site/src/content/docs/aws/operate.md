@@ -25,15 +25,16 @@ which is refused by name, exit 40, if any record the plan read has moved.
 
 ## From CI
 
-See [CI/CD](/plunge/use/cicd/).
+[CI/CD](/plunge/use/cicd/) covers pipelines. Serialize updates to one stack
+there for now.
 
 ## Two runs at once
 
 There is no stack lock. Creates carry their tags and Cloud Control lists a
 type's marked objects before each create, so each run sees the other's. An
 unnamed resource gets one name in both, so the second create fails at AWS and
-its re-run binds the winner ([Names](/plunge/how-it-works/names/)). Unit-tested;
-the floci races wait on [#7](https://github.com/INTENTIUS/plunge/issues/7), [#10](https://github.com/INTENTIUS/plunge/issues/10) and [#36](https://github.com/INTENTIUS/plunge/issues/36).
+its re-run binds the winner ([Names](/plunge/how-it-works/names/)). This is
+unit-tested, and the floci races wait on [#7](https://github.com/INTENTIUS/plunge/issues/7), [#10](https://github.com/INTENTIUS/plunge/issues/10) and [#36](https://github.com/INTENTIUS/plunge/issues/36).
 
 ## Endpoints
 

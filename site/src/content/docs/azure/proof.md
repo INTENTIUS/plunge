@@ -1,6 +1,6 @@
 ---
 title: Proof
-description: Recorded runs on Azure and the runs still to come.
+description: The recorded run on floci-az, the Azure emulator, and the runs still to come. Nothing has run on Azure itself.
 prompt: |
   Follow https://intentius.io/plunge/azure/proof/ and report which Azure claims have a recorded run. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.

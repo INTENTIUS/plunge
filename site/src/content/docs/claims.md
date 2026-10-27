@@ -1,21 +1,67 @@
 ---
 title: Claims and runs
-description: The four recorded plunge runs, with their dates and files, and every capability that waits for a run, with its issue.
+description: Each plunge capability with its status (real cloud, emulator, unit-tested or not built), then the four recorded runs with their dates and files.
 prompt: |
   Read https://intentius.io/plunge/claims/. For each recorded run, open its files and check they match the page. Report any difference. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-Under choudoufu's rule, which plunge follows, a promise with no proof is a GitHub issue.
-Every claim here rests on a run below, a real CLI run with its output
-committed. A capability with unit tests and no recorded run sits in the
-tables below with its issue.
+Each capability below has one of four statuses. **Real cloud** means a
+recorded run on AWS, Google Cloud, Azure or a real cluster; nothing has one
+yet. **Emulator** means a recorded run on a local emulator such as
+[floci](../glossary/#floci). **Unit-tested** means its Go tests pass, with
+fakes in place of the cloud. **Not built** means the code is not written.
+
+| Capability | Status | Link |
+|---|---|---|
+| `plunge preview` plans the same steps as stock `pulumi preview` on seven corpus programs, apart from autonamed names | Emulator[^parity] | [Recorded runs](#recorded-runs), [#3](https://github.com/INTENTIUS/plunge/issues/3) |
+| `plunge up` writes the markers and fixed names, and `stack export` and `stack output` read the result | Emulator | [Recorded runs](#recorded-runs) |
+| `plunge drift --resource` reads one resource's drift with one provider Read | Emulator | [Drift of one resource](../how-it-works/drift/) |
+| `plunge stack adopt` classifies, adopts, re-runs as a no-op and refuses a changed checkpoint | Emulator | [Migrate a stock stack](../use/migrate/) |
+| Two runs on different resources of one stack both land, with no stack lock | Unit-tested[^tests] | [#6](https://github.com/INTENTIUS/plunge/issues/6) |
+| The S3, GCS, Azure Blob and Kubernetes record stores | Unit-tested[^stores] | [#6](https://github.com/INTENTIUS/plunge/issues/6), [#14](https://github.com/INTENTIUS/plunge/issues/14), [#34](https://github.com/INTENTIUS/plunge/issues/34) |
+| Adopting a corpus stack end to end, the first `plunge up` after it, and backing out to stock | Unit-tested[^tests] | [#7](https://github.com/INTENTIUS/plunge/issues/7) |
+| Adopting indexed cloud objects with `plunge stack adopt --adopt` | Unit-tested[^tests] | [#52](https://github.com/INTENTIUS/plunge/issues/52) |
+| C1: the loser of a racing create binds the winner on its re-run, on pulumi-aws and aws-native | Unit-tested[^tests] | [#10](https://github.com/INTENTIUS/plunge/issues/10), [#36](https://github.com/INTENTIUS/plunge/issues/36) |
+| The races C1 to C6 on floci | Unit-tested; the race script is written and has not run | [#7](https://github.com/INTENTIUS/plunge/issues/7) |
+| A saved plan whose records moved is refused, exit 40 | Unit-tested[^tests] | [Saved plans](../how-it-works/concurrency/#saved-plans) |
+| Every delete, `destroy` included, is checked against the live marker | Unit-tested[^closed] | [#37](https://github.com/INTENTIUS/plunge/issues/37) |
+| The sweep matches recorded Lambda functions and queues by their other names | Unit-tested[^closed] | [#28](https://github.com/INTENTIUS/plunge/issues/28) |
+| `aws_budgets_budget_action` is listed with the account ID from the stack's own STS | Unit-tested[^closed] | [#31](https://github.com/INTENTIUS/plunge/issues/31) |
+| ARM listings go through the azure provider's `metadataHost` | Unit-tested[^closed] | [#41](https://github.com/INTENTIUS/plunge/issues/41) |
+| GCP listings fetch no token from Google when the stack names local endpoints | Unit-tested[^closed] | [#42](https://github.com/INTENTIUS/plunge/issues/42) |
+| Stores pointed at an emulator never build a default credential chain | Unit-tested[^closed] | [#50](https://github.com/INTENTIUS/plunge/issues/50) |
+| `import:` refused for another stack's marker or for create-only tags | Unit-tested[^tests]; an unmarked import waits for a ruling | [#51](https://github.com/INTENTIUS/plunge/issues/51) |
+| `plunge graph --json` loads a stack's graph in behold | Unit-tested[^tests] | [#40](https://github.com/INTENTIUS/plunge/issues/40) |
+| The azure-yaml corpus program under `plunge up` and destroy | One clean run on floci-az, unrecorded | [#16](https://github.com/INTENTIUS/plunge/issues/16) |
+| The baseline after an upstream merge | Not run; the script is written | [#3](https://github.com/INTENTIUS/plunge/issues/3) |
+| ARM listing consistency on a real subscription | Not measured | [#15](https://github.com/INTENTIUS/plunge/issues/15) |
+| floci-gcp's Cloud SQL, GKE and Assured Workloads list paths | Not measured | [#32](https://github.com/INTENTIUS/plunge/issues/32) |
+| A gate on the markers: an IAM condition or an admission policy | Not built | [#45](https://github.com/INTENTIUS/plunge/issues/45) |
+| Rename by `aliases`, `plunge state delete` on records, rebuilding a lost store, StackReference to a plunge stack | Not built | [#46](https://github.com/INTENTIUS/plunge/issues/46), [#47](https://github.com/INTENTIUS/plunge/issues/47), [#48](https://github.com/INTENTIUS/plunge/issues/48), [#49](https://github.com/INTENTIUS/plunge/issues/49) |
+
+C1 and C2 are the two claims about creates. In C1, two runs create the same
+resource, its fixed name makes the cloud refuse the second, and the loser's
+next run binds the winner's object. In C2, plunge lists live objects carrying
+a resource's markers before it creates it, binds one and refuses two. C3 to
+C6 are the races in the [glossary](../glossary/#c1-to-c6).
+
+A capability becomes a claim when a run of it is recorded. Most behaviour is
+covered by the shared store conformance suite and the emulator corpus runs,
+so a new recorded claim needs a reason those two cannot cover it
+([#44](https://github.com/INTENTIUS/plunge/issues/44)).
+
+[^parity]: `gcp-yaml` matches. The five `aws-*` programs and `azure-yaml` differ only in the names of autonamed resources.
+[^tests]: The Go suites passed on 2026-10-27 at d168d5cb7b, with fakes only (`pkg/backend/plunge` and `./engine/...` among them). The tests: `TestTwoConcurrentUpdatesOnDisjointResourcesBothLand`; `TestAdoptionIsGated`, `TestAdoptionIsRecordedAndReRunIsANoOp`, `TestBackOutLeavesOnlyMarkerTagRemovals`; `adoptindex_test.go`, `stack_adopt_test.go`; `TestRacingCreateLoserBindsTheWinnerOnReRun`; `TestMovedPlanIsRefusedWithExitCode40`; `importvet_test.go`, `plunge_importvet_test.go`, `plunge_deletevet_test.go`; `graph_test.go`.
+[^stores]: choudoufu's store conformance suite passed on scratch emulators on 2026-10-27 for `file`, `gs` and `azblob`, and 16 of 18 for `s3`, since floci ignores `If-Match` on `DeleteObject` ([lex00/floci#263](https://github.com/lex00/floci/issues/263)). None of it is recorded. `scripts/plunge-record-store-acceptance.sh` sets the bucket settings and has not run.
+[^closed]: These issues closed on 2026-10-27 with their tests green: `deletevet_test.go` and `plunge_deletevet_test.go` (#37), `TestSweepMatchesRecordsByTheirOtherNames` (#28), `accountid_test.go` (#31), `TestARMListingGoesThroughTheMetadataHost` (#41), `TestGCPListersFetchNoTokenFromANonLocalHost` (#42), `localstores_test.go` and `azblobmeta_test.go` (#50). A clean `up` and destroy of each corpus program on floci showed no sweep warning; each `aws-*` destroy was refused on SSM parameters, whose tags floci drops.
 
 ## Recorded runs
 
-All four ran on 2026-10-26 on local emulators (choudoufu's pinned floci,
-floci-gcp and floci-az images) with file backends and fake credentials, and
-none touched a real cloud.
+The four runs were recorded on 2026-10-26 on local emulators (choudoufu's
+pinned floci, floci-gcp and floci-az images), with file backends and fake
+credentials. None touched a real cloud. `gcp-yaml`'s part of the first run was
+re-recorded on 2026-10-27, as its row says.
 
 | Run | Result | Recording |
 |---|---|---|
@@ -26,45 +72,6 @@ none touched a real cloud.
 
 Each AWS run is on floci, so it shows plunge's behaviour on an AWS emulator
 and none on AWS itself.
-
-## Built, waiting for a run
-
-Each row is in the code on main. "Unit-tested" means its tests passed in the
-Go suites, last on 2026-10-27 at d168d5cb7b (pkg/backend/plunge and
-./engine/... among them), with fakes only.
-
-| Capability | State | Run held by |
-|---|---|---|
-| Two runs on different resources of one stack both land, with no stack lock | Unit-tested (`TestTwoConcurrentUpdatesOnDisjointResourcesBothLand`) | [#6](https://github.com/INTENTIUS/plunge/issues/6) |
-| The record store on a real S3 or GCS bucket, and on floci, floci-gcp and floci-az | choudoufu's conformance suite passed on scratch emulators for `file`, `gs` and `azblob`, and 16 of 18 for `s3` (floci ignores `If-Match` on `DeleteObject`, [lex00/floci#263](https://github.com/lex00/floci/issues/263)). `scripts/plunge-record-store-acceptance.sh` sets the bucket settings ([#34](https://github.com/INTENTIUS/plunge/issues/34)) and has not run | [#6](https://github.com/INTENTIUS/plunge/issues/6), [#14](https://github.com/INTENTIUS/plunge/issues/14), [#34](https://github.com/INTENTIUS/plunge/issues/34) |
-| Adopting a corpus stack, the first `plunge up` after it, and backing out to stock | Unit-tested (`TestAdoptionIsGated`, `TestAdoptionIsRecordedAndReRunIsANoOp`, `TestBackOutLeavesOnlyMarkerTagRemovals`) | [#7](https://github.com/INTENTIUS/plunge/issues/7) |
-| Adopting indexed cloud objects with `plunge stack adopt --adopt` | Unit-tested (`adoptindex_test.go`, `stack_adopt_test.go`) | [#52](https://github.com/INTENTIUS/plunge/issues/52) |
-| Races C1 to C6 (racing creates, two writers on one record, update racing a destroy, a crash is a re-run, a moved saved plan) | Unit-tested; `scripts/plunge-races/races.sh` written | [#7](https://github.com/INTENTIUS/plunge/issues/7) |
-| C1: the loser of a racing create binds the winner on its re-run, pulumi-aws and aws-native | Unit-tested (`TestRacingCreateLoserBindsTheWinnerOnReRun`); the aws-native race `c1-native` is in `races.sh` ([#36](https://github.com/INTENTIUS/plunge/issues/36), closed) and has not run | [#10](https://github.com/INTENTIUS/plunge/issues/10) |
-| ARM listing consistency on a real subscription | Not measured | [#15](https://github.com/INTENTIUS/plunge/issues/15) |
-| The azure-yaml corpus program | Its stock baseline is in the 2026-10-26 re-record above. A clean `plunge up` and destroy on floci-az ran on 2026-10-27, unrecorded | [#16](https://github.com/INTENTIUS/plunge/issues/16) |
-| The baseline after an upstream merge | Script written | [#3](https://github.com/INTENTIUS/plunge/issues/3) |
-| floci-gcp's Cloud SQL, GKE and Assured Workloads list paths | Not measured | [#32](https://github.com/INTENTIUS/plunge/issues/32) |
-| `plunge graph --json`, a stack's graph from its records, loading in behold | Unit-tested (`graph_test.go`) | [#40](https://github.com/INTENTIUS/plunge/issues/40) |
-| `import:` refused for another stack's marker or create-only tags, and the delete half of a replace checked like any delete | Unit-tested (`importvet_test.go`, `plunge_importvet_test.go`, `plunge_deletevet_test.go`); an unmarked import waits for a ruling | [#51](https://github.com/INTENTIUS/plunge/issues/51) |
-| A gate on the markers: an IAM condition, an admission policy | Not written | [#45](https://github.com/INTENTIUS/plunge/issues/45) |
-| Rename by `aliases`, `plunge state delete` on records, recovering a lost store, StackReference to a plunge stack | Not written | [#46](https://github.com/INTENTIUS/plunge/issues/46), [#47](https://github.com/INTENTIUS/plunge/issues/47), [#48](https://github.com/INTENTIUS/plunge/issues/48), [#49](https://github.com/INTENTIUS/plunge/issues/49) |
-
-## Tested, closed, not recorded
-
-These issues closed on 2026-10-27 with their tests green in the Go suites.
-None has a recorded run, so none is a claim here; plunge adds a claim only
-when the conformance suite and the corpus runs cannot cover it
-([#44](https://github.com/INTENTIUS/plunge/issues/44)).
-
-| Capability | Tests | Issue |
-|---|---|---|
-| The sweep matches recorded Lambda functions and queues by their other names, so it stops warning about them | `TestSweepMatchesRecordsByTheirOtherNames`; a clean `up` and destroy of each corpus program on floci showed no sweep warning | [#28](https://github.com/INTENTIUS/plunge/issues/28) |
-| `aws_budgets_budget_action` listed with the account ID from the stack's own STS | `accountid_test.go` | [#31](https://github.com/INTENTIUS/plunge/issues/31) |
-| Every delete checked against the live marker, `destroy` included | `deletevet_test.go`, `plunge_deletevet_test.go`; the corpus destroys on floci were refused on SSM parameters, whose tags floci drops ([lex00/floci#263](https://github.com/lex00/floci/issues/263)) | [#37](https://github.com/INTENTIUS/plunge/issues/37) |
-| ARM listings through the azure provider's `metadataHost` | `TestARMListingGoesThroughTheMetadataHost`; azure-yaml's `up` and destroy on floci-az made no real-cloud call | [#41](https://github.com/INTENTIUS/plunge/issues/41) |
-| GCP listings fetch no token from Google when the stack names local endpoints | `TestGCPListersFetchNoTokenFromANonLocalHost` | [#42](https://github.com/INTENTIUS/plunge/issues/42) |
-| S3, GCS and Azure Blob stores, and their stack metadata, never build a default credential chain against an emulator | `localstores_test.go`, `azblobmeta_test.go` | [#50](https://github.com/INTENTIUS/plunge/issues/50) |
 
 ## Release
 

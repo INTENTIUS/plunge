@@ -8,8 +8,8 @@ prompt: |
 
 As in choudoufu, a record is never permission to delete. Every object a run
 would delete, under `plunge destroy` too, is first checked against its live
-marker (`pkg/backend/plunge/deletevet.go`). Its tests passed on 2026-10-27
-and [#37](https://github.com/INTENTIUS/plunge/issues/37) is closed; no run of
+marker. Its tests passed on 2026-10-27 and
+[#37](https://github.com/INTENTIUS/plunge/issues/37) is closed, but no run of
 it is recorded ([Claims and runs](../../claims/)).
 
 | The live object | Outcome |
@@ -57,3 +57,5 @@ are create-only. An unmarked object imports and is marked by the next update
 On the pinned floci, a destroy of an `aws-*` corpus program is refused on its
 SSM parameters, whose tags floci drops
 ([lex00/floci#263](https://github.com/lex00/floci/issues/263)).
+
+Source: `pkg/backend/plunge/deletevet.go`.

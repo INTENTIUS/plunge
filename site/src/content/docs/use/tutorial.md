@@ -6,13 +6,27 @@ prompt: |
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-The recorded `plunge-outputs` and `plunge-drift` files came from a run like
-this, with its own name prefix ([Claims and runs](../../claims/)). It all runs
-locally against the floci AWS emulator, and nothing reaches AWS.
+This tutorial runs the `aws-ts` corpus program under plunge on
+[floci](../../glossary/#floci), a local AWS emulator, so nothing reaches AWS.
+Two of the recorded runs came from a run like this one
+([Claims and runs](../../claims/)). For a first look without Docker, the
+[quickstart](../start/#quickstart) takes five minutes.
 
-You need Docker, Node.js and the AWS CLI, with plunge on your `PATH`
-([Install](../start/#install)). A clone of the repository supplies the corpus
-program and the emulator script.
+:::caution[How it ends]
+Step 8's `plunge destroy` is refused, and that is expected. floci drops the
+tags of the program's two SSM parameters
+([lex00/floci#263](https://github.com/lex00/floci/issues/263)), and plunge
+refuses a delete when a taggable object has lost its markers. Cleaning up
+means stopping floci and deleting the temporary record directory.
+:::
+
+You need:
+
+- plunge on your `PATH` ([Quickstart](../start/#quickstart));
+- git, to clone the repository for the corpus program and the emulator script;
+- Docker, to run floci;
+- Node.js, for the TypeScript program;
+- the AWS CLI v2.13 or later, which reads `AWS_ENDPOINT_URL`.
 
 ## 1. Get the corpus
 
@@ -39,11 +53,13 @@ export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1
 export AWS_ENDPOINT_URL=http://localhost:4566
 export PULUMI_CONFIG_PASSPHRASE=plunge-baseline
 export PULUMI_SKIP_UPDATE_CHECK=true
+export AWS_DEFAULT_OUTPUT=json
 ```
 
 The stack file `tests/plunge-corpus/aws-ts/Pulumi.floci.yaml` points every
 provider call at floci with fake keys, and the `aws` commands below use the
-same fake keys.
+same fake keys. `AWS_DEFAULT_OUTPUT=json` keeps the CLI's output JSON, which
+the `sed` in step 7 edits.
 
 ## 4. Log in to a plunge backend
 
@@ -102,14 +118,16 @@ before and after ([Drift of one resource](../../how-it-works/drift/)).
 ## 8. Clean up
 
 ```sh
-plunge destroy --stack floci
+plunge destroy --stack floci        # refused on the two SSM parameters; deletes nothing
 cd ../../..
 scripts/plunge-emulators.sh down floci
+rm -rf "${PULUMI_BACKEND_URL#plunge+file://}"
+unset PULUMI_BACKEND_URL
 ```
 
-On the pinned floci, `plunge destroy` is refused for the two SSM parameters
-and deletes nothing: floci drops their tags on create
+The destroy is refused before it deletes anything: floci drops the SSM
+parameters' tags on create
 ([lex00/floci#263](https://github.com/lex00/floci/issues/263)), so the live
 marker check finds none ([Deletes](../../how-it-works/deletes/)). Stopping
-floci discards everything it holds, and the `plunge+file://` records sit in
-the temporary directory.
+floci discards every object it holds, and the last two lines delete the
+records and leave the shell's backend as it was.
