@@ -65,17 +65,32 @@ jobs:
         run: ./scripts/prep-for-goreleaser.sh
       - name: Show bundled files
         run: find bin -type f | sort
+      # goreleaser's release mode parses the tag as semver and refuses the plunge-v prefix (plunge#33's
+      # tags), so goreleaser builds the archives in snapshot mode, which takes the version from
+      # PLUNGE_VERSION, and gh publishes them under the pushed tag.
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean -f .goreleaser.plunge.yml
+          args: release --snapshot --clean -f .goreleaser.plunge.yml
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-          # The pushed tag, so goreleaser never picks an upstream tag on the same commit.
-          # It isn't semver with its prefix; goreleaser warns and goes on, and the archive names come from
-          # PLUNGE_VERSION, not the tag.
-          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
-          GORELEASER_PREVIOUS_TAG: ${{ steps.versions.outputs.previous }}
           PLUNGE_VERSION: ${{ steps.versions.outputs.plunge }}
           PULUMI_VERSION: ${{ steps.versions.outputs.pulumi }}
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLUNGE: ${{ steps.versions.outputs.plunge }}
+          PULUMI: ${{ steps.versions.outputs.pulumi }}
+          PREVIOUS: ${{ steps.versions.outputs.previous }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(goreleaser/plunge-v"${PLUNGE}"-*.tar.gz goreleaser/plunge-v"${PLUNGE}"-*.zip goreleaser/plunge-v"${PLUNGE}"-checksums.txt)
+          [ "${#assets[@]}" -ge 3 ] || { echo "no archives for ${PLUNGE} under goreleaser/" >&2; exit 1; }
+          # Notes start from the previous plunge tag, never an upstream v3.* tag.
+          notes=(--generate-notes)
+          [ -n "${PREVIOUS}" ] && notes+=(--notes-start-tag "${PREVIOUS}")
+          gh release create "${GITHUB_REF_NAME}" "${assets[@]}" \
+            --verify-tag \
+            --title "plunge ${PLUNGE} (Pulumi-compatible ${PULUMI})" \
+            "${notes[@]}"
