@@ -420,6 +420,41 @@ func TestReencryptedSecretIsNotARewrite(t *testing.T) {
 	assert.Equal(t, 1, store.total())
 }
 
+// A refresh rebuilds each state's property dependencies from the dependencies that still resolve
+// (pkg/backend/journal.go, rebuildDependencies), which drops every key whose list is empty. That is the same state, so
+// the record is not rewritten: a rewrite there made every refreshing run write every resource's record, and two
+// concurrent runs on disjoint resources conflicted on each other's records (the lifecycle race on floci,
+// INTENTIUS/plunge#6).
+func TestEmptyPropertyDependenciesAreNotARewrite(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := newCountingStore(t)
+	urn := resource.URN("urn:pulumi:test::test::pkgA:m:typA::resQ")
+
+	deployment := func(propDeps map[resource.PropertyKey][]resource.URN) apitype.TypedDeployment {
+		return apitype.TypedDeployment{Deployment: &apitype.DeploymentV3{Resources: []apitype.ResourceV3{{
+			URN: urn, Type: "pkgA:m:typA", Custom: true, ID: "q-1",
+			Inputs:               map[string]any{"name": "q"},
+			PropertyDependencies: propDeps,
+		}}}}
+	}
+
+	l, err := load(ctx, store, testKeys)
+	require.NoError(t, err)
+	p := newRecordPersister(ctx, store, l, Generation{}, true, nil)
+	require.NoError(t, p.Save(deployment(map[resource.PropertyKey][]resource.URN{"name": {}, "tags": {}})))
+	require.Equal(t, 1, store.total())
+
+	for _, refreshed := range []map[resource.PropertyKey][]resource.URN{{}, nil, {"name": nil}} {
+		l, err = load(ctx, store, testKeys)
+		require.NoError(t, err)
+		p = newRecordPersister(ctx, store, l, Generation{}, true, nil)
+		require.NoError(t, p.Save(deployment(refreshed)))
+		assert.Equal(t, 1, store.total(), "property dependencies %v rewrote the record", refreshed)
+	}
+}
+
 type mapDecrypter map[string]string
 
 func (m mapDecrypter) DecryptValue(_ context.Context, ciphertext string) (string, error) {

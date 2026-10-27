@@ -8,8 +8,8 @@
 # Usage:
 #   scripts/plunge-races/races.sh [race ...]
 #
-# Races: c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6 (default: all, in that order). See lib.sh for the
-# environment.
+# Races: c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6 (default: all, in that order), and lifecycle, which
+# runs only when named. See lib.sh for the environment.
 #
 # Output in $OUT/<race>/: each run's log (a.log, b.log, ...), records.txt (the record listing after the race,
 # decoded), records.json, and $OUT/verdicts.txt with one line per claim:
@@ -275,6 +275,166 @@ print((s.get("inputs") or s.get("Inputs") or {}).get("messageRetentionSeconds"))
   fi
 }
 
+# The minimal estate end to end (INTENTIUS/plunge#6's maintainer run): two queues in one stack on a plunge+s3://
+# record store on floci. preview plans the two creates; up creates them; two checkouts then each change one queue at
+# once, and both land with no lock object in the store; the export assembles (it passes VerifyIntegrity or fails)
+# and holds both changes, with one resource record per URN; a run stamped with an older program generation that no
+# longer declares queue-b keeps it and warns with both stamps; a tag changed through floci's API shows as drift on
+# queue-a and queue-b reads in sync, each with one provider Read; destroy removes both queues and their records.
+race_lifecycle() {
+  race_begin lifecycle
+  local urn_a="urn:pulumi:${STACK}::plunge-races::aws:sqs/queue:Queue::queue-a"
+  local urn_b="urn:pulumi:${STACK}::plunge-races::aws:sqs/queue:Queue::queue-b"
+  # Explicit stamps, so the result does not depend on where OUT sits relative to a git checkout.
+  export PLUNGE_PROGRAM_COMMIT=newer PLUNGE_PROGRAM_TIME=2000000000
+  checkout "${WORK}/a" queue-a queue-b
+  checkout "${WORK}/b" queue-a queue-b
+
+  # preview: two creates.
+  pl "${WORK}/a" "${WORK}/preview.log" preview --json || { verdict L lifecycle-preview FAIL "preview failed; see preview.log"; return; }
+  local creates
+  creates="$(python3 -I - "${WORK}/preview.log" <<'PY2'
+import json, sys
+raw = open(sys.argv[1]).read()
+doc = json.loads(raw[raw.find("{"):])
+print(sum(1 for s in doc.get("steps") or [] if s.get("op") == "create" and s.get("urn", "").endswith(("::queue-a", "::queue-b"))))
+PY2
+)"
+  if [ "${creates}" = 2 ]; then
+    verdict L lifecycle-preview PASS "preview plans the two queue creates"
+  else
+    verdict L lifecycle-preview FAIL "preview planned ${creates} queue creates; see preview.log"
+  fi
+
+  # up: both queues, marked.
+  pl "${WORK}/a" "${WORK}/up.log" up --yes || { verdict L lifecycle-up FAIL "up failed; see up.log"; return; }
+  local tags
+  tags="$(awsf sqs list-queue-tags --queue-url "$(awsf sqs get-queue-url --queue-name "${PREFIX}-a" --query QueueUrl --output text)")"
+  echo "${tags}" > "${WORK}/queue-a-tags.json"
+  if grep -q plunge-urn "${WORK}/queue-a-tags.json" && [ "$(queue_retention "${PREFIX}-b")" = 3600 ]; then
+    verdict L lifecycle-up PASS "up created both queues, and queue-a carries its plunge-urn marker"
+  else
+    verdict L lifecycle-up FAIL "see up.log and queue-a-tags.json"
+  fi
+
+  # Two disjoint updates at once, with the store watched for lock objects.
+  stack_config "${WORK}/a" retentionA=7200
+  stack_config "${WORK}/b" retentionB=1800
+  : > "${WORK}/locks-seen.txt"
+  (
+    for _ in $(seq 1 120); do
+      lockish_keys >> "${WORK}/locks-seen.txt"
+      sleep 0.5
+    done
+  ) &
+  local watcher=$!
+  both "$(runner "${WORK}/a" "${WORK}/a.log" up --yes)" "$(runner "${WORK}/b" "${WORK}/b.log" up --yes)"
+  kill "${watcher}" 2>/dev/null || true
+  wait "${watcher}" 2>/dev/null || true
+  local ra rb locks
+  ra="$(queue_retention "${PREFIX}-a")"
+  rb="$(queue_retention "${PREFIX}-b")"
+  locks="$(sort -u "${WORK}/locks-seen.txt" | sed '/^$/d' | wc -l | tr -d ' ')"
+  echo "concurrent updates: exits a=${RC_A} b=${RC_B}; live a=${ra} b=${rb}; lock-like keys seen ${locks}" | tee -a "${WORK}/race.txt"
+  if [ "${RC_A}" = 0 ] && [ "${RC_B}" = 0 ] && [ "${ra}" = 7200 ] && [ "${rb}" = 1800 ] && [ "${locks}" = 0 ]; then
+    verdict C5 lifecycle-disjoint PASS "two concurrent updates on disjoint resources both land (a=7200, b=1800), no lock object seen"
+  else
+    verdict C5 lifecycle-disjoint FAIL "exits a=${RC_A} b=${RC_B}, live a=${ra} b=${rb}, lock-like keys ${locks}; see a.log, b.log"
+  fi
+
+  # The export assembles from the records, so it passed VerifyIntegrity; it holds both changes, one record per URN.
+  records
+  local xrc=0
+  (cd "${WORK}/a" && PULUMI_BACKEND_URL="${BACKEND}" "${PLUNGE}" stack export --stack "${STACK}" --non-interactive) \
+    > "${WORK}/export.json" 2> "${WORK}/export.stderr" || xrc=$?
+  local xcheck
+  xcheck="$(python3 -I - "${WORK}/export.json" "${WORK}/records.txt" <<'PY2'
+import json, sys
+dep = json.load(open(sys.argv[1]))["deployment"]
+res = {r["urn"]: r for r in dep.get("resources") or []}
+def ret(name):
+  for u, r in res.items():
+    if u.endswith("::" + name):
+      return (r.get("inputs") or {}).get("messageRetentionSeconds")
+recs = [l.split(" ")[1] for l in open(sys.argv[2]) if l.startswith("resources ")]
+one_per_urn = len(recs) == len(set(recs)) and set(recs) == set(res)
+print(f"a={ret('queue-a')} b={ret('queue-b')} resources={len(res)} records={len(recs)} one-per-urn={'yes' if one_per_urn else 'no'}")
+PY2
+)" || xcheck="unreadable"
+  echo "export: exit ${xrc}; ${xcheck}" | tee -a "${WORK}/race.txt"
+  if [ "${xrc}" = 0 ] && [ "${xcheck#a=7200 b=1800 }" != "${xcheck}" ] && [ "${xcheck%one-per-urn=yes}" != "${xcheck}" ]; then
+    verdict P6 lifecycle-export PASS "the export assembles with integrity checking on, holds a=7200 and b=1800, and the store has one resource record per URN"
+  else
+    verdict P6 lifecycle-export FAIL "export exit ${xrc}; ${xcheck}; see export.stderr and records.txt"
+  fi
+
+  # A run of an older program that no longer declares queue-b keeps it at its value, warning with both stamps.
+  checkout "${WORK}/c" queue-a
+  stack_config "${WORK}/c" retentionA=7200
+  local orc=0
+  PLUNGE_PROGRAM_COMMIT=older PLUNGE_PROGRAM_TIME=1000000000 pl "${WORK}/c" "${WORK}/older.log" up --yes || orc=$?
+  local rb2
+  rb2="$(queue_retention "${PREFIX}-b" 2>/dev/null || echo gone)"
+  echo "older run: exit ${orc}; live b=${rb2}" | tee -a "${WORK}/race.txt"
+  if [ "${orc}" = 0 ] && [ "${rb2}" = "${rb}" ] && grep -q queue-b "${WORK}/older.log" && grep -q newer "${WORK}/older.log" &&
+    grep -q older "${WORK}/older.log"; then
+    verdict P6 lifecycle-older-run PASS "an older program's run keeps queue-b and warns naming it and both stamps"
+  else
+    verdict P6 lifecycle-older-run FAIL "exit ${orc}, live b=${rb2}; see older.log"
+  fi
+
+  # Drift: change queue-a's race tag through floci's API, then read each queue alone.
+  awsf sqs tag-queue --queue-url "$(awsf sqs get-queue-url --queue-name "${PREFIX}-a" --query QueueUrl --output text)" \
+    --tags race=drifted
+  local drc=0
+  (cd "${WORK}/a" && PULUMI_BACKEND_URL="${BACKEND}" "${PLUNGE}" drift --resource "${urn_a}" --stream --stack "${STACK}" \
+    --non-interactive) > "${WORK}/drift-a.ndjson" 2> "${WORK}/drift-a.stderr" || drc=$?
+  (cd "${WORK}/a" && PULUMI_BACKEND_URL="${BACKEND}" "${PLUNGE}" drift --resource "${urn_b}" --stream --stack "${STACK}" \
+    --non-interactive) > "${WORK}/drift-b.ndjson" 2> "${WORK}/drift-b.stderr" || drc=$((drc + $?))
+  local dcheck
+  dcheck="$(python3 -I - "${WORK}/drift-a.ndjson" "${WORK}/drift-b.ndjson" <<'PY2'
+import json, sys
+def lines(p):
+  return [json.loads(l) for l in open(p) if l.strip()]
+out = []
+for p in sys.argv[1:]:
+  ls = lines(p)
+  rec = next((l for l in ls if l.get("kind") == "drift-record" or l.get("type") == "drift-record"), {})
+  settle = next((l for l in ls if l.get("kind") == "drift-settle" or l.get("type") == "drift-settle"), {})
+  out.append(f"{rec.get('status') or rec.get('state')}/{json.dumps(settle.get('reads'), sort_keys=True)}")
+print(" ".join(out))
+PY2
+)" || dcheck="unreadable"
+  echo "drift: exits ${drc}; ${dcheck}" | tee -a "${WORK}/race.txt"
+  case "${dcheck}" in
+    drifted/*" "in-sync/*)
+      verdict L lifecycle-drift PASS "drift --resource reports queue-a drifted and queue-b in sync (${dcheck})" ;;
+    *)
+      verdict L lifecycle-drift FAIL "${dcheck}; see drift-a.ndjson, drift-b.ndjson" ;;
+  esac
+
+  # destroy: both queues and their records go.
+  local zrc=0
+  pl "${WORK}/a" "${WORK}/destroy.log" destroy --yes || zrc=$?
+  records
+  cp "${WORK}/records.txt" "${WORK}/records-after-destroy.txt"
+  local live left
+  live="$(awsf sqs list-queues --queue-name-prefix "${PREFIX}-" --query 'QueueUrls' --output text 2>/dev/null | sed 's/None//' | wc -w | tr -d ' ')"
+  left="$(grep -c '^resources .*::queue-' "${WORK}/records-after-destroy.txt" || true)"
+  echo "destroy: exit ${zrc}; live queues ${live}; queue records left ${left}" | tee -a "${WORK}/race.txt"
+  if [ "${zrc}" = 0 ] && [ "${live}" = 0 ] && [ "${left}" = 0 ]; then
+    verdict L lifecycle-destroy PASS "destroy removed both queues and their records"
+  else
+    verdict L lifecycle-destroy FAIL "exit ${zrc}, live queues ${live}, queue records ${left}; see destroy.log"
+  fi
+
+  real_cloud_rejections "${WORK}"/*.log "${WORK}"/*.stderr > "${WORK}/real-cloud.txt"
+  if [ -s "${WORK}/real-cloud.txt" ]; then
+    verdict L lifecycle-offline FAIL "a log names a real AWS endpoint or a rejection of the test keys; stop and see real-cloud.txt"
+  fi
+  unset PLUNGE_PROGRAM_COMMIT PLUNGE_PROGRAM_TIME
+}
+
 race_c5_same() {
   race_begin c5-same
   same_record_race c5-same
@@ -351,6 +511,7 @@ for r in "${RACES[@]}"; do
     c5-same) race_c5_same ;;
     c5-sse) race_c5_sse ;;
     c6) race_c6 ;;
+    lifecycle) race_lifecycle ;;
     *) die "unknown race ${r} (races: ${ALL[*]})" ;;
   esac
 done
