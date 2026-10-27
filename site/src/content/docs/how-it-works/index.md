@@ -11,11 +11,11 @@ the same programs, SDKs and providers. What changes is where a stack's state
 lives and how a run decides what it owns.
 
 The ownership model comes from [chant](https://intentius.io/chant/): identity
-markers on the live object decide what a deployment owns. plunge carries that
-model into Pulumi, as [choudoufu](https://intentius.io/choudoufu/) carries it
-into OpenTofu. Both are engines for chant, so a chant workspace can run a
-plunge stack as a member, and each also works on its own: plunge runs any
-Pulumi program with no chant project.
+markers on the live object decide what a deployment owns. This fork carries
+that model into Pulumi, as [choudoufu](https://intentius.io/choudoufu/) carries
+it into OpenTofu. Both are engines for chant (a chant workspace can run a
+plunge stack as a member) and each works on its own, running any Pulumi program
+with no chant project.
 
 ## Three words
 

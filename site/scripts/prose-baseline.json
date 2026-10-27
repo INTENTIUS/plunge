@@ -33,13 +33,17 @@
   "tricolon/comma-series": 1
  },
  "site/src/content/docs/how-it-works/records.md": {
+  "dead-metaphor/rare-lemma": 1,
   "tricolon/comma-series": 2
+ },
+ "site/src/content/docs/kubernetes/compatibility.md": {
+  "discourse/punchy-fragments": 1
  },
  "site/src/content/docs/use/bucket.md": {
   "tricolon/comma-series": 1
  },
  "site/src/content/docs/use/setup.md": {
-  "tricolon/comma-series": 1
+  "tricolon/comma-series": 2
  },
  "site/src/data/rooms.ts": {
   "discourse/staccato-register": 1,
