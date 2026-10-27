@@ -32,6 +32,10 @@ package plunge
 //   - A marker naming another stack (or another resource of this one), or no marker at all, refuses the run before
 //     any delete step exists, ruled 2026-10-26 ("refuse, like choudoufu"). The refusal names every such resource,
 //     its object ID, what its marker says, its record and the command that removes the record.
+//   - The delete half of a replacement (INTENTIUS/plunge#51) is vetted the same way, before the replacement's first
+//     step: a replace is not a way around the marker. The original of a replacement shares its URN with the new
+//     object, so a marked original carries this resource's markers and passes; an unmarked one (an `import:` whose
+//     markers would force a new resource, say) refuses the run, and nothing is created or deleted.
 
 import (
 	"context"
@@ -59,6 +63,8 @@ type DeleteRefusal struct {
 	Marker string
 	// Detail says what was wrong.
 	Detail string
+	// Replacement reports that the refused delete is the delete half of a replacement.
+	Replacement bool
 }
 
 // DeleteRefusedError refuses a run that would delete objects whose live markers do not name this stack.
@@ -71,6 +77,12 @@ func (e *DeleteRefusedError) Error() string {
 	fmt.Fprintf(&b, "plunge refuses this run: %d delete(s) would remove an object whose live marker does not name "+
 		"this stack, and a record alone is not permission to delete. Nothing was deleted.", len(e.Refusals))
 	for _, r := range e.Refusals {
+		if r.Replacement {
+			fmt.Fprintf(&b, "\n  - %s (ID %s): the run would delete this object to finish a replacement, but %s; "+
+				"its record is %s. If the object is this stack's, let an `up` that changes only its tags add the "+
+				"markers before the change that replaces it", r.URN, r.ID, r.Detail, r.Record)
+			continue
+		}
 		fmt.Fprintf(&b, "\n  - %s (ID %s): %s; its record is %s. If the object is no longer this stack's, remove "+
 			"the record with `plunge state delete '%s'` and run again", r.URN, r.ID, r.Detail, r.Record, r.URN)
 	}
@@ -137,7 +149,9 @@ func (v *deleteVetter) vet(
 	ctx context.Context, req deploy.DeleteVetRequest, c deploy.DeleteCandidate,
 ) (DeleteRefusal, bool) {
 	st := c.State
-	refusal := DeleteRefusal{URN: st.URN, ID: st.ID, Type: st.Type, Record: v.keys.resource(st.URN)}
+	refusal := DeleteRefusal{
+		URN: st.URN, ID: st.ID, Type: st.Type, Record: v.keys.resource(st.URN), Replacement: c.Replacement,
+	}
 	note := func(format string, args ...any) {
 		if req.Diag != nil {
 			req.Diag.Infof(diag.Message(st.URN, format), args...)

@@ -27,7 +27,9 @@
 // Two engine seams on deploy.Target carry the rest: ProviderIDs derives a new provider's ID instead of a random
 // UUID (providerid.go), and DeleteGuard keeps a resource an older program version would delete (generation.go).
 // DeleteVetter refuses a run, destroy included, that would delete an object whose live marker does not name the
-// stack (deletevet.go, INTENTIUS/plunge#37).
+// stack (deletevet.go, INTENTIUS/plunge#37), the delete half of a replacement included (INTENTIUS/plunge#51).
+// ImportVetter holds an `import:` to the marker rules: a create-only-tags type, or an object another stack's marker
+// names, is refused before the import step exists (importvet.go, INTENTIUS/plunge#51).
 //
 // docs/plunge/CONCURRENCY.md describes the behaviour for operators.
 package plunge

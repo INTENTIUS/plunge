@@ -139,7 +139,7 @@ type runConfig struct {
 	persist bool              // write records through the record persister
 	base    *deploy.Snapshot  // the snapshot to run against in place of the records' (a stock back-out run)
 	marks   *ledger           // receives the run's ledger, when set
-	vet     bool              // set Target.DeleteVetter, as the plunge backend does (deletevet.go)
+	vet     bool              // set Target.DeleteVetter and Target.ImportVetter, as the plunge backend does
 	destroy bool              // run a destroy in place of an update
 }
 
@@ -186,6 +186,7 @@ func run(
 	}
 	if cfg.vet {
 		target.DeleteVetter = newDeleteVetter(newCatalog(), l)
+		target.ImportVetter = newImportVetter(newCatalog(), marks)
 	}
 
 	var manager *backend.SnapshotManager
