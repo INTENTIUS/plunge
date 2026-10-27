@@ -12,7 +12,7 @@ record key on a rename is open on [#46](https://github.com/INTENTIUS/plunge/issu
 
 ## Remove
 
-Delete it from the program and update; plunge checks the live tags first ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+Delete it from the program and update; plunge checks the live tags first ([#37](https://github.com/INTENTIUS/plunge/issues/37), tested).
 
 ## Plan, review, update
 
@@ -29,5 +29,5 @@ collision claim excludes it ([#15](https://github.com/INTENTIUS/plunge/issues/15
 
 With `metadataHost` (or `ARM_METADATA_HOSTNAME`), the ARM lister lists through
 the ARM and login endpoints in that host's `/metadata/endpoints`, taking a
-client secret only from the environment ([#41](https://github.com/INTENTIUS/plunge/issues/41), built, tests not run).
+client secret only from the environment ([#41](https://github.com/INTENTIUS/plunge/issues/41), tested).
 Lacking the three `ARM_*` variables, it warns and calls nothing.

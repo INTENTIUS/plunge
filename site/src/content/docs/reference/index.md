@@ -13,7 +13,9 @@ Everything else is stock Pulumi's CLI, under the name `plunge`.
 | Command | Effect |
 |---|---|
 | `plunge stack adopt [--file F] [--json] [--yes] [--stack S]` | Moves a stock stack's checkpoint onto records. `--json` prints [the adopt document](adopt-json/) and never prompts; alone it writes nothing. A refusal exits non-zero (`pkg/cmd/pulumi/stack/stack_adopt.go`) |
+| `plunge stack adopt --adopt F [--index-store D] [--json] [--yes]` | Adopts the indexed cloud objects an `adopt: v1` adoption file selects, read again through the stack's provider; `--index-store` defaults to behold's per-user store ([ADOPT.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/ADOPT.md#--adopt-file), [#52](https://github.com/INTENTIUS/plunge/issues/52)) |
 | `plunge drift --resource URN [--stream] [--member M] [--stack S]` | One resource's drift from one provider Read, as chant drift record v1 with `--stream` ([Drift of one resource](../how-it-works/drift/)) |
+| `plunge graph --json [--versions] [--stack S]` | The stack's graph from one bulk read of its records, as chant's engine graph JSON; no program run, no provider call, no secret printed. `--versions` adds each record's versions ([#40](https://github.com/INTENTIUS/plunge/issues/40)) |
 | `plunge version [--pulumi-compatible]` | plunge's version and the Pulumi version it is compatible with |
 
 Refused on a plunge stack by name (`UnsupportedOnRecordsError`):
@@ -67,6 +69,7 @@ A test fails if an upstream merge adds a code equal to 40.
 | `InFlightDependencyError` | a resource this run would change depends on one with a pending operation |
 | `CollisionError` | two or more live objects carry one resource's markers |
 | `DeleteRefusedError` | a live object's marker does not name this stack and resource ([#37](https://github.com/INTENTIUS/plunge/issues/37)) |
+| `ImportRefusedError` | an `import:` of an object carrying another stack's marker, or of a type with create-only tags ([#51](https://github.com/INTENTIUS/plunge/issues/51)) |
 | `RandomAutonamePatternError` | a random `pulumi:autonaming` pattern on a covered type |
 | `MissingReferenceError` | a record refers to a parent, dependency or provider no record holds |
 | `ContractRefusedError` | a bucket setting failed or could not be read |

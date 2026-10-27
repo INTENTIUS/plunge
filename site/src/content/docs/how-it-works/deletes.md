@@ -8,9 +8,9 @@ prompt: |
 
 As in choudoufu, a record is never permission to delete. Every object a run
 would delete, under `plunge destroy` too, is first checked against its live
-marker (`pkg/backend/plunge/deletevet.go`). The check and its tests are on the
-integration branch; neither the tests nor a run have happened yet
-([#37](https://github.com/INTENTIUS/plunge/issues/37)).
+marker (`pkg/backend/plunge/deletevet.go`). Its tests passed on 2026-10-27
+and [#37](https://github.com/INTENTIUS/plunge/issues/37) is closed; no run of
+it is recorded ([Claims and runs](../../claims/)).
 
 | The live object | Outcome |
 |---|---|
@@ -42,5 +42,18 @@ An adopted stack never updated under plunge has no markers yet, so its
 or drop the records by name. `PLUNGE_MARKERS=false` turns off markers and this
 check.
 
-Pending deletes left by a replacement are not checked: they finish replacing
-this stack's own resource.
+## Replacements and imports
+
+The delete half of a replacement is checked the same way, before the
+replacement's first step, and so is a pending delete an earlier replacement
+left. An original carrying this stack's markers is deleted as before; an
+unmarked one refuses the run, and nothing is created or deleted.
+
+An `import:` is checked before the import step (`ImportRefusedError`): a live
+object with another stack's marker is refused, and so is any type whose tags
+are create-only. An unmarked object imports and is marked by the next update
+([#51](https://github.com/INTENTIUS/plunge/issues/51), open for that ruling).
+
+On the pinned floci, a destroy of an `aws-*` corpus program is refused on its
+SSM parameters, whose tags floci drops
+([lex00/floci#263](https://github.com/lex00/floci/issues/263)).

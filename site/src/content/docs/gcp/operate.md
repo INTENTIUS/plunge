@@ -12,7 +12,7 @@ record key on a rename is open on [#46](https://github.com/INTENTIUS/plunge/issu
 
 ## Remove
 
-Delete it from the program and update; plunge checks the live labels first ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+Delete it from the program and update; plunge checks the live labels first ([#37](https://github.com/INTENTIUS/plunge/issues/37), tested).
 
 ## Plan, review, update
 
@@ -32,4 +32,4 @@ A list uses the service's `<service>CustomEndpoint` input or
 `GOOGLE_*_CUSTOM_ENDPOINT`; custom endpoints for other services only skip it
 with a warning ([#27](https://github.com/INTENTIUS/plunge/issues/27)). With all named endpoints local, the listers
 send no credential (or only a static `accessToken`) and fetch no Google token
-([#42](https://github.com/INTENTIUS/plunge/issues/42), built, tests not run).
+([#42](https://github.com/INTENTIUS/plunge/issues/42), tested).

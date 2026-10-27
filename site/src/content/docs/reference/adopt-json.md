@@ -69,5 +69,10 @@ That is the start of the recorded `would-adopt.json` (2026-10-26) in behold's
 | `foreign-records` | the stack already has records that are not this checkpoint's |
 | `empty-checkpoint` | the checkpoint holds no resources |
 
+`--adopt` adds optional fields and eight more codes (`engine-type`,
+`address`, `not-importable`, `import-id`, `foreign-marker`,
+`live-read-failed`, `not-found`, `stock-checkpoint`), listed in
+[ADOPT.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/ADOPT.md#--adopt-file).
+
 Treat an unknown code as an unexplained refusal, and an unknown `adopt`
 version as an unreadable document.

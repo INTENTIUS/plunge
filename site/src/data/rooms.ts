@@ -114,9 +114,9 @@ export const ROOMS: Room[] = [
 		title: 'Starting new',
 		lede: 'You are starting a new Pulumi stack.',
 		works: [
-			'Build plunge from source; there is no release yet (#13)',
+			'Install v0.1.0 from its release archive',
 			'Log in to a plunge+ URL and run plunge up',
-			'The tutorial needs Docker, Go and Node.js',
+			'The tutorial needs Docker, Node.js and a clone of the repository',
 		],
 		differs: [],
 		first: start,

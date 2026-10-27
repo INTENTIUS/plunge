@@ -13,7 +13,7 @@ and the record key is open on [#46](https://github.com/INTENTIUS/plunge/issues/4
 ## Remove
 
 Delete the object from the program and update; plunge checks the live
-object's labels first ([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+object's labels first ([#37](https://github.com/INTENTIUS/plunge/issues/37), tested).
 
 ## Plan, review, update
 

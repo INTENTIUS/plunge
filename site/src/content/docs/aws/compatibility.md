@@ -18,12 +18,13 @@ The corpus programs run pulumi-aws at version 7.51.1, alongside aws-native.
 
 Cloud Control's primary identifier is not always pulumi-aws's ID. choudoufu's
 `pkg/identity` translates a multi-part identifier from its parts or by a
-hand-written rule. Translations for single-part identifiers
-([#28](https://github.com/INTENTIUS/plunge/issues/28)) and for
-`aws_budgets_budget_action`, which needs the account ID from the stack's STS
-([#31](https://github.com/INTENTIUS/plunge/issues/31)), are built with tests
-unrun, in `CloudControlTranslation`
-([choudoufu#2286](https://github.com/INTENTIUS/choudoufu/issues/2286)); plunge supplies the account ID.
+hand-written rule, and single-part identifiers too
+([#28](https://github.com/INTENTIUS/plunge/issues/28)), in
+`CloudControlTranslation`
+([choudoufu#2286](https://github.com/INTENTIUS/choudoufu/issues/2286)).
+`aws_budgets_budget_action` needs the account ID, which plunge reads from the
+stack's own STS ([#31](https://github.com/INTENTIUS/plunge/issues/31)). Both
+issues are closed with their tests passing.
 
 ## Types with no tags
 

@@ -14,7 +14,7 @@ the record key is open on [#46](https://github.com/INTENTIUS/plunge/issues/46)
 ## Remove
 
 Delete it from the program and update; plunge checks the live tags first
-([#37](https://github.com/INTENTIUS/plunge/issues/37), built, waiting for its run).
+([#37](https://github.com/INTENTIUS/plunge/issues/37), tested).
 `plunge state delete '<urn>'` drops the record and keeps the object
 ([#47](https://github.com/INTENTIUS/plunge/issues/47), [Remove a resource](/plunge/use/remove/)).
 
