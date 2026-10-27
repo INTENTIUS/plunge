@@ -77,7 +77,7 @@ export default defineConfig({
 				ThemeProvider: './src/components/ThemeProvider.astro',
 				ThemeSelect: './src/components/ThemeSelect.astro',
 			},
-			description: 'Your Pulumi programs, with one record per resource and parallel updates',
+			description: 'Pulumi with resource level concurrency and no stack lock',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/INTENTIUS/plunge' }],
 			editLink: {
 				baseUrl: 'https://github.com/INTENTIUS/plunge/edit/main/site/',
