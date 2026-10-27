@@ -33,10 +33,10 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
 )
 
-// NewGraphCmd is `plunge graph --json [--stack <stack>]`.
+// NewGraphCmd is `plunge graph --json [--stack <stack>] [--versions]`.
 func NewGraphCmd(ws pkgWorkspace.Context, lm cmdBackend.LoginManager) *cobra.Command {
 	var stackName string
-	var jsonOut bool
+	var jsonOut, versions bool
 
 	cmd := &cobra.Command{
 		Use:   "graph",
@@ -47,31 +47,41 @@ func NewGraphCmd(ws pkgWorkspace.Context, lm cmdBackend.LoginManager) *cobra.Com
 			"document: a node per URN with the facts the records hold (ownership, the markers the record says were\n" +
 			"written, how ownership is known, cloud IDs), and `ref` edges for dependencies, parents and providers\n" +
 			"(grain instance) and property dependencies (grain property). The program is not run, no provider is\n" +
-			"called, no record is written, and no output value or secret is printed. Needs a plunge+<url> backend.",
+			"called, no record is written, and no output value or secret is printed. Needs a plunge+<url> backend.\n" +
+			"\n" +
+			"With --versions each node also lists its record's versions (id, write time, current, deleted; never a\n" +
+			"value), one version listing per record. A store that replaces records in place reports kept: false.",
 		Example: "plunge graph --json --stack dev",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !jsonOut {
 				return errors.New("plunge graph prints JSON only; pass --json")
 			}
-			return run(cmd.Context(), ws, lm, stackName, cmd.OutOrStdout())
+			return run(cmd.Context(), ws, lm, stackName, versions, cmd.OutOrStdout())
 		},
 	}
 
 	cmd.Flags().StringVarP(&stackName, "stack", "s", "",
 		"The name of the stack to operate on. Defaults to the current stack")
 	cmd.Flags().BoolVar(&jsonOut, "json", false, "Print chant's engine graph document (required)")
+	cmd.Flags().BoolVar(&versions, "versions", false,
+		"Add each record's versions as facts.recordVersions (one version listing per record)")
 	return cmd
 }
 
-func run(ctx context.Context, ws pkgWorkspace.Context, lm cmdBackend.LoginManager, stackName string, stdout io.Writer) error {
+func run(ctx context.Context, ws pkgWorkspace.Context, lm cmdBackend.LoginManager, stackName string, versions bool,
+	stdout io.Writer,
+) error {
 	sink := cmdutil.Diag()
 	opts := display.Options{Color: cmdutil.GetGlobalColorization()}
 	s, err := cmdStack.RequireStack(ctx, sink, ws, lm, stackName, cmdStack.LoadOnly, opts, "")
 	if err != nil {
 		return err
 	}
-	doc, err := plunge.EmitGraph(ctx, s.Backend(), s.Ref(), plunge.GraphRequest{EngineVersion: plungeVersion.Version})
+	doc, err := plunge.EmitGraph(ctx, s.Backend(), s.Ref(), plunge.GraphRequest{
+		EngineVersion: plungeVersion.Version,
+		Versions:      versions,
+	})
 	if err != nil {
 		return err
 	}

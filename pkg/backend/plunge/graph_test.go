@@ -361,7 +361,7 @@ func TestGraphOwnershipMapping(t *testing.T) {
 		if f := n.Facts; f != nil {
 			assert.Contains(t, []string{"", "bound", "pending"}, f.Ownership, n.ID)
 			assert.Contains(t, []string{"", "marker", "record"}, f.OwnedBy, n.ID)
-			assert.Nil(t, f.RecordVersions, "#40 never sets recordVersions")
+			assert.Nil(t, f.RecordVersions, "recordVersions only with --versions")
 			if f.Markers != nil {
 				assert.Equal(t, "record", f.Markers.Source)
 			}
