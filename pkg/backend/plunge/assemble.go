@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/providers"

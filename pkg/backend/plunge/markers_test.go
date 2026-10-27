@@ -43,10 +43,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/engine"
 	lt "github.com/pulumi/pulumi/pkg/v3/engine/lifecycletest/framework"
 	pkgresource "github.com/pulumi/pulumi/pkg/v3/resource"

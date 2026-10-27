@@ -18,8 +18,8 @@ hex characters of the SHA-256 of `<project>/<stack>`.
 
 `plunge+k8s://` labels each record Secret with an estate (the `estate` query
 key, else the namespace). choudoufu's estate-boundary
-ValidatingAdmissionPolicy, vendored at
-`pkg/backend/plunge/staterecord/estate-boundary.yaml`, fences writes to those
+ValidatingAdmissionPolicy, embedded in choudoufu's `staterecord` package
+(`pkg/staterecord/estate-boundary.yaml` in choudoufu), fences writes to those
 Secrets by that label.
 
 ## Objects plunge creates

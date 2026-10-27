@@ -216,11 +216,6 @@ linters:
       - linters:
           - goheader
         path: pkg/cmd/pulumi/logs/timestamp\.go$
-      # plunge: these packages are ported from OpenTofu and choudoufu and keep their HashiCorp and
-      # OpenTofu MPL-2.0 headers.
-      - linters:
-          - goheader
-        path: ^pkg/backend/plunge/(staterecord|kubesweep|azsweep|gcpsweep|cloudcontrol|registry)/
       # Scope the cmd.OutOrStdout/ErrOrStderr/fmt.Fprint* forbidigo rules to
       # non-test code under pkg/cmd/. Paths reported by golangci-lint are
       # relative to the repo root regardless of which module is being linted.

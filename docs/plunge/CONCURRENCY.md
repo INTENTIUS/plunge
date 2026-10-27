@@ -3,7 +3,8 @@
 What happens when two runs write one stack's state at the same time on the
 plunge record backend (`plunge+file://`, `plunge+s3://`, `plunge+azblob://`,
 `plunge+gs://`, `plunge+k8s://`). The backend is `pkg/backend/plunge`; the record store under it
-is choudoufu's `staterecord`, vendored at `pkg/backend/plunge/staterecord`.
+is choudoufu's public `staterecord` package (`github.com/intentius/choudoufu/pkg/staterecord`), a module
+dependency of `pkg/go.mod` since INTENTIUS/plunge#39.
 
 ## No stack lock
 

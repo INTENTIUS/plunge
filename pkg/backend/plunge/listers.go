@@ -35,13 +35,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/azsweep"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/cloudcontrol"
+	"github.com/intentius/choudoufu/pkg/azsweep"
+	"github.com/intentius/choudoufu/pkg/cloudcontrol"
+	"github.com/intentius/choudoufu/pkg/gcpsweep"
+	"github.com/intentius/choudoufu/pkg/kubesweep"
+	"github.com/intentius/choudoufu/pkg/registry"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcplist"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/gcpsweep"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/kubesweep"
 	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/markers"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/registry"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
@@ -273,13 +273,10 @@ func (l *armLister) ListMarked(
 			ClientSecret:   providerString(in, "clientSecret"),
 			Environment:    providerString(in, "environment"),
 		}
+		// plunge builds the credential (sweepconfig.go); armCustomEndpointSkip above keeps every custom-endpoint stack
+		// away from it.
 		c, err = l.creds.get(sub+"|"+a.TenantID+"|"+a.ClientID+"|"+a.Environment, func() (*armClient, error) {
-			cred, ep, _, err := a.Credential(ctx, "plunge's marker bind")
-			if err != nil {
-				return nil, err
-			}
-			return &armClient{endpoint: strings.TrimSuffix(ep.ResourceManager, "/"), scope: azsweep.Scope(ep.Audience),
-				cred: cred}, nil
+			return armProviderClient(a)
 		})
 		if err != nil {
 			return nil, err
@@ -613,7 +610,10 @@ func (l *gcpLister) ListMarked(
 		c, err = l.clients.get(local.cacheKey(), func() (*http.Client, error) { return local.client(ctx) })
 	} else {
 		key := a.Credentials + "|" + a.AccessToken + "|" + a.ImpersonateServiceAccount
-		c, err = l.clients.get(key, func() (*http.Client, error) { return gcpsweep.HTTPClient(ctx, a) })
+		c, err = l.clients.get(key, func() (*http.Client, error) {
+			hc, _, err := gcpProviderHTTPClient(ctx, a)
+			return hc, err
+		})
 	}
 	if err != nil {
 		return nil, err
@@ -670,20 +670,20 @@ func (l *assetLister) ListMarked(
 	}
 	var c *gcpsweep.Client
 	if isLocal {
-		// INTENTIUS/plunge#42: the Cloud Asset client goes over plunge's own client, never the copy's credential
-		// lookup (gcpauth.go).
+		// INTENTIUS/plunge#42: the Cloud Asset client goes over plunge's own client, never a credential lookup
+		// (gcpauth.go); choudoufu's public gcpsweep looks up none when handed one (plunge#39).
 		c, err = l.clients.get(a.Project+"|"+local.cacheKey(), func() (*gcpsweep.Client, error) {
 			hc, err := local.client(ctx)
 			if err != nil {
 				return nil, err
 			}
-			return gcpsweep.NewWithHTTPClient(ctx, a, hc, gcpsweep.Credentials{
+			return gcpAssetClient(ctx, a, hc, gcpsweep.Credentials{
 				Source: gcpsweep.SourceCaller, Impersonate: local.impersonate,
 			})
 		})
 	} else {
 		c, err = l.clients.get(a.Project+"|"+a.ImpersonateServiceAccount, func() (*gcpsweep.Client, error) {
-			return gcpsweep.New(ctx, a)
+			return gcpAssetClient(ctx, a, nil, gcpsweep.Credentials{})
 		})
 	}
 	if err != nil {

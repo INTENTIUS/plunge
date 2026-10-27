@@ -49,7 +49,7 @@ only, since the backend URL is saved and printed.
 `plunge+k8s://` keeps one Secret per record in the namespace and needs a DIY
 URL for the stack metadata (`metadata`). The Secrets carry an estate label
 for choudoufu's estate-boundary admission policy
-(`pkg/backend/plunge/staterecord/estate-boundary.yaml`).
+(`pkg/staterecord/estate-boundary.yaml` in choudoufu, which plunge imports).
 
 ## Who may write
 

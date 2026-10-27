@@ -23,10 +23,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/intentius/choudoufu/pkg/staterecord"
 	"github.com/pulumi/pulumi/pkg/v3/backend"
 	"github.com/pulumi/pulumi/pkg/v3/backend/display"
 	"github.com/pulumi/pulumi/pkg/v3/backend/diy"
-	"github.com/pulumi/pulumi/pkg/v3/backend/plunge/staterecord"
 	sdkDisplay "github.com/pulumi/pulumi/pkg/v3/display"
 	"github.com/pulumi/pulumi/pkg/v3/engine"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
