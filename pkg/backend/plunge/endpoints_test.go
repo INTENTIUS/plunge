@@ -178,8 +178,9 @@ func TestSweepWarnsWhenTheStacksEndpointsNameNoCloudControl(t *testing.T) {
 
 // The other families keep to the same rule: a google provider with custom endpoints and none for the type's service
 // lists nothing, nor does Asset Inventory without its own endpoint, and an azure provider reading its endpoints from
-// a metadata host is not listed through the public ARM.
+// a metadata host with no client secret in the environment is not listed at all (with one, armendpoints_test.go).
 func TestOtherListersSkipWhenTheStackNamesOtherEndpoints(t *testing.T) {
+	clearAzureEnv(t)
 	for _, n := range append(envNamesWith("GOOGLE_", "_CUSTOM_ENDPOINT"), "ARM_METADATA_HOSTNAME") {
 		t.Setenv(n, "")
 	}
