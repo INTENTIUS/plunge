@@ -1,11 +1,10 @@
 ---
-// "Optional: hand this page to your coding agent": a compact card with the
-// prompt's first lines showing, a button that copies the whole prompt, one that
-// copies a link to it, and a toggle that shows it all. The card is a shortcut,
-// never a requirement. The text is the page's `prompt:` front matter, or `text`
-// when given. The page header (PageTitle.astro) renders it under the title of
-// every page with a `prompt:`, so a page needs no import for it; a page that
-// places <AgentPrompt /> itself gets it there instead. Every prompt ends with
+// "Optional: hand this page to your coding agent": a closed card under the
+// page's content. Opened, it shows the prompt, a button that copies it and one
+// that copies a link to it. The card is a shortcut, never a requirement. The
+// text is the page's `prompt:` front matter, or `text` when given. The footer
+// (Footer.astro) renders it on every page with a `prompt:`, so a page needs no
+// import for it; a page that places <AgentPrompt /> itself gets it there instead. Every prompt ends with
 // neverLine from src/prompts.ts, which forbids apply, approval and merge.
 // Adapted from choudoufu's site.
 import { promptText } from '../prompts';
@@ -25,21 +24,17 @@ const prompt = text ?? promptText(Astro.locals.starlightRoute?.entry.data.prompt
 ---
 {prompt && (
 	<figure class="pl-prompt not-content" id="agent-prompt">
-		<figcaption>
-			<span class="label"><Diver size={16} />{label}</span>
-			<span class="note">{note}</span>
-		</figcaption>
 		<details>
 			<summary>
-				<pre class="peek" aria-hidden="true">{prompt}</pre>
-				<span class="more">Show the whole prompt</span>
+				<span class="label"><Diver size={16} />{label}</span>
+				<span class="note">{note}</span>
 			</summary>
 			<pre class="full"><code>{prompt}</code></pre>
+			<div class="actions">
+				<button type="button" class="copy" data-copy={prompt} data-done="Copied">Copy prompt</button>
+				<button type="button" class="link" data-link data-done="Link copied">Copy link</button>
+			</div>
 		</details>
-		<div class="actions">
-			<button type="button" class="copy" data-copy={prompt} data-done="Copied">Copy prompt</button>
-			<button type="button" class="link" data-link data-done="Link copied">Copy link</button>
-		</div>
 	</figure>
 )}
 
@@ -70,7 +65,7 @@ const prompt = text ?? promptText(Astro.locals.starlightRoute?.entry.data.prompt
 
 <style>
 	.pl-prompt {
-		margin: 1.25rem 0 0;
+		margin: 2.5rem 0 0;
 		width: min(100%, 44rem);
 		text-align: left;
 		border: 1px solid var(--pl-rule);
@@ -79,12 +74,13 @@ const prompt = text ?? promptText(Astro.locals.starlightRoute?.entry.data.prompt
 		background: var(--pl-panel);
 		overflow: hidden;
 	}
-	figcaption {
+	summary {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: baseline;
 		gap: 0.25rem 0.75rem;
-		padding: 0.7rem 1rem 0.4rem;
+		padding: 0.7rem 1rem;
+		cursor: pointer;
 	}
 	.label {
 		display: inline-flex;
@@ -98,16 +94,6 @@ const prompt = text ?? promptText(Astro.locals.starlightRoute?.entry.data.prompt
 		font-size: 0.75rem;
 		color: var(--sl-color-gray-3);
 	}
-	summary {
-		position: relative;
-		display: block;
-		list-style: none;
-		cursor: pointer;
-		padding: 0 1rem;
-	}
-	summary::-webkit-details-marker {
-		display: none;
-	}
 	pre {
 		margin: 0;
 		font-family: var(--sl-font-mono);
@@ -119,27 +105,6 @@ const prompt = text ?? promptText(Astro.locals.starlightRoute?.entry.data.prompt
 		background: none;
 		border: 0;
 		padding: 0;
-	}
-	/* Two lines of the prompt, fading out, say it is there. */
-	.peek {
-		max-height: 2.4rem;
-		overflow: hidden;
-		mask-image: linear-gradient(to bottom, #000 40%, transparent);
-	}
-	.more {
-		display: inline-block;
-		margin-top: 0.2rem;
-		font-size: 0.72rem;
-		color: var(--pl-accent);
-	}
-	details[open] .peek,
-	details[open] .more {
-		display: none;
-	}
-	details[open] summary::after {
-		content: 'Hide the prompt';
-		font-size: 0.72rem;
-		color: var(--pl-accent);
 	}
 	.full {
 		padding: 0.25rem 1rem 0;

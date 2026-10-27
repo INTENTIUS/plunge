@@ -22,10 +22,12 @@ const href = (h: string) => (/^https?:/.test(h) ? h : `${base}${h}`);
 			<h2>Features</h2>
 			<ul>{r.works.map((w) => <li>{w}</li>)}</ul>
 		</section>
-		<section id="differs">
-			<h2>Differences</h2>
-			{r.differs.length ? <ul>{r.differs.map((d) => <li>{d}</li>)}</ul> : <p>Nothing beyond the pages below.</p>}
-		</section>
+		{r.differs.length > 0 && (
+			<section id="differs">
+				<h2>Differences from stock Pulumi</h2>
+				<ul>{r.differs.map((d) => <li>{d}</li>)}</ul>
+			</section>
+		)}
 		<section id="first" class="first">
 			<h2>First step</h2>
 			<p><a href={href(r.first.href)}>{r.first.label}</a></p>

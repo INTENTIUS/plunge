@@ -6,7 +6,7 @@ prompt: |
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
-Two marker keys mark a resource as a stack's (`pkg/backend/plunge/markers/keys.go`).
+Two [marker](../../glossary/#marker) keys mark a resource as a stack's.
 
 | Key | Value on tags (AWS, aws-native, Azure) | Value on labels (Google Cloud, Kubernetes) |
 |---|---|---|
@@ -28,7 +28,7 @@ In the recorded `aws-ts` run, bucket `docs-assets` (a child of component
 ## Where the marker goes
 
 Pulumi's schema has no "taggable" flag, so plunge decides per provider
-family (`pkg/backend/plunge/catalog.go`):
+family:
 
 - pulumi-aws, pulumi-azure and pulumi-gcp serve their Terraform schema through the bridge; a type is markable when it has a tags (for Google, labels) argument.
 - aws-native's committed `metadata.json` at the provider's version names the tags property and whether it is create-only.
@@ -47,13 +47,18 @@ bucket policy in the recorded `aws-ts` run is one.
 
 ## Refusals
 
-plunge refuses by name a provider whose `ignoreTags`, `ignoreLabels`,
-`defaultTags` or `defaultLabels` would hide or override the markers, and a
-resource whose tags are create-only (aws-native `tagUpdatable: false`), since
-marking it would replace it.
+plunge refuses by name a provider whose `ignoreTags` or `ignoreLabels` key or
+prefix matches `plunge-`, since it would hide the markers. It also refuses a
+`defaultTags` or `defaultLabels` entry with a `plunge-` key, which would
+override them; other default tags are fine. A resource whose tags are
+create-only (aws-native `tagUpdatable: false`) is refused too, since marking
+it would replace it.
 
 ## Who may change a resource
 
 The cloud's own policy can condition on the marker. None has run against
 plunge's markers yet; each platform's Gate page shows the shape and [#45](https://github.com/INTENTIUS/plunge/issues/45)
 holds the run.
+
+Source: `pkg/backend/plunge/markers/keys.go` (the keys and digests),
+`catalog.go` (which types take markers) and `inject.go` (the provider checks).

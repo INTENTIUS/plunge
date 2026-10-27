@@ -7,11 +7,11 @@
  },
  "site/src/data/rooms.ts": {
   "discourse/staccato-register": 1,
-  "tricolon/comma-series": 3,
-  "discourse/punchy-fragments": 8,
-  "anaphora/repeated-opening": 3,
-  "formatting/em-dash-density": 5,
-  "repetition/near-duplicate": 2
+  "tricolon/comma-series": 2,
+  "discourse/punchy-fragments": 3,
+  "repetition/near-duplicate": 1,
+  "anaphora/repeated-opening": 1,
+  "formatting/em-dash-density": 2
  },
  "README.md": {
   "tricolon/comma-series": 4,

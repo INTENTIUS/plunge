@@ -1,6 +1,12 @@
 # plunge
 
-Pulumi with resource level concurrency and no stack lock. plunge runs stock Pulumi's programs, SDKs,
+Pulumi with resource level concurrency and no stack lock
+
+Status: lock-free concurrent updates are unit-tested and have not run on a real store yet
+([#6](https://github.com/INTENTIUS/plunge/issues/6), [claims](https://intentius.io/plunge/claims/)), so
+serialize updates to one stack in CI for now.
+
+plunge runs stock Pulumi's programs, SDKs,
 language hosts and providers, and changes where state lives and how a run decides ownership:
 
 - Each taggable resource carries two markers, `plunge-stack` and `plunge-urn`, written in its create
@@ -26,18 +32,23 @@ argument; `just site` builds it with its link and contrast checks.
 
 ## Install
 
+The first release came out on 2026-10-27 and is still early. All proof so far is on local emulators, so
+keep it away from production for now.
+
 plunge `v0.1.0` (Pulumi-compatible `3.272.0`) is on the
 [releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.1.0) with a checksums
 file, for darwin, linux and windows on arm64 and x64. Each archive unpacks to `plunge/` (on Windows
 `plunge/bin/`), the CLI beside its language hosts; put that directory on `PATH`. The
-[install page](https://intentius.io/plunge/use/start/#install) has the commands, the checksum check
-and the macOS quarantine step.
+[quickstart](https://intentius.io/plunge/use/start/#quickstart) has the commands and the checksum
+check, and runs a first preview offline in five minutes; [Install](https://intentius.io/plunge/use/start/#install)
+covers the macOS quarantine step, a permanent `PATH` and uninstalling.
 
 ## Fork point
 
 Forked from [pulumi/pulumi](https://github.com/pulumi/pulumi) master at `7e12743da8` (2026-10-25,
 after the 3.272.0 release), with upstream history kept. The `upstream` remote points at pulumi/pulumi,
-merged in, never rebased.
+merged in, never rebased. The scheduled merge of 2026-10-26 stopped on a conflict and waits for a
+person (INTENTIUS/plunge#24).
 
 Choices that keep those merges cheap:
 

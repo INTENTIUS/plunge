@@ -1,0 +1,11 @@
+{
+ "/for/pulumi-cloud/": "/plunge/for/pulumi-stack/",
+ "/for/chant/": "/plunge/how-it-works/drift/",
+ "/for/aws/": "/plunge/aws/",
+ "/for/kubernetes/": "/plunge/kubernetes/",
+ "/for/gcp/": "/plunge/gcp/",
+ "/for/azure/": "/plunge/azure/",
+ "/for/security/": "/plunge/how-it-works/identity/",
+ "/for/agents/": "/plunge/llms.txt",
+ "/for/contribute/": "https://github.com/INTENTIUS/plunge/blob/main/README.md"
+}

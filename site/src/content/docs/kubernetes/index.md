@@ -11,4 +11,6 @@ Each pulumi-kubernetes object carries `plunge-stack` and `plunge-urn` labels. La
 - [Gate](/plunge/kubernetes/gate/): fence writes by the owning stack.
 - [Operate](/plunge/kubernetes/operate/): rename, remove, saved plans, two runs at once.
 - [Compatibility](/plunge/kubernetes/compatibility/): which providers and types take markers, and how they are listed.
-- [Proof](/plunge/kubernetes/proof/): recorded runs on Kubernetes and the runs still to come.
+- [Proof](/plunge/kubernetes/proof/): the runs still to come.
+
+Status: nothing has run on Kubernetes yet.

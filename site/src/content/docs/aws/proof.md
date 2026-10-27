@@ -1,6 +1,6 @@
 ---
 title: Proof
-description: Recorded runs on AWS, with dates and recordings, and the runs still to come.
+description: Recorded runs on floci, the AWS emulator, with dates and recordings, and the runs still to come. Nothing has run on AWS itself.
 prompt: |
   Follow https://intentius.io/plunge/aws/proof/. Open each recording it links and check the page's description of it. Report any difference. Change no files.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.

@@ -62,7 +62,7 @@ That is the start of the recorded `would-adopt.json` (2026-10-26) in behold's
 | Code | When |
 |---|---|
 | `pending-operations` | the checkpoint has a pending operation; settle it with stock Pulumi first |
-| `marker-hiding-provider-config` | a provider's `ignoreTags`, `ignoreLabels`, `defaultTags` or `defaultLabels` would hide or override the markers |
+| `marker-hiding-provider-config` | a provider's `ignoreTags` or `ignoreLabels` key or prefix matches `plunge-`, or its `defaultTags` or `defaultLabels` has an entry with a `plunge-` key |
 | `create-only-tags` | a resource's tags can only be set at create, so marking it would replace it |
 | `unrepresentable-markers` | a resource's URN cannot be written as a marker value |
 | `adopted-from-another-checkpoint` | the stack was adopted from a checkpoint with a different digest (recorded in `refused.json`) |
