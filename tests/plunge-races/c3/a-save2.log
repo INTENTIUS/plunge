@@ -1,0 +1,16 @@
+Previewing update (race-c3-053601803):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-053601803 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-053601803 refreshing 
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803 running 
+@ previewing update....
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803  
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Update plan written to '/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/out/races-final/c3/plan-a2.json'
+Run `pulumi up --plan='/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/out/races-final/c3/plan-a2.json'` to constrain the update to the operations planned by this preview

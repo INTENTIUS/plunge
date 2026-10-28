@@ -1,0 +1,159 @@
+{
+    "manifest": {
+        "time": "2026-10-27T23:36:30.942251-06:00",
+        "magic": "9a15a292a881dbeb77a86955b3246fa29aae8b7d695358eee7c9e474a33b8927",
+        "version": "v3.272.0"
+    },
+    "config": {
+        "aws-native:region": "us-east-1",
+        "aws:accessKey": "test",
+        "aws:endpoints": [
+            {
+                "ec2": "http://localhost:4566",
+                "iam": "http://localhost:4566",
+                "s3": "http://localhost:4566",
+                "sqs": "http://localhost:4566",
+                "sts": "http://localhost:4566"
+            }
+        ],
+        "aws:region": "us-east-1",
+        "aws:s3UsePathStyle": "true",
+        "aws:secretKey": "test",
+        "aws:skipCredentialsValidation": "true",
+        "aws:skipMetadataApiCheck": "true",
+        "aws:skipRegionValidation": "true",
+        "aws:skipRequestingAccountId": "true",
+        "plunge-races:prefix": "plrc3053601803",
+        "plunge-races:retentionA": "7200",
+        "plunge-races:retentionB": "3600",
+        "plunge-races:retentionW": "3600"
+    },
+    "resourcePlans": {
+        "urn:pulumi:race-c3-053601803::plunge-races::aws:sqs/queue:Queue::queue-a": {
+            "goal": {
+                "type": "aws:sqs/queue:Queue",
+                "name": "queue-a",
+                "custom": true,
+                "inputDiff": {
+                    "updates": {
+                        "messageRetentionSeconds": 7200
+                    }
+                },
+                "outputDiff": {},
+                "parent": "urn:pulumi:race-c3-053601803::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c3-053601803",
+                "protect": false,
+                "provider": "urn:pulumi:race-c3-053601803::plunge-races::pulumi:providers:aws::default_7_51_1::da691d2b-091a-50d3-a4c9-928b38eef5b4",
+                "propertyDependencies": {
+                    "messageRetentionSeconds": [],
+                    "name": [],
+                    "tags": []
+                },
+                "customTimeouts": {}
+            },
+            "steps": [
+                "update"
+            ],
+            "state": {
+                "__meta": "{\"_new_extra_shim\":{},\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":180000000000,\"delete\":180000000000,\"update\":180000000000}}",
+                "__pulumi_raw_state_delta": {
+                    "obj": {
+                        "ps": {
+                            "tags": {
+                                "map": {}
+                            },
+                            "tagsAll": {
+                                "map": {}
+                            }
+                        }
+                    }
+                },
+                "arn": "arn:aws:sqs:us-east-1:000000000000:plrc3053601803-a",
+                "contentBasedDeduplication": false,
+                "deduplicationScope": "",
+                "delaySeconds": 0,
+                "fifoQueue": false,
+                "fifoThroughputLimit": "",
+                "id": "https://sqs.us-east-1.amazonaws.com/000000000000/plrc3053601803-a",
+                "kmsDataKeyReusePeriodSeconds": 300,
+                "kmsMasterKeyId": "",
+                "maxMessageSize": 262144,
+                "messageRetentionSeconds": 7200,
+                "name": "plrc3053601803-a",
+                "namePrefix": "",
+                "policy": "",
+                "receiveWaitTimeSeconds": 0,
+                "redriveAllowPolicy": "",
+                "redrivePolicy": "",
+                "region": "us-east-1",
+                "sqsManagedSseEnabled": false,
+                "tags": {
+                    "plunge-stack": "plunge-races/race-c3-053601803",
+                    "plunge-urn": "aws:sqs/queue:Queue::queue-a",
+                    "race": "plunge"
+                },
+                "tagsAll": {
+                    "plunge-stack": "plunge-races/race-c3-053601803",
+                    "plunge-urn": "aws:sqs/queue:Queue::queue-a",
+                    "race": "plunge"
+                },
+                "url": "https://sqs.us-east-1.amazonaws.com/000000000000/plrc3053601803-a",
+                "visibilityTimeoutSeconds": 30
+            },
+            "seed": "mKnLdoEVEyh0GAQJUDuV87Blbt2At3QrkmfWlcgjzpg="
+        },
+        "urn:pulumi:race-c3-053601803::plunge-races::pulumi:providers:aws::default_7_51_1": {
+            "goal": {
+                "type": "pulumi:providers:aws",
+                "name": "default_7_51_1",
+                "custom": true,
+                "inputDiff": {},
+                "outputDiff": {},
+                "protect": false,
+                "customTimeouts": {}
+            },
+            "steps": [
+                "same"
+            ],
+            "state": {
+                "accessKey": {
+                    "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                    "ciphertext": "v1:x9JR/rL5VIcRrTVf:jxN8LIdBOUHUulmxApI4QET4z55gng=="
+                },
+                "endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+                "region": "us-east-1",
+                "s3UsePathStyle": "true",
+                "secretKey": {
+                    "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                    "ciphertext": "v1:4Zo3/VDLxLtsyipo:2kNsrHUisoiqvWKpSohHMhBnRAOZ3Q=="
+                },
+                "skipCredentialsValidation": "true",
+                "skipMetadataApiCheck": "true",
+                "skipRegionValidation": "true",
+                "skipRequestingAccountId": "true",
+                "version": "7.51.1"
+            },
+            "seed": "EjoOJGwYZmwfrNO89EFj7pHFiZEFhAVnC4tCGyvTiW8="
+        },
+        "urn:pulumi:race-c3-053601803::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c3-053601803": {
+            "goal": {
+                "type": "pulumi:pulumi:Stack",
+                "name": "plunge-races-race-c3-053601803",
+                "custom": false,
+                "inputDiff": {},
+                "outputDiff": {},
+                "protect": false,
+                "customTimeouts": {}
+            },
+            "steps": [
+                "same"
+            ],
+            "state": {},
+            "seed": "GwqPjwRc0nIydAbm/e+Fy2Skno42y0V/JzdCMJEXzkk="
+        }
+    },
+    "plungeRecordVersions": {
+        "urn:pulumi:race-c3-053601803::plunge-races::aws:sqs/queue:Queue::queue-a": "\"f1d3f7027424ff7dfb76fee2c97da213\"",
+        "urn:pulumi:race-c3-053601803::plunge-races::pulumi:providers:aws::default_7_51_1": "\"cd5ba3bd62ae822e708be9cb132e26ad\"",
+        "urn:pulumi:race-c3-053601803::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c3-053601803": "\"d033c6c4582b9eee34c9f64c145ffb76\""
+    }
+}

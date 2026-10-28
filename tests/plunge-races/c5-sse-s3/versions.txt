@@ -1,0 +1,5 @@
+plunge: /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/bin/plunge
+  plunge v0.1.0-dev.0
+  pulumi v3.272.0
+floci:  http://localhost:4566
+tree:   a6ab1a7e49712a55832edecb0be0a5671db8bc79

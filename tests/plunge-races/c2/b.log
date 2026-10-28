@@ -1,0 +1,33 @@
+Previewing update (race-c2-05354937):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 create 
+@ previewing update....
+ +  aws:ec2:Vpc net create 
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 create 
+Resources:
+    + 2 to create
+
+Updating (race-c2-05354937):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 creating (0s) 
+@ updating....
+ +  aws:ec2:Vpc net creating (0s) 
+ +  aws:ec2:Vpc net creating (0s) error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-05354937::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0": expected no record to exist, but found version "\"d7151cc0a8e1b02c7e2469ece8bf1f33\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 creating (1s) error: resource complete event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-05354937::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0": expected no record to exist, but found version "\"d7151cc0a8e1b02c7e2469ece8bf1f33\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 creating (1s) error: update failed
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 **creating failed (1s)** 2 errors
+ +  aws:ec2:Vpc net **creating failed** 1 error
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c2-05354937):
+    error: resource complete event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-05354937::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0": expected no record to exist, but found version "\"d7151cc0a8e1b02c7e2469ece8bf1f33\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    error: update failed
+
+  aws:ec2:Vpc (net):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-05354937::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-05354937/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTA1MzU0OTM3OjpwbHVuZ2UtcmFjZXM6OmF3czplYzIvdnBjOlZwYzo6bmV0": expected no record to exist, but found version "\"d7151cc0a8e1b02c7e2469ece8bf1f33\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+Resources:
+    + 1 created
+    2 errored
+
+Duration: 2s
+

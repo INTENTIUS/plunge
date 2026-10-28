@@ -1,0 +1,20 @@
+Previewing update (race-c5-same-054114286):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c5-same-054114286 create 
+ +  aws:sqs:Queue queue-a create 
+ +  pulumi:pulumi:Stack plunge-races-race-c5-same-054114286 create 
+Resources:
+    + 2 to create
+
+Updating (race-c5-same-054114286):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c5-same-054114286 creating (0s) 
+ +  aws:sqs:Queue queue-a creating (0s) 
+@ updating............................
+ +  aws:sqs:Queue queue-a created (25s) 
+ +  pulumi:pulumi:Stack plunge-races-race-c5-same-054114286 created (25s) 
+Resources:
+    + 2 created
+
+Duration: 26s
+

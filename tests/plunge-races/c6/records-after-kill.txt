@@ -1,0 +1,2 @@
+resources urn:pulumi:race-c6-054439380::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c6-054439380 2622
+stacks/plunge-races/race-c6-054439380/secrets 138

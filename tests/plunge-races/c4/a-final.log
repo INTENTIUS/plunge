@@ -1,0 +1,39 @@
+Previewing update (race-c4-053735133):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing 
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue worker-1 refreshing 
+ ~  aws:sqs:Queue worker-1 refresh 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133 running 
+@ previewing update.....
+    aws:sqs:Queue queue-a  
+ -  aws:sqs:Queue worker-1 delete 
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133  
+Resources:
+    - 1 to delete
+    2 unchanged
+
+Updating (race-c4-053735133):
+
+@ updating....
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing (0s) 
+ ~  aws:sqs:Queue worker-1 refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue worker-1 refresh (0.03s) 
+ ~  aws:sqs:Queue queue-a refresh (0.03s) 
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133 running 
+@ updating......
+    aws:sqs:Queue queue-a  
+ -  aws:sqs:Queue worker-1 deleting (0s) 
+@ updating.............................................
+ -  aws:sqs:Queue worker-1 deleted (42s) 
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133  
+Resources:
+    - 1 deleted
+    2 unchanged
+
+Duration: 47s
+

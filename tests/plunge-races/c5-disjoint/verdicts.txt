@@ -1,0 +1,1 @@
+VERDICT C5 c5-disjoint PASS two disjoint applies both land with no lock (a=7200, b=1800)

@@ -1,0 +1,5 @@
+resources urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role 5465
+resources urn:pulumi:race-c1-055000406::plunge-races::aws:s3/bucket:Bucket::site 6332
+resources urn:pulumi:race-c1-055000406::plunge-races::pulumi:providers:aws::default_7_51_1 1847
+resources urn:pulumi:race-c1-055000406::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-055000406 2624
+stacks/plunge-races/race-c1-055000406/secrets 138

@@ -1,0 +1,38 @@
+Previewing update (race-c1-055000406):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 create 
+ +  aws:s3:Bucket site create 
+ +  aws:iam:Role role create 
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 create 
+Resources:
+    + 3 to create
+
+Updating (race-c1-055000406):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 creating (0s) 
+ +  aws:iam:Role role creating (0s) 
+ +  aws:s3:Bucket site creating (0s) 
+ +  aws:iam:Role role creating (0s) error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"4d19fa11dc2157b5583f9824577ad2dc\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  aws:s3:Bucket site creating (0s) error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"4d19fa11dc2157b5583f9824577ad2dc\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 creating (0s) error: resource complete event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"1e04250745e56e005a5b79b79d1f10b8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 creating (0s) error: update failed
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 **creating failed (0.81s)** 2 errors
+ +  aws:iam:Role role **creating failed** 1 error
+ +  aws:s3:Bucket site **creating failed** 1 error
+Diagnostics:
+  aws:iam:Role (role):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"4d19fa11dc2157b5583f9824577ad2dc\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  aws:s3:Bucket (site):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"4d19fa11dc2157b5583f9824577ad2dc\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  pulumi:pulumi:Stack (plunge-races-race-c1-055000406):
+    error: resource complete event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-055000406/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTA1NTAwMDQwNjo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"1e04250745e56e005a5b79b79d1f10b8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    error: update failed
+
+Resources:
+    + 1 created
+    3 errored
+
+Duration: 1s
+

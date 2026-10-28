@@ -1,0 +1,47 @@
+Previewing update (race-c4-053735133):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing 
+ ~  aws:sqs:Queue worker-1 refreshing 
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+ ~  aws:sqs:Queue worker-1 refresh 
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133 running 
+@ previewing update....
+    aws:sqs:Queue queue-a  
+ ~  aws:sqs:Queue worker-1 update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133  
+Resources:
+    ~ 1 to update
+    2 unchanged
+
+Updating (race-c4-053735133):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-053735133 refreshing (0s) 
+ ~  aws:sqs:Queue worker-1 refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refresh (0.01s) 
+ ~  aws:sqs:Queue worker-1 refresh (0.01s) 
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133 running 
+@ updating....
+    aws:sqs:Queue queue-a  
+ ~  aws:sqs:Queue worker-1 updating (0s) [diff: ~messageRetentionSeconds]
+ ~  aws:sqs:Queue worker-1 updating (0s) [diff: ~messageRetentionSeconds]; error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c4-053735133::plunge-races::aws:sqs/queue:Queue::worker-1 at "stacks/plunge-races/race-c4-053735133/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTA1MzczNTEzMzo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c4-053735133/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTA1MzczNTEzMzo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ": expected version "\"5c4e59a808d020789c97bcbcf6b615cc\"", found version "\"22081f32da056946023936e0e0b7a14f\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133 running error: update failed
+    pulumi:pulumi:Stack plunge-races-race-c4-053735133 **failed** 1 error
+ ~  aws:sqs:Queue worker-1 **updating failed** [diff: ~messageRetentionSeconds]; 1 error
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c4-053735133):
+    error: update failed
+
+  aws:sqs:Queue (worker-1):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c4-053735133::plunge-races::aws:sqs/queue:Queue::worker-1 at "stacks/plunge-races/race-c4-053735133/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTA1MzczNTEzMzo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c4-053735133/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTA1MzczNTEzMzo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ": expected version "\"5c4e59a808d020789c97bcbcf6b615cc\"", found version "\"22081f32da056946023936e0e0b7a14f\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+Resources:
+    2 unchanged
+    2 errored
+
+Duration: 2s
+
+error: writing records: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c4-053735133::plunge-races::aws:sqs/queue:Queue::worker-1 at "stacks/plunge-races/race-c4-053735133/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTA1MzczNTEzMzo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c4-053735133/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTA1MzczNTEzMzo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ": expected version "\"5c4e59a808d020789c97bcbcf6b615cc\"", found version "\"22081f32da056946023936e0e0b7a14f\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now

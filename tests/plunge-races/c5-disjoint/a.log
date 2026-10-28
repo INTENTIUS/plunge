@@ -1,0 +1,38 @@
+Previewing update (race-c5-disjoint-054010446):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 refreshing 
+ ~  aws:sqs:Queue queue-b refreshing 
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-b refresh 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 running 
+@ previewing update....
+    aws:sqs:Queue queue-b  
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446  
+Resources:
+    ~ 1 to update
+    2 unchanged
+
+Updating (race-c5-disjoint-054010446):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 refreshing (0s) 
+ ~  aws:sqs:Queue queue-b refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 refreshing (0s) 
+ ~  aws:sqs:Queue queue-b refresh (0.01s) 
+ ~  aws:sqs:Queue queue-a refresh (0.02s) 
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 running 
+@ updating.....
+    aws:sqs:Queue queue-b  
+ ~  aws:sqs:Queue queue-a updating (0s) [diff: ~messageRetentionSeconds]
+@ updating............................
+ ~  aws:sqs:Queue queue-a updated (25s) [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446  
+Resources:
+    ~ 1 updated
+    2 unchanged
+
+Duration: 28s
+

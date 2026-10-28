@@ -1,0 +1,33 @@
+Previewing update (race-c3-053601803):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-053601803 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-053601803 refreshing 
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803 running 
+@ previewing update....
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803  
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Updating (race-c3-053601803):
+
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-053601803 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-053601803 refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refresh (0.01s) 
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803 running 
+@ updating....
+ ~  aws:sqs:Queue queue-a updating (0s) [diff: ~messageRetentionSeconds]
+@ updating............................
+ ~  aws:sqs:Queue queue-a updated (25s) [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803  
+    pulumi:pulumi:Stack plunge-races-race-c3-053601803  
+Resources:
+    ~ 1 updated
+    1 unchanged
+
+Duration: 27s
+
