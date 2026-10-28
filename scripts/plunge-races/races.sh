@@ -79,8 +79,8 @@ c1_race() {
     return
   fi
   local buckets roles
-  buckets="$(awsf s3api list-buckets --query "Buckets[?Name=='${bucket}'].Name" --output text | wc -w)"
-  roles="$(awsf iam list-roles --query "Roles[?RoleName=='${rolename}'].RoleName" --output text | wc -w)"
+  buckets="$(awsf s3api list-buckets --query "Buckets[?Name=='${bucket}'].Name" --output text | wc -w | tr -d ' ')"
+  roles="$(awsf iam list-roles --query "Roles[?RoleName=='${rolename}'].RoleName" --output text | wc -w | tr -d ' ')"
   echo "live: ${buckets} bucket(s) ${bucket}, ${roles} role(s) ${rolename}" | tee -a "${WORK}/race.txt"
   local tags
   tags="$(awsf s3api get-bucket-tagging --bucket "${bucket}" 2>/dev/null || true)"
