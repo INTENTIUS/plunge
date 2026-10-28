@@ -533,6 +533,9 @@ func (b *plungeBackend) apply(
 		}
 		persister := newRecordPersister(ctx, b.store, l, run, guard, dec)
 		persister.ownership = marks
+		// Per-resource provider-call and record-write timings in the step events (timings.go, INTENTIUS/plunge#55).
+		target.Timings = deploy.NewTimings()
+		persister.timings = target.Timings
 		manager = backend.NewSnapshotManager(persister, op.SecretsManager, snap, nil)
 		engineCtx.SnapshotManager = manager
 	}

@@ -385,6 +385,8 @@ type StepEventMetadata struct {
 	Logical      bool                           // true if this step represents a logical operation in the program.
 	Provider     string                         // the provider that performed this step.
 	Untargeted   bool                           // true if this same-step's resource was not included in the operation.
+
+	PlungeTimings []apitype.PlungeTiming // plunge's per-call timings for this step (INTENTIUS/plunge#55); nil elsewhere.
 }
 
 func (m *StepEventMetadata) LockState() {

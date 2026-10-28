@@ -361,6 +361,8 @@ type Registry struct {
 
 	// newID, when set, replaces the random UUID a created provider is registered under. See SetIDGenerator.
 	newID IDGenerator
+	// wrap, when set, wraps every provider GetProvider hands out (plunge_timings.go, INTENTIUS/plunge#55).
+	wrap func(plugin.Provider) plugin.Provider
 
 	pctx      *plugin.Context
 	isPreview bool
@@ -497,6 +499,9 @@ func (r *Registry) GetProvider(ref providers.Reference) (plugin.Provider, bool) 
 	logging.V(7).Infof("GetProvider(%v)", ref)
 
 	provider, ok := r.providers[ref]
+	if ok && r.wrap != nil {
+		provider = r.wrap(provider) // INTENTIUS/plunge#55
+	}
 	return provider, ok
 }
 

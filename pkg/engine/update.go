@@ -1426,7 +1426,8 @@ func (acts *updateActions) OnResourceStepPost(
 			acts.Opts.Diag.Errorf(diag.GetResourceOperationFailedError(errorURN), err)
 		}
 		steps := atomic.LoadInt32(&acts.Steps)
-		acts.Opts.Events.resourceOperationFailedEvent(step, status, steps, awaited, acts.Opts.Debug, acts.Opts.ShowSecrets)
+		defer acts.Opts.Events.operationFailedAfterRecordWrite( // INTENTIUS/plunge#55
+			step, status, steps, awaited, acts.Opts.Debug, acts.Opts.ShowSecrets)()
 	} else {
 		if t := acts.Opts.snippetDeletions; t != nil {
 			t.recordStep(step)
@@ -1466,14 +1467,14 @@ func (acts *updateActions) OnResourceStepPost(
 			acts.Opts.Refresh && step.Op() == deploy.OpRefresh ||
 			step.Op() == deploy.OpDelete ||
 			res.ViewOf != "") {
-			acts.Opts.Events.resourceOutputsEvent(
+			defer acts.Opts.Events.outputsAfterRecordWrite( // INTENTIUS/plunge#55
 				op,
 				step,
 				false, /*planning*/
 				acts.Opts.Debug,
 				isInternalStep,
 				acts.Opts.ShowSecrets,
-			)
+			)()
 		}
 	}
 
