@@ -2,7 +2,7 @@
 name: plunge-races
 runtime: yaml
 config:
-  prefix: {type: string, default: plrlifecycle191607957}
+  prefix: {type: string, default: plrlifecycle054514679}
   retentionA: {type: integer, default: 3600}
   retentionB: {type: integer, default: 3600}
   retentionW: {type: integer, default: 3600}

@@ -15,4 +15,4 @@ config:
       sts: http://localhost:4566
   aws-native:region: us-east-1
   plunge-races:retentionB: 1800
-encryptionsalt: v1:XDEMZ9wVrVw=:v1:0dzWKm4OeLMRRn2j:T1VAD0lfqaQy9z62CqsAR3bhcWfjmQ==
+encryptionsalt: v1:nGKTDqptDyg=:v1:VDvKWZ0TxrNQdT9E:CmTip++DJBOu/3iKWMb+BrDK4KDhzA==
