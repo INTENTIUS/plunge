@@ -133,8 +133,8 @@ func TestGraphVersionsListsWithoutValues(t *testing.T) {
 	assert.NotContains(t, out, gSecretText)
 	assert.NotContains(t, out, "ciphertext")
 	assert.NotContains(t, out, resourceFormat, "no record payload")
-	for _, ct := range b64Ciphertexts(t, gSecretWord) {
-		assert.NotContains(t, out, ct)
+	for _, v := range []string{gSecretWord, gSecretText} {
+		assert.NotContains(t, out, storedCiphertext(t, resource.NewProperty(v)))
 	}
 }
 

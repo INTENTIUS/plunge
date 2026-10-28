@@ -35,6 +35,7 @@ import (
 	"github.com/pulumi/pulumi/pkg/v3/secrets/b64"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/sig"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 )
 
@@ -294,20 +295,34 @@ func TestGraphNeverPrintsSecrets(t *testing.T) {
 	assert.NotContains(t, out, gSecretText)
 	assert.NotContains(t, out, "ciphertext")
 	assert.NotContains(t, out, "1b47061264138c4ac30d75fd1eb44270", "no secret signature")
-	for _, plain := range []string{gSecretWord, gSecretText} {
-		for _, ct := range b64Ciphertexts(t, plain) {
-			assert.NotContains(t, out, ct)
-		}
+	secrets := []resource.PropertyValue{
+		resource.NewProperty(gSecretWord),
+		resource.NewProperty(gSecretText),
+		resource.NewProperty(resource.PropertyMap{"key": resource.NewProperty(gSecretWord)}),
+	}
+	for _, v := range secrets {
+		ct := storedCiphertext(t, v)
+		assert.NotContains(t, out, ct, "the ciphertext the state holds for %v", v)
 	}
 	// The secrets record is never read: nothing is decrypted.
 	assert.NotContains(t, spy.keysRead, graphKeys.secrets())
 }
 
-func b64Ciphertexts(t *testing.T, plain string) []string {
+// storedCiphertext is the ciphertext a record holds for v made secret: the one in the envelope serializeOutputs writes,
+// which encrypts v's JSON encoding (a string's quotes included), so it is never the ciphertext of the bare string.
+func storedCiphertext(t *testing.T, v resource.PropertyValue) string {
 	t.Helper()
-	ct, err := b64.NewBase64SecretsManager().Encrypter().EncryptValue(context.Background(), plain)
+	out := serializeOutputs(t, resource.PropertyMap{"v": resource.MakeSecret(v)})
+	// The record holds the envelope as JSON; read it back the way the record's reader does.
+	raw, err := json.Marshal(out["v"])
 	require.NoError(t, err)
-	return []string{ct}
+	var envelope map[string]any
+	require.NoError(t, json.Unmarshal(raw, &envelope))
+	require.Equal(t, sig.Secret, envelope[sig.Key], "a secret serializes to an envelope")
+	ct, ok := envelope["ciphertext"].(string)
+	require.True(t, ok, "the envelope holds a ciphertext")
+	require.NotEmpty(t, ct)
+	return ct
 }
 
 // The emit is one bulk read and nothing else: no keyed read, no listing, no write, no delete, and no lister or
