@@ -47,6 +47,8 @@ jobs:
         run: npm ci
       - name: Lint prose
         run: npm run lint:prose
+      - name: Check the claims source
+        run: npm run check:claims && npm run test:claims
       - name: Build the site
         env:
           PUBLIC_POSTHOG_KEY: '${{ vars.PUBLIC_POSTHOG_KEY }}'

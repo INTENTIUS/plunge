@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "claims": [
+    {
+      "id": "c5-disjoint",
+      "engine_version": "0.1.0",
+      "proofs": [],
+      "pending": [
+        {
+          "repo": "INTENTIUS/plywood",
+          "scenario": "pw-disjoint",
+          "note": "disjoint updates, markers and plungeTimings (plunge#55)"
+        }
+      ]
+    },
+    {
+      "id": "c3",
+      "engine_version": "0.1.0",
+      "proofs": [],
+      "pending": [
+        {
+          "repo": "INTENTIUS/plywood",
+          "scenario": "pw-moved-plan",
+          "note": "a saved plan applied after its resource moved, refused with exit 40"
+        }
+      ]
+    },
+    {
+      "id": "adopt",
+      "engine_version": "0.1.0",
+      "proofs": [],
+      "pending": [
+        {
+          "repo": "INTENTIUS/plywood",
+          "scenario": "pw-adopt",
+          "note": "adopting a stock stack"
+        }
+      ]
+    }
+  ]
+}
