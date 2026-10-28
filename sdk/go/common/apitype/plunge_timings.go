@@ -14,6 +14,8 @@
 
 package apitype
 
+import "github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+
 // PlungeTimingKind says which side of a resource step a timed call was made to.
 type PlungeTimingKind string
 
@@ -39,4 +41,8 @@ type PlungeTiming struct {
 	DurationMs float64 `json:"durationMs"`
 	// Failed is set when the call returned an error.
 	Failed bool `json:"failed,omitempty"`
+	// URN names the resource the call was for when it is not the event's own. A default provider's step event is
+	// internal and not shown, so its record write rides on the first event of a resource that uses the provider,
+	// with the provider's URN here. Empty for the event's own resource.
+	URN resource.URN `json:"urn,omitempty"`
 }

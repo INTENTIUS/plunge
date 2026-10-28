@@ -3,7 +3,7 @@
 # Run under scripts/plunge-safe-run.sh. Args: <program dir> <out dir> <plunge binary>
 set -euo pipefail
 P="$1"; O="$2"; PLUNGE="$3"
-FLOCI=http://localhost:4566
+FLOCI="${FLOCI:-http://localhost:4566}"  # the program's Pulumi.floci.yaml must name the same port
 B=cp-rec-p55-records
 mkdir -p "$O"
 awsf() { aws --endpoint-url "$FLOCI" --output json "$@"; }

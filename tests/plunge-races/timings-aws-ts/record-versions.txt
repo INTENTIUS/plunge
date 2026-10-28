@@ -1,0 +1,20 @@
+S3 versions of each resource record (aws s3api list-object-versions) against the record:write entries in up.json
+alerts-west              versions=2 timed-writes=2
+app-role                 versions=3 timed-writes=3
+app-sg                   versions=2 timed-writes=2
+corpus-aws-ts-floci      versions=1 timed-writes=1
+db-password              versions=3 timed-writes=3
+default_7_51_1           versions=1 timed-writes=1
+docs                     versions=2 timed-writes=2
+docs-assets              versions=2 timed-writes=2
+docs-notify              versions=3 timed-writes=3
+events                   versions=2 timed-writes=2
+main                     versions=3 timed-writes=3
+site-bucket              versions=3 timed-writes=3
+site-bucket-policy       versions=2 timed-writes=2
+vpc-id                   versions=2 timed-writes=2
+west                     versions=1 timed-writes=1
+worker-0                 versions=2 timed-writes=2
+worker-1                 versions=3 timed-writes=3
+worker-2                 versions=2 timed-writes=2
+total versions 39 timed writes 39 mismatch none
