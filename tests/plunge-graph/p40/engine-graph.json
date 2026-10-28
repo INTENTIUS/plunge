@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "meta": {
+    "engineGraph": {
+      "format": 1,
+      "engine": {
+        "name": "plunge",
+        "version": "v0.1.0-dev.0"
+      },
+      "scope": {
+        "kind": "stack",
+        "project": "p40",
+        "stack": "dev"
+      },
+      "observedAt": "2026-10-28T05:26:51Z",
+      "markerScheme": {
+        "ownerKey": "plunge-stack",
+        "addressKey": "plunge-urn",
+        "continuationKeys": [
+          "plunge-urn-2",
+          "plunge-urn-3",
+          "plunge-urn-4"
+        ],
+        "encoding": {
+          "tags": "plain",
+          "labels": "digest"
+        }
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "urn:pulumi:dev::p40::pulumi:pulumi:Stack::p40-dev",
+      "kind": "pulumi:pulumi:Stack",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::p40::pulumi:pulumi:Stack::p40-dev"
+      },
+      "facts": {
+        "observedAt": "2026-10-28T05:26:51Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::p40::pulumi:providers:random::default",
+      "kind": "pulumi:providers:random",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::p40::pulumi:providers:random::default"
+      },
+      "physicalId": "c08ec330-1a2d-5385-9bba-98bad87f792a",
+      "facts": {
+        "ownership": "bound",
+        "cloudIds": [
+          {
+            "kind": "provider-id",
+            "value": "c08ec330-1a2d-5385-9bba-98bad87f792a"
+          }
+        ],
+        "observedAt": "2026-10-28T05:26:51Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::p40::random:index/randomInteger:RandomInteger::tail",
+      "kind": "random:index/randomInteger:RandomInteger",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::p40::random:index/randomInteger:RandomInteger::tail"
+      },
+      "physicalId": "7",
+      "facts": {
+        "ownership": "bound",
+        "ownedBy": "record",
+        "cloudIds": [
+          {
+            "kind": "provider-id",
+            "value": "7"
+          }
+        ],
+        "observedAt": "2026-10-28T05:26:51Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet",
+      "kind": "random:index/randomPet:RandomPet",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet"
+      },
+      "physicalId": "tqO838oC-pumped-eel",
+      "facts": {
+        "ownership": "bound",
+        "ownedBy": "record",
+        "cloudIds": [
+          {
+            "kind": "provider-id",
+            "value": "tqO838oC-pumped-eel"
+          }
+        ],
+        "observedAt": "2026-10-28T05:26:51Z"
+      }
+    },
+    {
+      "id": "urn:pulumi:dev::p40::random:index/randomString:RandomString::base",
+      "kind": "random:index/randomString:RandomString",
+      "lexicon": "pulumi",
+      "attrs": {
+        "address": "urn:pulumi:dev::p40::random:index/randomString:RandomString::base"
+      },
+      "physicalId": "tqO838oC",
+      "facts": {
+        "ownership": "bound",
+        "ownedBy": "record",
+        "cloudIds": [
+          {
+            "kind": "provider-id",
+            "value": "tqO838oC"
+          }
+        ],
+        "observedAt": "2026-10-28T05:26:51Z"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomInteger:RandomInteger::tail",
+      "to": "urn:pulumi:dev::p40::pulumi:providers:random::default",
+      "kind": "ref",
+      "viaAttr": "provider",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomInteger:RandomInteger::tail",
+      "to": "urn:pulumi:dev::p40::pulumi:pulumi:Stack::p40-dev",
+      "kind": "ref",
+      "viaAttr": "parent",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomInteger:RandomInteger::tail",
+      "to": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet",
+      "kind": "ref",
+      "viaAttr": "dependencies",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet",
+      "to": "urn:pulumi:dev::p40::pulumi:providers:random::default",
+      "kind": "ref",
+      "viaAttr": "provider",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet",
+      "to": "urn:pulumi:dev::p40::pulumi:pulumi:Stack::p40-dev",
+      "kind": "ref",
+      "viaAttr": "parent",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet",
+      "to": "urn:pulumi:dev::p40::random:index/randomString:RandomString::base",
+      "kind": "ref",
+      "viaAttr": "dependencies",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomPet:RandomPet::pet",
+      "to": "urn:pulumi:dev::p40::random:index/randomString:RandomString::base",
+      "kind": "ref",
+      "viaAttr": "prefix",
+      "grain": "property"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomString:RandomString::base",
+      "to": "urn:pulumi:dev::p40::pulumi:providers:random::default",
+      "kind": "ref",
+      "viaAttr": "provider",
+      "grain": "instance"
+    },
+    {
+      "from": "urn:pulumi:dev::p40::random:index/randomString:RandomString::base",
+      "to": "urn:pulumi:dev::p40::pulumi:pulumi:Stack::p40-dev",
+      "kind": "ref",
+      "viaAttr": "parent",
+      "grain": "instance"
+    }
+  ],
+  "groups": {}
+}

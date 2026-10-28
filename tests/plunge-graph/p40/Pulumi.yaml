@@ -1,0 +1,13 @@
+name: p40
+runtime: yaml
+resources:
+  base:
+    type: random:RandomString
+    properties: {length: 8, special: false}
+  pet:
+    type: random:RandomPet
+    properties: {prefix: "${base.result}"}
+  tail:
+    type: random:RandomInteger
+    properties: {min: 1, max: 9}
+    options: {dependsOn: ["${pet}"]}

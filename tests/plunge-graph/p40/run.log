@@ -1,0 +1,47 @@
+plunge-safe-run: 2026-10-28T05:26:48Z in /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec-graph/p40/prog
+plunge-safe-run: command: sh -c mkdir\ -p\ /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec-graph/p40/state\ \&\&\ plunge\ stack\ init\ dev\ \&\&\ plunge\ up\ --yes\ -s\ dev\ \&\&\ plunge\ graph\ --json\ -s\ dev\ \>\ /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec-graph/p40/prog/engine-graph.json
+plunge-safe-run: PULUMI_BACKEND_URL=plunge+file:///private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec-graph/p40/state CLOUDSDK_CONFIG=/var/folders/jz/jz_28g4x5r7_8qgbd7k3p2740000gn/T/plunge-safe-run.Cc1aiL/env.ABQCwR/gcloud AZURE_CONFIG_DIR=/var/folders/jz/jz_28g4x5r7_8qgbd7k3p2740000gn/T/plunge-safe-run.Cc1aiL/env.ABQCwR/azure
+Created stack 'dev'
+warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+Previewing update (dev):
+    pulumi:pulumi:Stack p40-dev  warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+Downloading plugin random-4.21.4: starting
+@ previewing update....
+Downloading plugin random-4.21.4: done
+Installing plugin random-4.21.4: starting
+Installing plugin random-4.21.4: done
+
+ +  pulumi:pulumi:Stack p40-dev create warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+@ previewing update....
+ +  random:index:RandomString base create 
+ +  random:index:RandomPet pet create 
+ +  random:index:RandomInteger tail create 
+ +  pulumi:pulumi:Stack p40-dev create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (p40-dev):
+    warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+
+Resources:
+    + 4 to create
+
+Updating (dev):
+    pulumi:pulumi:Stack p40-dev  warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack p40-dev creating (0s) warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+ +  random:index:RandomString base creating (0s) 
+ +  random:index:RandomString base created (0.00s) 
+ +  random:index:RandomPet pet creating (0s) 
+ +  random:index:RandomPet pet created (0.00s) 
+ +  random:index:RandomInteger tail creating (0s) 
+ +  random:index:RandomInteger tail created (0.00s) 
+ +  pulumi:pulumi:Stack p40-dev created (0.05s) 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (p40-dev):
+    warning: using pulumi-language-yaml from $PATH at /Users/alex/Documents/checkouts/intentius/engine-wt/stock-pulumi/pulumi/pulumi-language-yaml
+
+Resources:
+    + 4 created
+
+Duration: 1s
+
+plunge-safe-run: CLEAN (command exited 0; log /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec-graph/p40/run.log)

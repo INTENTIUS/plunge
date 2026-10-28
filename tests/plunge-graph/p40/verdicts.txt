@@ -1,0 +1,33 @@
+plunge#40 recorded run, 2026-10-28 (run sheet entry G14 of engine-wt/goals/consolidation-graph-1-runs.md)
+
+plunge: built from main ab9158fdf08fd4fc3a23c2167ae15ff90f9f0895 (plunge v0.1.0-dev.0, pulumi v3.272.0),
+        language host pulumi-language-yaml from stock pulumi v3.272.0, provider pulumi-random 4.21.4.
+behold: a local build of main c70fa729dbafce704e0f7b120a80e414e743326d (git archive into a scratch dir,
+        npm ci, npm run build), with @ladybugdb/core 0.22.0 beside it. Nothing in behold was changed.
+Backend: plunge+file:// in a scratch directory. No cloud, no emulator.
+
+Commands (run with $PLUNGE/bin first on PATH, then the stock pulumi directory for the language host):
+  scripts/plunge-safe-run.sh --log run.log -e PULUMI_BACKEND_URL=plunge+file://<scratch>/state \
+    -e PULUMI_CONFIG_PASSPHRASE=p40 -e PULUMI_DIY_BACKEND_NO_LEGACY_WARNING=true -- \
+    sh -c "plunge stack init dev && plunge up --yes -s dev && plunge graph --json -s dev > engine-graph.json"
+  python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); print(sorted({e.get("grain") for e in d["edges"]}))' engine-graph.json
+  node <behold>/bin/behold.js serve <dir holding Pulumi.yaml and engine-graph.json> --port 4600
+  GET /api/graphdb/query?cypher=MATCH (a)-[r:REF]->(b) RETURN a.id, r.grain, r.viaAttr, b.id   -> behold-query-rows.json
+  /graph pane, Cypher "MATCH (a)-[r:REF]->(b) RETURN a, r, b", headless Chrome screenshot      -> behold-graph.png
+
+Verdicts:
+PASS  plunge-safe-run: CLEAN (command exited 0) for the up and the emit (run.log)
+PASS  grains in the emitted graph: ['instance', 'property']
+PASS  behold loads it: source engine/plunge/p40/dev, from engine-graph.json, 5 nodes, 9 edges (LadybugDB 0.22.0)
+PASS  pet -> base, grain property, viaAttr prefix
+PASS  pet -> base and tail -> pet, grain instance, viaAttr dependencies
+PASS  parent (to Stack p40-dev) and provider (to pulumi:providers:random::default) edges at grain instance for base, pet, tail
+PASS  the /graph pane draws the 5 nodes and their edges as SVG (behold-graph.png)
+
+Secret test, red first (pkg/backend/plunge/graph_test.go TestGraphNeverPrintsSecrets):
+RED   secret-break-decrypt.diff (plainString reads through the envelope and decodes the ciphertext):
+      the test fails, the graph should not contain "arn:aws:s3:::the-secret-plaintext-0f3c" (secret-red.txt)
+GREEN graph.go restored with git checkout; all TestGraph* pass (secret-green.txt)
+GAP   secret-break-ciphertext.diff (the envelope's ciphertext printed as a self-link cloud id) stays green
+      (secret-ciphertext-break.txt): b64Ciphertexts encrypts the bare string, but the state holds the
+      ciphertext of the JSON-encoded value, so the ciphertext the test looks for never matches.
