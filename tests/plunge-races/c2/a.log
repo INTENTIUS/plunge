@@ -1,0 +1,21 @@
+Previewing update (race-c2-05354937):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 create 
+@ previewing update....
+ +  aws:ec2:Vpc net create 
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 create 
+Resources:
+    + 2 to create
+
+Updating (race-c2-05354937):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 creating (0s) 
+@ updating....
+ +  aws:ec2:Vpc net creating (0s) 
+ +  aws:ec2:Vpc net created (0.06s) 
+ +  pulumi:pulumi:Stack plunge-races-race-c2-05354937 created (1s) 
+Resources:
+    + 2 created
+
+Duration: 2s
+

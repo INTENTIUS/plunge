@@ -1,0 +1,9 @@
+resources urn:pulumi:race-c6-054439380::plunge-races::aws:sqs/queue:Queue::q-0 5685
+resources urn:pulumi:race-c6-054439380::plunge-races::aws:sqs/queue:Queue::q-1 5685
+resources urn:pulumi:race-c6-054439380::plunge-races::aws:sqs/queue:Queue::q-2 5685
+resources urn:pulumi:race-c6-054439380::plunge-races::aws:sqs/queue:Queue::q-3 5685
+resources urn:pulumi:race-c6-054439380::plunge-races::aws:sqs/queue:Queue::q-4 5685
+resources urn:pulumi:race-c6-054439380::plunge-races::aws:sqs/queue:Queue::q-5 5685
+resources urn:pulumi:race-c6-054439380::plunge-races::pulumi:providers:aws::default_7_51_1 1847
+resources urn:pulumi:race-c6-054439380::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c6-054439380 2622
+stacks/plunge-races/race-c6-054439380/secrets 138

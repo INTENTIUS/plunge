@@ -1,0 +1,4 @@
+resources urn:pulumi:race-c2-05354937::plunge-races::aws:ec2/vpc:Vpc::net 5414
+resources urn:pulumi:race-c2-05354937::plunge-races::pulumi:providers:aws::default_7_51_1 1845
+resources urn:pulumi:race-c2-05354937::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c2-05354937 2620
+stacks/plunge-races/race-c2-05354937/secrets 138

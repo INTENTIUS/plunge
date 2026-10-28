@@ -1,0 +1,42 @@
+Previewing update (race-c6-054439380):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c6-054439380 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c6-054439380 refreshing 
+    pulumi:pulumi:Stack plunge-races-race-c6-054439380 running 
+ +  aws:sqs:Queue q-1 create 
+ +  aws:sqs:Queue q-5 create 
+ +  aws:sqs:Queue q-2 create 
+ +  aws:sqs:Queue q-0 create 
+ +  aws:sqs:Queue q-4 create 
+ +  aws:sqs:Queue q-3 create 
+    pulumi:pulumi:Stack plunge-races-race-c6-054439380  
+Resources:
+    + 6 to create
+    1 unchanged
+
+Updating (race-c6-054439380):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c6-054439380 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c6-054439380 refreshing (0s) 
+    pulumi:pulumi:Stack plunge-races-race-c6-054439380 running 
+ +  aws:sqs:Queue q-2 creating (0s) 
+ +  aws:sqs:Queue q-3 creating (0s) 
+ +  aws:sqs:Queue q-5 creating (0s) 
+ +  aws:sqs:Queue q-1 creating (0s) 
+ +  aws:sqs:Queue q-4 creating (0s) 
+ +  aws:sqs:Queue q-0 creating (0s) 
+@ updating............................
+ +  aws:sqs:Queue q-5 created (25s) 
+ +  aws:sqs:Queue q-3 created (25s) 
+ +  aws:sqs:Queue q-2 created (25s) 
+ +  aws:sqs:Queue q-1 created (25s) 
+ +  aws:sqs:Queue q-4 created (25s) 
+ +  aws:sqs:Queue q-0 created (25s) 
+@ updating....
+    pulumi:pulumi:Stack plunge-races-race-c6-054439380  
+Resources:
+    + 6 created
+    1 unchanged
+
+Duration: 26s
+

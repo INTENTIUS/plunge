@@ -1,0 +1,41 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-054010446/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTA1NDAxMDQ0Njo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxdWV1ZS1h",
+            "LastModified": "2026-10-28T05:41:13+00:00",
+            "ETag": "\"5a92e7a4405907fd48164d77ea4c35db\"",
+            "Size": 5844,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-054010446/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTA1NDAxMDQ0Njo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxdWV1ZS1i",
+            "LastModified": "2026-10-28T05:41:12+00:00",
+            "ETag": "\"b717f4778e9f36739eecd6e6b1d9ddc4\"",
+            "Size": 5844,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-054010446/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTA1NDAxMDQ0Njo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHJvdmlkZXJzOmF3czo6ZGVmYXVsdF83XzUxXzE",
+            "LastModified": "2026-10-28T05:40:17+00:00",
+            "ETag": "\"def9b17125720efab90e2eca64ae7328\"",
+            "Size": 1865,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-054010446/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTA1NDAxMDQ0Njo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHVsdW1pOlN0YWNrOjpwbHVuZ2UtcmFjZXMtcmFjZS1jNS1kaXNqb2ludC0wNTQwMTA0NDY",
+            "LastModified": "2026-10-28T05:40:16+00:00",
+            "ETag": "\"9613ed869ce72e3265a24c5e698acf48\"",
+            "Size": 2660,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-054010446/secrets",
+            "LastModified": "2026-10-28T05:40:13+00:00",
+            "ETag": "\"5f1cecf5f94fb8a3c6e217bcb7632849\"",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

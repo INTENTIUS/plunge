@@ -1,0 +1,69 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxLTA",
+            "LastModified": "2026-10-28T05:45:10+00:00",
+            "ETag": "\"6d0d7b21be6a1133e5b307b7ef4382ec\"",
+            "Size": 5685,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxLTE",
+            "LastModified": "2026-10-28T05:45:10+00:00",
+            "ETag": "\"19e0de7104794f0343a4cf16e71c75f7\"",
+            "Size": 5685,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxLTI",
+            "LastModified": "2026-10-28T05:45:10+00:00",
+            "ETag": "\"e6612e7e7d5517f190435a5a857ca5e2\"",
+            "Size": 5685,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxLTM",
+            "LastModified": "2026-10-28T05:45:10+00:00",
+            "ETag": "\"9e8e8cc7f000a7233680f43e04a369b8\"",
+            "Size": 5685,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxLTQ",
+            "LastModified": "2026-10-28T05:45:10+00:00",
+            "ETag": "\"306b369398c4053da0cb66d8341fc7c9\"",
+            "Size": 5685,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxLTU",
+            "LastModified": "2026-10-28T05:45:10+00:00",
+            "ETag": "\"60372302837d3e7254ba5d113e5f1286\"",
+            "Size": 5685,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHJvdmlkZXJzOmF3czo6ZGVmYXVsdF83XzUxXzE",
+            "LastModified": "2026-10-28T05:44:45+00:00",
+            "ETag": "\"ea45d8e01cea98ffb439c2c6cffbadf3\"",
+            "Size": 1847,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/resources/dXJuOnB1bHVtaTpyYWNlLWM2LTA1NDQzOTM4MDo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHVsdW1pOlN0YWNrOjpwbHVuZ2UtcmFjZXMtcmFjZS1jNi0wNTQ0MzkzODA",
+            "LastModified": "2026-10-28T05:44:42+00:00",
+            "ETag": "\"7412878fc9fd02c80b8610ab22e202c6\"",
+            "Size": 2622,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c6-054439380/secrets",
+            "LastModified": "2026-10-28T05:44:41+00:00",
+            "ETag": "\"91b301fe0361b9afe2b6fa0b17fa6d28\"",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

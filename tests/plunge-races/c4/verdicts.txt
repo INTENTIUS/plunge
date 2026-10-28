@@ -1,0 +1,1 @@
+VERDICT C4 c4 PASS the losing run was told by name, and after its re-run the destroy holds: no worker-1 live or in the records, no changes planned

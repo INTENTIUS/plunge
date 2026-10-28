@@ -1,0 +1,34 @@
+Previewing update (race-c1-055000406):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-055000406 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-055000406 refreshing 
+ ~  aws:iam:Role role refreshing 
+ ~  aws:s3:Bucket site refreshing 
+ ~  aws:iam:Role role refresh 
+ ~  aws:s3:Bucket site refresh 
+    pulumi:pulumi:Stack plunge-races-race-c1-055000406 running 
+@ previewing update....
+    aws:iam:Role role  
+    aws:s3:Bucket site  
+    pulumi:pulumi:Stack plunge-races-race-c1-055000406  
+Resources:
+    3 unchanged
+
+Updating (race-c1-055000406):
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-055000406 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-055000406 refreshing (0s) 
+ ~  aws:iam:Role role refreshing (0s) 
+ ~  aws:s3:Bucket site refreshing (0s) 
+ ~  aws:iam:Role role refresh (0.01s) 
+ ~  aws:s3:Bucket site refresh (0.02s) 
+    pulumi:pulumi:Stack plunge-races-race-c1-055000406 running 
+@ updating....
+    aws:s3:Bucket site  
+    aws:iam:Role role  
+    pulumi:pulumi:Stack plunge-races-race-c1-055000406  
+Resources:
+    3 unchanged
+
+Duration: 2s
+

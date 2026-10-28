@@ -1,0 +1,34 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-sse-s3-054215705/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0wNTQyMTU3MDU6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ",
+            "LastModified": "2026-10-28T05:43:18+00:00",
+            "ETag": "\"174616e0d1227d25411dd94da1f395cf\"",
+            "Size": 5806,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-sse-s3-054215705/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0wNTQyMTU3MDU6OnBsdW5nZS1yYWNlczo6cHVsdW1pOnB1bHVtaTpTdGFjazo6cGx1bmdlLXJhY2VzLXJhY2UtYzUtc3NlLXMzLTA1NDIxNTcwNQ",
+            "LastModified": "2026-10-28T05:42:18+00:00",
+            "ETag": "\"db49a7715645f43ce4eb2cd0210ed2b8\"",
+            "Size": 2652,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-sse-s3-054215705/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0wNTQyMTU3MDU6OnBsdW5nZS1yYWNlczo6cHVsdW1pOnByb3ZpZGVyczphd3M6OmRlZmF1bHRfN181MV8x",
+            "LastModified": "2026-10-28T05:42:19+00:00",
+            "ETag": "\"b53033540d6e24569aebc4bbdb5feffc\"",
+            "Size": 1859,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-sse-s3-054215705/secrets",
+            "LastModified": "2026-10-28T05:42:17+00:00",
+            "ETag": "\"d46fce95f44be93039a23d1e1e54ec23\"",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

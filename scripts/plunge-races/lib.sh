@@ -80,7 +80,9 @@ secure_bucket() {
     BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true >/dev/null
 }
 
-# race_begin <name>: a fresh bucket, prefix and backend for one race. Sets RACE, WORK, BUCKET, PREFIX, BACKEND.
+# race_begin <name>: a fresh bucket, prefix, stack and backend for one race. Sets RACE, WORK, BUCKET, PREFIX, STACK,
+# BACKEND. The stack name goes into every object's plunge-stack marker, so a stack per race keeps one race's bind
+# phase from binding objects an earlier race left on the same floci.
 race_begin() {
   RACE="$1"
   WORK="${OUT}/${RACE}"
@@ -89,10 +91,11 @@ race_begin() {
   stamp="$(date -u +%H%M%S)$((RANDOM % 1000))"
   BUCKET="plr-${RACE}-${stamp}"
   PREFIX="plr${RACE//[^a-z0-9]/}${stamp}"
+  STACK="race-${RACE}-${stamp}"
   awsf s3api create-bucket --bucket "${BUCKET}" >/dev/null
   secure_bucket "${BUCKET}"
   BACKEND="plunge+s3://${BUCKET}?region=us-east-1&endpoint=${FLOCI}&s3ForcePathStyle=true"
-  echo "== ${RACE}: bucket ${BUCKET}, prefix ${PREFIX}" | tee "${WORK}/race.txt"
+  echo "== ${RACE}: bucket ${BUCKET}, prefix ${PREFIX}, stack ${STACK}" | tee "${WORK}/race.txt"
 }
 
 # write_program <dir> <resource>...: the race program with only the named resources. Every physical name carries
@@ -235,14 +238,20 @@ PY
   awsf s3 cp "s3://${BUCKET}/${key}" - 2>/dev/null
 }
 
-# no_changes <log>: the `preview --json` in <log> plans nothing but same steps.
+# no_changes <log>: the `preview --json` in <log> plans nothing but same steps. Since plunge refreshes by default,
+# the preview also lists a `refresh` step per resource; one with no diff is a read, not a change, and any drift it
+# finds shows as a later update step.
 no_changes() {
   python3 -I - "$1" <<'PY'
 import json, sys
 raw = open(sys.argv[1]).read()
 start = raw.find("{")
 doc = json.loads(raw[start:]) if start >= 0 else {}
-ops = sorted({s.get("op") for s in doc.get("steps") or []} - {"same"})
+def change(s):
+  if s.get("op") == "same":
+    return False
+  return not (s.get("op") == "refresh" and not s.get("diffReasons") and not s.get("detailedDiff"))
+ops = sorted({s.get("op") for s in doc.get("steps") or [] if change(s)})
 summary = {k: v for k, v in (doc.get("changeSummary") or {}).items() if k != "same"}
 sys.exit(0 if not ops and not summary else 1)
 PY

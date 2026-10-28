@@ -61,7 +61,8 @@ for s in doc.get("steps") or []:
     if op != "update":
         bad.append(f"{op} {urn}")
         continue
-    diffs = set(s.get("diffs") or [])
+    # `preview --json` steps name their changed properties in diffReasons.
+    diffs = set(s.get("diffReasons") or s.get("diffs") or [])
     if not diffs or diffs - {"tags", "tagsAll"}:
         bad.append(f"update {urn} diffs {sorted(diffs)}")
         continue

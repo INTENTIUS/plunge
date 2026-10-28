@@ -1,0 +1,25 @@
+Previewing update (race-c5-disjoint-054010446):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 create 
+@ previewing update.....
+ +  aws:sqs:Queue queue-b create 
+ +  aws:sqs:Queue queue-a create 
+ +  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 create 
+Resources:
+    + 3 to create
+
+Updating (race-c5-disjoint-054010446):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 creating (0s) 
+@ updating....
+ +  aws:sqs:Queue queue-b creating (0s) 
+ +  aws:sqs:Queue queue-a creating (0s) 
+@ updating............................
+ +  aws:sqs:Queue queue-b created (25s) 
+ +  aws:sqs:Queue queue-a created (25s) 
+ +  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-054010446 created (26s) 
+Resources:
+    + 3 created
+
+Duration: 27s
+

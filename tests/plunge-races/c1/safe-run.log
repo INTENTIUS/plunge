@@ -1,0 +1,14 @@
+plunge-safe-run: 2026-10-28T05:49:59Z in /Users/alex/Documents/checkouts/intentius/engine-wt/cp-plunge-rec-6
+plunge-safe-run: command: env PLUNGE=/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/bin/plunge OUT=/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/out/races-c1 scripts/plunge-races/races.sh c1
+plunge-safe-run: PULUMI_BACKEND_URL=file:///private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/safe-run/env.lrY9wO/state CLOUDSDK_CONFIG=/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/safe-run/env.lrY9wO/gcloud AZURE_CONFIG_DIR=/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/safe-run/env.lrY9wO/azure
+== c1: bucket plr-c1-055000406, prefix plrc1055000406, stack race-c1-055000406
+first runs: a=1 b=0
+resources urn:pulumi:race-c1-055000406::plunge-races::aws:iam/role:Role::role 5465
+resources urn:pulumi:race-c1-055000406::plunge-races::aws:s3/bucket:Bucket::site 6332
+resources urn:pulumi:race-c1-055000406::plunge-races::pulumi:providers:aws::default_7_51_1 1847
+resources urn:pulumi:race-c1-055000406::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-055000406 2624
+stacks/plunge-races/race-c1-055000406/secrets 138
+live: 1 bucket(s) plrc1055000406-site, 1 role(s) plrc1055000406-app
+VERDICT C1 c1 PASS one bucket and one role after two racing first runs and their re-runs, marked, and both checkouts plan no changes
+results in /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/out/races-c1
+plunge-safe-run: CLEAN (command exited 0; log /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/43ec5e03-fc5e-4942-a57b-aedcb2c63f8c/scratchpad/rec/out/races-c1/safe-run.log)

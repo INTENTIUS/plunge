@@ -1,0 +1,3 @@
+== c4: bucket plr-c4-053735133, prefix plrc4053735133, stack race-c4-053735133
+racing runs: a(destroy)=0 b(update)=1
+after convergence on A's program: live worker-1 queues 0, in records no

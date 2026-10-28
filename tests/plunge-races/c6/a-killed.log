@@ -1,0 +1,16 @@
+Previewing update (race-c6-054439380):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c6-054439380 create 
+ +  aws:sqs:Queue q-0 create 
+ +  aws:sqs:Queue q-4 create 
+ +  aws:sqs:Queue q-1 create 
+ +  aws:sqs:Queue q-2 create 
+ +  aws:sqs:Queue q-5 create 
+ +  aws:sqs:Queue q-3 create 
+ +  pulumi:pulumi:Stack plunge-races-race-c6-054439380 create 
+Resources:
+    + 7 to create
+
+Updating (race-c6-054439380):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c6-054439380 creating (0s) 

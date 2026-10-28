@@ -1,0 +1,22 @@
+Previewing update (race-c1-055000406):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 create 
+ +  aws:iam:Role role create 
+ +  aws:s3:Bucket site create 
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 create 
+Resources:
+    + 3 to create
+
+Updating (race-c1-055000406):
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 creating (0s) 
+ +  aws:iam:Role role creating (0s) 
+ +  aws:s3:Bucket site creating (0s) 
+ +  aws:iam:Role role created (0.02s) 
+ +  aws:s3:Bucket site created (0.03s) 
+ +  pulumi:pulumi:Stack plunge-races-race-c1-055000406 created (0.84s) 
+Resources:
+    + 3 created
+
+Duration: 1s
+

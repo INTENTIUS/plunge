@@ -1,0 +1,17 @@
+config:
+  aws:region: us-east-1
+  aws:accessKey: test
+  aws:secretKey: test
+  aws:skipCredentialsValidation: true
+  aws:skipRequestingAccountId: true
+  aws:skipRegionValidation: true
+  aws:skipMetadataApiCheck: true
+  aws:s3UsePathStyle: true
+  aws:endpoints:
+    - ec2: http://localhost:4566
+      iam: http://localhost:4566
+      s3: http://localhost:4566
+      sqs: http://localhost:4566
+      sts: http://localhost:4566
+  aws-native:region: us-east-1
+encryptionsalt: v1:ibgG4Ue/vO4=:v1:Dmg0j3dd3BLnwqkD:qmH3BkgJL4omM8hnpWB4m8tjkfFwAg==
