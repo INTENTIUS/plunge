@@ -1,50 +1,41 @@
-warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
-Previewing update (race):
-    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+Previewing update (race-lifecycle-054514679):
 
- ~  pulumi:pulumi:Stack plunge-races-race refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
- ~  pulumi:pulumi:Stack plunge-races-race refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
- ~  aws:sqs:Queue queue-a refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 refreshing 
  ~  aws:sqs:Queue queue-b refreshing 
- ~  aws:sqs:Queue queue-a refresh 
+ ~  aws:sqs:Queue queue-a refreshing 
  ~  aws:sqs:Queue queue-b refresh 
-    pulumi:pulumi:Stack plunge-races-race running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 running 
 @ previewing update....
     aws:sqs:Queue queue-a  
- ~  aws:sqs:Queue queue-b refresh warning: not deleting urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
-    aws:sqs:Queue queue-b  warning: not deleting urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
-    pulumi:pulumi:Stack plunge-races-race  1 warning
+ ~  aws:sqs:Queue queue-b refresh warning: not deleting urn:pulumi:race-lifecycle-054514679::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    aws:sqs:Queue queue-b  warning: not deleting urn:pulumi:race-lifecycle-054514679::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679  
 Diagnostics:
-  pulumi:pulumi:Stack (plunge-races-race):
-    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
-
   aws:sqs:Queue (queue-b):
-    warning: not deleting urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    warning: not deleting urn:pulumi:race-lifecycle-054514679::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
 
 Resources:
     3 unchanged
 
-Updating (race):
-    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+Updating (race-lifecycle-054514679):
 
- ~  pulumi:pulumi:Stack plunge-races-race refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
- ~  aws:sqs:Queue queue-b refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 refreshing (0s) 
  ~  aws:sqs:Queue queue-a refreshing (0s) 
- ~  pulumi:pulumi:Stack plunge-races-race refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
- ~  aws:sqs:Queue queue-b refresh (0.01s) 
+ ~  aws:sqs:Queue queue-b refreshing (0s) 
  ~  aws:sqs:Queue queue-a refresh (0.01s) 
-    pulumi:pulumi:Stack plunge-races-race running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-b refresh (0.01s) 
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 running 
 @ updating....
     aws:sqs:Queue queue-a  
- ~  aws:sqs:Queue queue-b refresh (0.01s) warning: not deleting urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
-    aws:sqs:Queue queue-b  warning: not deleting urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
-    pulumi:pulumi:Stack plunge-races-race  1 warning
+ ~  aws:sqs:Queue queue-b refresh (0.01s) warning: not deleting urn:pulumi:race-lifecycle-054514679::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    aws:sqs:Queue queue-b  warning: not deleting urn:pulumi:race-lifecycle-054514679::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679  
 Diagnostics:
   aws:sqs:Queue (queue-b):
-    warning: not deleting urn:pulumi:race::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
-
-  pulumi:pulumi:Stack (plunge-races-race):
-    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+    warning: not deleting urn:pulumi:race-lifecycle-054514679::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
 
 Resources:
     3 unchanged

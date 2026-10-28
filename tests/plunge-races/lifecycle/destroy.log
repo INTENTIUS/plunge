@@ -1,37 +1,27 @@
-Previewing destroy (race):
-    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+Previewing destroy (race-lifecycle-054514679):
 
  -  aws:sqs:Queue queue-b delete 
  -  aws:sqs:Queue queue-a delete 
- -  pulumi:pulumi:Stack plunge-races-race delete 
-    pulumi:pulumi:Stack plunge-races-race  1 warning
- -  pulumi:pulumi:Stack plunge-races-race delete 
-Diagnostics:
-  pulumi:pulumi:Stack (plunge-races-race):
-    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
-
+ -  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 delete 
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679  
+ -  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 delete 
 Resources:
     - 3 to delete
 
-Destroying (race):
-    pulumi:pulumi:Stack plunge-races-race  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
+Destroying (race-lifecycle-054514679):
 
- -  aws:sqs:Queue queue-a deleting (0s) 
  -  aws:sqs:Queue queue-b deleting (0s) 
+ -  aws:sqs:Queue queue-a deleting (0s) 
 @ destroying.............................................
- -  aws:sqs:Queue queue-a deleted (42s) 
  -  aws:sqs:Queue queue-b deleted (42s) 
- -  pulumi:pulumi:Stack plunge-races-race deleting (0s) 
- -  pulumi:pulumi:Stack plunge-races-race deleted (0.00s) 
-    pulumi:pulumi:Stack plunge-races-race  1 warning
-Diagnostics:
-  pulumi:pulumi:Stack (plunge-races-race):
-    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml
-
+ -  aws:sqs:Queue queue-a deleted (42s) 
+ -  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 deleting (0s) 
+ -  pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679 deleted (0.00s) 
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-054514679  
 Resources:
     - 3 deleted
 
 Duration: 43s
 
 The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
-If you want to remove the stack completely, run `pulumi stack rm race`.
+If you want to remove the stack completely, run `pulumi stack rm race-lifecycle-054514679`.
