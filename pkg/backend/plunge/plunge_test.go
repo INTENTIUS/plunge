@@ -460,7 +460,7 @@ func TestEmptyPropertyDependenciesAreNotARewrite(t *testing.T) {
 // RandomString hands back keepers {v: "1"} for a program's {v: 1}) and the modification time it stamps on that, is the
 // same resource, so the record is not rewritten, and neither is it by the same step that follows and puts the
 // program's inputs back. That rewrite made each of two concurrent runs on disjoint RandomStrings write the other's
-// record, and the second to write lost (scripts/plunge-record-store-acceptance.sh on floci, INTENTIUS/plunge#6).
+// record, and the second to write lost (the record store acceptance run on floci, INTENTIUS/plunge#6; races.sh readback).
 func TestRefreshReadingBackTheSameResourceIsNotARewrite(t *testing.T) {
 	t.Parallel()
 

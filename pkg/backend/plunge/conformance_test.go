@@ -30,7 +30,7 @@ package plunge
 //	                               (floci-az; ARM_TENANT_ID, ARM_CLIENT_ID and ARM_CLIENT_SECRET set, per #35)
 //
 // The bucket or container must carry the settings openStore checks (versioning, a noncurrent-version lifecycle
-// rule, the public access settings), as scripts/plunge-record-store-acceptance.sh sets them, or name them in allow_insecure.
+// rule, the public access settings), as secure_bucket in scripts/plunge-races/lib.sh sets them, or name them in allow_insecure.
 // Each subtest gets its own key prefix under the URL's path, so subtests never see each other's keys.
 //
 // No leg reaches a public endpoint: each refuses, before opening anything, a URL whose endpoint is not a loopback
