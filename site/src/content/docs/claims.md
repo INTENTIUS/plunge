@@ -21,3 +21,21 @@ re-recorded on 2026-10-27.
 | `plunge stack adopt --json` on a stock pulumi v3.272.0 stack of `aws-ts` | `would-adopt` (nothing written), `adopted` with `--yes`, `already-adopted` on a re-run, and `refused` with `adopted-from-another-checkpoint` after a stock refresh changed the checkpoint | behold [`src/__fixtures__/plunge-adopt-30806be26b/`](https://github.com/INTENTIUS/behold/tree/main/src/__fixtures__/plunge-adopt-30806be26b), plunge 30806be26b, floci |
 | Two SQS queues in one stack on a `plunge+s3://` record store, recorded on 2026-10-28 by `scripts/plunge-races/races.sh lifecycle`: preview, up, two concurrent `plunge up` runs each changing one queue, `stack export`, a run of an older program, `plunge drift --resource` on each queue, destroy | Both concurrent updates land, and no lock object appears in the store. The export passes integrity checking, holds both changes and matches one record per URN. The older program's run keeps the queue it no longer declares and warns with both program stamps. Drift reports the retagged queue as drifted and the other in sync, each with one provider Read and zero stack refreshes. Destroy removes both queues and their records | [`tests/plunge-races/lifecycle/`](https://github.com/INTENTIUS/plunge/tree/main/tests/plunge-races/lifecycle), plunge built from ab9158fdf0, floci ([#6](https://github.com/INTENTIUS/plunge/issues/6)) |
 | The concurrency races on `plunge+s3://` record stores, recorded on 2026-10-28 by `scripts/plunge-races/races.sh`: two first runs of one client-named bucket and role (`c1`), two first runs of one VPC (`c2`), a saved plan applied after its resource moved, with an unmoved control (`c3`), a destroy racing an update (`c4`), two runs changing different queues (`c5-disjoint`) and the same queue (`c5-same`, then under SSE-S3 and SSE-KMS bucket encryption), and a run killed with `kill -9` part way (`c6`) | One bucket, one role and one VPC after the racing first runs, each bound by its markers, and both checkouts plan no changes. The moved plan is refused with exit 40 naming the queue, and the unmoved one applies. The losing destroy is told by name and its re-run holds. Disjoint changes both land. On the same queue one write lands and the other run is refused by name, under each encryption setting, with no lock object in the store at any point. The re-run after the kill finishes with no cancel or unlock and leaves each queue once | [`tests/plunge-races/`](https://github.com/INTENTIUS/plunge/tree/main/tests/plunge-races) (`c1` to `c6`), plunge built from ab9158fdf0, floci ([#7](https://github.com/INTENTIUS/plunge/issues/7)) |
+
+<!-- product-scenario rows: written by `npm run claims:render` from src/data/claims.json -->
+
+## Product scenario rows
+
+A claim can cite a row of a product's scenario. The table below gives each cited row its repo and scenario, the product commit and date, and the plunge version it ran. It counts only at the version the claim is about. At any other version it is listed and marked not counted. It never replaces the runs in the table above.
+
+No row is recorded yet.
+
+Pending citations have no recorded run until the scenario has a row.
+
+| Claim | Repo | Scenario | To record |
+|---|---|---|---|
+| `c5-disjoint` | INTENTIUS/plywood | `pw-disjoint` | disjoint updates, markers and plungeTimings (plunge#55) |
+| `c3` | INTENTIUS/plywood | `pw-moved-plan` | a saved plan applied after its resource moved, refused with exit 40 |
+| `adopt` | INTENTIUS/plywood | `pw-adopt` | adopting a stock stack |
+
+<!-- end product-scenario rows -->

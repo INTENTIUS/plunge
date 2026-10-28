@@ -9,6 +9,9 @@
     "build": "astro build && node scripts/check-rooms.mjs && node scripts/check-links.mjs && node scripts/check-contrast.mjs",
     "preview": "astro preview",
     "lint:prose": "node scripts/lint-prose.mjs",
+    "claims:render": "node scripts/claims.mjs --write",
+    "check:claims": "node scripts/claims.mjs --check",
+    "test:claims": "node --test scripts/claims.test.mjs",
     "check:contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
