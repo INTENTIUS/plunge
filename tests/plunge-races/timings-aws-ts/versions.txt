@@ -1,0 +1,5 @@
+plunge: built from ab9158fdf08fd4fc3a23c2167ae15ff90f9f0895
+  plunge v0.1.0-dev.0
+  pulumi v3.272.0
+floci:  ghcr.io/lex00/floci@sha256:5ec92ae8046445d62c0009590dd09f04560886e5a5ef31248cb3fcc09b2961ec
+program: tests/plunge-corpus/aws-ts, stack floci
