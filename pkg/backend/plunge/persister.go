@@ -406,7 +406,16 @@ func (p *recordPersister) split(d apitype.TypedDeployment) (map[string]*desired,
 			if err != nil {
 				return nil, err
 			}
-			if bytes.Equal(mine, theirs) {
+			same := bytes.Equal(mine, theirs)
+			if !same {
+				if same, err = p.sameRead(r.States, k.resource.States); err != nil {
+					return nil, err
+				} else if same {
+					// The record already says this; keep it as written (records.go, sameRead).
+					r.States = k.resource.States
+				}
+			}
+			if same {
 				r.Pending = k.resource.Pending
 			} else {
 				p.operated[urn] = true
@@ -754,4 +763,45 @@ func canonicalJSON(raw json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(v)
+}
+
+// sameRead reports whether mine, the states a deployment gives a URN this run has not acted on, are the record's
+// states as a refresh that read back the same resource leaves them: the same IDs, outputs and everything else, with
+// only the inputs and the modification time differing, and the modification time moved. A provider's read can hand
+// back the inputs in its own form (pulumi-random's RandomString returns keepers {v: "1"} for a program's {v: 1}), and
+// the refresh then stamps a new modification time; the same step that follows puts the program's inputs back and
+// keeps that time. Neither says anything the record does not, and rewriting the record there made a refreshing run
+// write the record of every such resource it did not change, so a concurrent run changing one of them lost its
+// conditional write (INTENTIUS/plunge#6). New inputs under the record's own modification time come from the program,
+// and are written as before.
+func (p *recordPersister) sameRead(mine, theirs []apitype.ResourceV3) (bool, error) {
+	if len(mine) != len(theirs) {
+		return false, nil
+	}
+	moved := false
+	strip := func(states []apitype.ResourceV3) []apitype.ResourceV3 {
+		out := comparableStates(states, false)
+		for i := range out {
+			out[i].Inputs, out[i].Modified = nil, nil
+		}
+		return out
+	}
+	for i := range mine {
+		a, b := mine[i].Modified, theirs[i].Modified
+		if (a == nil) != (b == nil) || (a != nil && !a.Equal(*b)) {
+			moved = true
+		}
+	}
+	if !moved {
+		return false, nil
+	}
+	a, err := p.crypto.canonical(p.ctx, strip(mine))
+	if err != nil {
+		return false, err
+	}
+	b, err := p.crypto.canonical(p.ctx, strip(theirs))
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(a, b), nil
 }

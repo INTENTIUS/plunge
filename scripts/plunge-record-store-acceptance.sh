@@ -332,7 +332,9 @@ for r in d.get("resources", []):
         continue
     name = r["urn"].rsplit("::", 1)[-1]
     got[name] = (r.get("inputs") or {}).get("keepers", {}).get("v")
-ok = got.get("resX") == "2" and got.get("resY") == "2"
+# The program's YAML gives the keeper as a number and pulumi-random reads it back as a string; a record holds
+# whichever form its last write had, so the value is compared, not its JSON type.
+ok = str(got.get("resX")) == "2" and str(got.get("resY")) == "2"
 print("keepers:", got)
 sys.exit(0 if ok else 1)
 EOF
