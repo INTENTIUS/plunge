@@ -8,8 +8,9 @@
 # Usage:
 #   scripts/plunge-races/races.sh [race ...]
 #
-# Races: c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6 (default: all, in that order), and lifecycle, which
-# runs only when named. See lib.sh for the environment.
+# Races: c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6 (default: all, in that order), and lifecycle and
+# readback, which run only when named. Together lifecycle and readback are the record store acceptance run
+# (INTENTIUS/plunge#6), which had its own script until INTENTIUS/plunge#58. See lib.sh for the environment.
 #
 # Output in $OUT/<race>/: each run's log (a.log, b.log, ...), records.txt (the record listing after the race,
 # decoded), records.json, and $OUT/verdicts.txt with one line per claim:
@@ -435,6 +436,81 @@ PY2
   unset PLUNGE_PROGRAM_COMMIT PLUNGE_PROGRAM_TIME
 }
 
+# The record store acceptance run's own program (INTENTIUS/plunge#6; its script was retired by INTENTIUS/plunge#58),
+# on the race harness: two pulumi-random RandomStrings, rand-x and rand-y, whose keepers come
+# from config. pulumi-random's Read hands a keeper back as a string where the program gives it in its own form, so
+# every refresh reads back inputs that differ from the record only in form and modification time. That read is the
+# same resource and must not be written (persister.go sameRead, 1a72ec8d30). A plain re-run then adds no version to
+# either record; two concurrent runs, each changing one keeper, both land with neither refused for the other's
+# record; and the export holds both keepers, compared by value since a record keeps whichever form its last write
+# had. The store has one resource record per URN.
+race_readback() {
+  race_begin readback
+  export PLUNGE_PROGRAM_COMMIT=newer PLUNGE_PROGRAM_TIME=2000000000
+  checkout "${WORK}/a" rand-x rand-y
+  checkout "${WORK}/b" rand-x rand-y
+  pl "${WORK}/a" "${WORK}/setup-up.log" up --yes || { verdict P6 readback-setup FAIL "the setup up failed; see setup-up.log"; return; }
+
+  # A plain re-run refreshes both RandomStrings and changes nothing: neither record gains a version.
+  local before after
+  before="$(record_versions rand-x rand-y | tr '\n' ' ')"
+  pl "${WORK}/a" "${WORK}/rerun.log" up --yes || true
+  after="$(record_versions rand-x rand-y | tr '\n' ' ')"
+  echo "record versions: before re-run ${before}; after ${after}" | tee -a "${WORK}/race.txt"
+  local written=yes
+  case " ${before}" in *" 0 "*) written=no ;; esac
+  if [ "${written}" = yes ] && [ "${before}" = "${after}" ]; then
+    verdict P6 readback-no-rewrite PASS "a re-run whose refresh reads the keepers back as strings writes neither record (${after% })"
+  else
+    verdict P6 readback-no-rewrite FAIL "record versions before ${before:-none}, after ${after:-none}; see rerun.log"
+  fi
+
+  # Two runs at once, each changing one keeper, set as the acceptance script set it (`config set`).
+  pl "${WORK}/a" "${WORK}/config.log" config set keeperX 2 || { verdict C5 readback-disjoint FAIL "config set failed; see config.log"; return; }
+  pl "${WORK}/b" "${WORK}/config.log" config set keeperY 2 || { verdict C5 readback-disjoint FAIL "config set failed; see config.log"; return; }
+  both "$(runner "${WORK}/a" "${WORK}/a.log" up --yes)" "$(runner "${WORK}/b" "${WORK}/b.log" up --yes)"
+  local refused=no
+  grep -q "changed under this run" "${WORK}/a.log" "${WORK}/b.log" && refused=yes
+  records
+  local xrc=0
+  (cd "${WORK}/a" && PULUMI_BACKEND_URL="${BACKEND}" "${PLUNGE}" stack export --stack "${STACK}" --non-interactive) \
+    > "${WORK}/export.json" 2> "${WORK}/export.stderr" || xrc=$?
+  local xcheck
+  xcheck="$(python3 -I - "${WORK}/export.json" "${WORK}/records.txt" <<'PY2'
+import json, sys
+dep = json.load(open(sys.argv[1]))["deployment"]
+res = {r["urn"]: r for r in dep.get("resources") or [] if not r.get("delete")}
+def keeper(name):
+  for u, r in res.items():
+    if u.endswith("::" + name):
+      return ((r.get("inputs") or {}).get("keepers") or {}).get("v")
+# The record holds the keeper in whichever form its last write had, so the value is compared, not its JSON type.
+ok = str(keeper("rand-x")) == "2" and str(keeper("rand-y")) == "2"
+recs = [l.split(" ")[1] for l in open(sys.argv[2]) if l.startswith("resources ")]
+one_per_urn = len(recs) == len(set(recs)) and set(recs) == set(res)
+print(f"x={keeper('rand-x')!r} y={keeper('rand-y')!r} keepers={'yes' if ok else 'no'} resources={len(res)} records={len(recs)} one-per-urn={'yes' if one_per_urn else 'no'}")
+PY2
+)" || xcheck="unreadable"
+  echo "concurrent runs: exits a=${RC_A} b=${RC_B}; refused=${refused}; export exit ${xrc}; ${xcheck}" | tee -a "${WORK}/race.txt"
+  if [ "${RC_A}" = 0 ] && [ "${RC_B}" = 0 ] && [ "${refused}" = no ] && [ "${xrc}" = 0 ] &&
+    [ "${xcheck#*keepers=yes}" != "${xcheck}" ]; then
+    verdict C5 readback-disjoint PASS "two concurrent runs, each changing one RandomString's keeper, both land and the export holds both (${xcheck%% resources=*})"
+  else
+    verdict C5 readback-disjoint FAIL "exits a=${RC_A} b=${RC_B}, refused=${refused}, export exit ${xrc}; ${xcheck}; see a.log, b.log"
+  fi
+  if [ "${xrc}" = 0 ] && [ "${xcheck%one-per-urn=yes}" != "${xcheck}" ]; then
+    verdict P6 readback-export PASS "the export assembles with integrity checking on and the store has one resource record per URN"
+  else
+    verdict P6 readback-export FAIL "export exit ${xrc}; ${xcheck}; see export.stderr and records.txt"
+  fi
+
+  real_cloud_rejections "${WORK}"/*.log "${WORK}"/*.stderr > "${WORK}/real-cloud.txt"
+  if [ -s "${WORK}/real-cloud.txt" ]; then
+    verdict P6 readback-offline FAIL "a log names a real AWS endpoint or a rejection of the test keys; stop and see real-cloud.txt"
+  fi
+  unset PLUNGE_PROGRAM_COMMIT PLUNGE_PROGRAM_TIME
+}
+
 race_c5_same() {
   race_begin c5-same
   same_record_race c5-same
@@ -512,6 +588,7 @@ for r in "${RACES[@]}"; do
     c5-sse) race_c5_sse ;;
     c6) race_c6 ;;
     lifecycle) race_lifecycle ;;
+    readback) race_readback ;;
     *) die "unknown race ${r} (races: ${ALL[*]})" ;;
   esac
 done
