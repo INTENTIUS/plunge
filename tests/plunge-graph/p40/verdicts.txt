@@ -31,3 +31,14 @@ GREEN graph.go restored with git checkout; all TestGraph* pass (secret-green.txt
 GAP   secret-break-ciphertext.diff (the envelope's ciphertext printed as a self-link cloud id) stays green
       (secret-ciphertext-break.txt): b64Ciphertexts encrypts the bare string, but the state holds the
       ciphertext of the JSON-encoded value, so the ciphertext the test looks for never matches.
+
+Ciphertext gap closed (2026-10-28, INTENTIUS/plunge#40 option (a)):
+TestGraphNeverPrintsSecrets and TestGraphVersionsListsWithoutValues now expect the ciphertext as a record holds
+it: storedCiphertext serializes each secret through serializeOutputs and takes the envelope's ciphertext, which
+is the ciphertext of the JSON-encoded value (a string's quotes included). The seeded secrets checked are
+gSecretWord, gSecretText and the ConfigMap's {"key": gSecretWord}.
+RED   secret-break-ciphertext.diff applied with git apply: the test fails, the graph should not contain
+      "ImFybjphd3M6czM6Ojp0aGUtc2VjcmV0LXBsYWludGV4dC0wZjNjIg==", the ciphertext the state holds for
+      gSecretText (secret-ciphertext-red.txt)
+RED   secret-break-decrypt.diff applied the same way still fails the test
+GREEN graph.go restored with git checkout; all seven TestGraph* pass (secret-ciphertext-green.txt)
