@@ -7,7 +7,7 @@ while True:
     d, i = dec.raw_decode(raw, i); docs.append(d)
 kinds = collections.Counter(k for d in docs for k in d if k.endswith("Event"))
 print("documents", len(docs), "events", dict(kinds))
-custom_out = 0; missing = []; calls = collections.Counter(); bad = []
+custom_out = 0; missing = []; calls = collections.Counter(); bad = []; carried = []
 for d in docs:
     for key in ("resOutputsEvent", "resOpFailedEvent"):
         e = d.get(key)
@@ -23,12 +23,14 @@ for d in docs:
             continue
         for x in t:
             calls[(x["kind"], x["call"])] += 1
+            if x.get("urn"): carried.append(f"{x['urn'].rsplit('::',1)[-1]} {x['kind']}:{x['call']} on {urn.rsplit('::',1)[-1]}")
             if not isinstance(x.get("durationMs"), (int, float)) or x["durationMs"] < 0 or not x.get("startedAt"):
                 bad.append(f"{urn} {x}")
-        print(f"{key} {md.get('op'):8} {urn.rsplit('::',1)[-1]:22} " + ", ".join(f"{x['kind']}:{x['call']} {x['durationMs']:.1f}ms" + (" failed" if x.get('failed') else "") for x in t))
+        print(f"{key} {md.get('op'):8} {urn.rsplit('::',1)[-1]:22} " + ", ".join((f"[{x['urn'].rsplit('::',1)[-1]}] " if x.get('urn') else "") + f"{x['kind']}:{x['call']} {x['durationMs']:.1f}ms" + (" failed" if x.get('failed') else "") for x in t))
 print("calls", {f"{k}:{c}": n for (k, c), n in sorted(calls.items())})
 print("changed resources with an outputs event:", custom_out)
 print("changed resource events without plungeTimings:", missing or "none")
 print("entries without a duration or start time:", bad or "none")
+print("calls carried for another resource (a default provider's, on its first user's event):", carried or "none")
 ok = custom_out > 0 and not missing and not bad and calls[("record", "write")] > 0 and any(k == "provider" for k, _ in calls)
 print("VERDICT plunge-timings", "PASS" if ok else "FAIL")

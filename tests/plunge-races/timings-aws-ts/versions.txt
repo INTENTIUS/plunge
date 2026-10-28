@@ -1,5 +1,5 @@
-plunge: built from ab9158fdf08fd4fc3a23c2167ae15ff90f9f0895
+plunge: built from 3654404be6c8d4dc94f3e29b576acbb8487a7d35 (main 9907534d5f plus the INTENTIUS/plunge#55 fix)
   plunge v0.1.0-dev.0
   pulumi v3.272.0
-floci:  ghcr.io/lex00/floci@sha256:5ec92ae8046445d62c0009590dd09f04560886e5a5ef31248cb3fcc09b2961ec
-program: tests/plunge-corpus/aws-ts, stack floci
+floci:  ghcr.io/lex00/floci@sha256:5ec92ae8046445d62c0009590dd09f04560886e5a5ef31248cb3fcc09b2961ec (container cp-fix-plunge-floci, 127.0.0.1:4576)
+program: tests/plunge-corpus/aws-ts, stack floci, with Pulumi.floci.yaml's port set to 4576

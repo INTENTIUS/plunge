@@ -1,21 +1,24 @@
-documents 121 events {'preludeEvent': 1, 'diagnosticEvent': 83, 'resourcePreEvent': 17, 'resOutputsEvent': 17, 'summaryEvent': 1, 'cancelEvent': 1}
-resOutputsEvent create   west                   record:write 1.7ms
-resOutputsEvent create   db-password            provider:check 0.4ms, record:write 1.5ms, provider:create 11.2ms, record:write 1.1ms, record:write 1.4ms
-resOutputsEvent create   app-role               provider:check 0.5ms, record:write 1.4ms, provider:create 8.5ms, record:write 1.1ms, record:write 1.0ms
-resOutputsEvent create   site-bucket            provider:check 0.7ms, record:write 1.6ms, provider:create 28.6ms, record:write 1.0ms, record:write 1.1ms
-resOutputsEvent create   main                   provider:check 0.6ms, record:write 1.1ms, provider:create 15.8ms, record:write 1.1ms
-resOutputsEvent create   docs-notify            provider:check 0.6ms, record:write 4.3ms, provider:create 13.2ms, record:write 1.1ms, record:write 1.2ms
-resOutputsEvent create   docs-assets            provider:check 0.7ms, record:write 1.3ms, provider:create 28.0ms, record:write 1.2ms, record:write 1.2ms
-resOutputsEvent create   site-bucket-policy     provider:check 0.4ms, record:write 1.4ms, provider:create 3.9ms, record:write 1.1ms, record:write 1.6ms
-resOutputsEvent create   alerts-west            provider:check 0.6ms, record:write 1.5ms, provider:create 13.9ms, record:write 1.5ms, record:write 1.0ms
-resOutputsEvent create   vpc-id                 provider:check 0.5ms, record:write 1.1ms, provider:create 7.0ms, record:write 2.2ms
-resOutputsEvent create   app-sg                 provider:check 0.6ms, record:write 1.1ms, provider:create 219.1ms, record:write 1.7ms
-resOutputsEvent create   worker-1               provider:check 0.6ms, record:write 1.4ms, provider:create 25020.4ms, record:write 1.1ms
-resOutputsEvent create   worker-0               provider:check 0.6ms, record:write 1.4ms, provider:create 25029.6ms, record:write 1.5ms, record:write 1.1ms
-resOutputsEvent create   worker-2               provider:check 0.7ms, record:write 1.3ms, provider:create 25026.2ms, record:write 1.1ms, record:write 1.2ms
-resOutputsEvent create   events                 provider:check 0.6ms, record:write 1.1ms, provider:create 25016.4ms, record:write 1.6ms, record:write 1.3ms
+documents 115 events {'preludeEvent': 1, 'diagnosticEvent': 77, 'resourcePreEvent': 17, 'resOutputsEvent': 17, 'summaryEvent': 1, 'cancelEvent': 1}
+resOutputsEvent create   west                   record:write 1.8ms
+resOutputsEvent create   db-password            [default_7_51_1] record:write 2.9ms, provider:check 0.8ms, record:write 4.6ms, provider:create 40.1ms, record:write 1.2ms, record:write 1.4ms
+resOutputsEvent create   main                   provider:check 0.6ms, record:write 2.4ms, provider:create 72.0ms, record:write 1.3ms, record:write 1.5ms
+resOutputsEvent create   app-role               provider:check 1.4ms, record:write 2.9ms, provider:create 21.5ms, record:write 1.5ms, record:write 1.5ms
+resOutputsEvent create   site-bucket            provider:check 1.6ms, record:write 4.4ms, provider:create 71.1ms, record:write 2.1ms, record:write 1.5ms
+resOutputsEvent create   docs-assets            provider:check 1.2ms, record:write 1.7ms, provider:create 30.6ms, record:write 2.2ms
+resOutputsEvent create   vpc-id                 provider:check 0.5ms, record:write 1.8ms, provider:create 12.2ms, record:write 2.1ms
+resOutputsEvent create   site-bucket-policy     provider:check 0.4ms, record:write 2.3ms, provider:create 7.3ms, record:write 1.9ms
+resOutputsEvent create   alerts-west            provider:check 0.9ms, record:write 2.4ms, provider:create 113.4ms, record:write 1.6ms
+resOutputsEvent create   docs-notify            provider:check 1.6ms, record:write 2.4ms, provider:create 131.0ms, record:write 1.8ms, record:write 1.9ms
+resOutputsEvent create   docs                   record:write 3.6ms, record:write 1.7ms
+resOutputsEvent create   app-sg                 provider:check 0.5ms, record:write 2.1ms, provider:create 222.8ms, record:write 1.9ms
+resOutputsEvent create   events                 provider:check 0.9ms, record:write 2.4ms, provider:create 25063.4ms, record:write 2.0ms
+resOutputsEvent create   worker-2               provider:check 0.7ms, record:write 1.7ms, provider:create 25060.7ms, record:write 2.5ms
+resOutputsEvent create   worker-1               provider:check 0.6ms, record:write 7.5ms, provider:create 25050.4ms, record:write 1.9ms, record:write 2.3ms
+resOutputsEvent create   worker-0               provider:check 1.1ms, record:write 2.6ms, provider:create 25032.8ms, record:write 1.9ms
+resOutputsEvent create   corpus-aws-ts-floci    record:write 2.8ms
 calls {'provider:check': 14, 'provider:create': 14, 'record:write': 39}
 changed resources with an outputs event: 17
-changed resource events without plungeTimings: ['resOutputsEvent create corpus:index:Site docs', 'resOutputsEvent create pulumi:pulumi:Stack corpus-aws-ts-floci']
+changed resource events without plungeTimings: none
 entries without a duration or start time: none
-VERDICT plunge-timings FAIL
+calls carried for another resource (a default provider's, on its first user's event): ['default_7_51_1 record:write on db-password']
+VERDICT plunge-timings PASS
