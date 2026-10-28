@@ -29,6 +29,7 @@ package plunge
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -654,10 +655,15 @@ func (m *mover) prepare(
 		}
 	}
 
+	// Check takes a random seed, as the step generator passes one; the old inputs keep any name already chosen.
+	randomSeed := make([]byte, 32)
+	if _, err := cryptorand.Read(randomSeed); err != nil {
+		return fmt.Errorf("generating a random seed for %s: %w", mv.urn, err)
+	}
 	check, err := p.Check(ctx, plugin.CheckRequest{
 		URN: st.URN, Name: st.URN.Name(), Type: st.URN.Type(),
 		NewInputs: resource.FromResourcePropertyMap(inputs), OldInputs: resource.FromResourcePropertyMap(st.Inputs),
-		OldOutputs: resource.FromResourcePropertyMap(st.Outputs),
+		OldOutputs: resource.FromResourcePropertyMap(st.Outputs), RandomSeed: randomSeed,
 	})
 	if err != nil {
 		m.refuse(mv.urn, "the provider's check of the rewritten markers failed: %v", err)
