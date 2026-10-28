@@ -1513,14 +1513,7 @@ func (acts *updateActions) OnResourceOutputs(step deploy.Step) error {
 	assertSeen(acts.Seen, step)
 	acts.MapLock.Unlock()
 
-	acts.Opts.Events.resourceOutputsEvent(
-		step.Op(),
-		step,
-		false, /*planning*/
-		acts.Opts.Debug,
-		isInternalStep(step),
-		acts.Opts.ShowSecrets,
-	)
+	defer acts.outputsAfterRegisterOutputs(step)() // INTENTIUS/plunge#55
 
 	// There's a chance there are new outputs that weren't written out last time.
 	// We need to perform another snapshot write to ensure they get written out.

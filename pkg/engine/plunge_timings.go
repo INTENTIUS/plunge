@@ -17,6 +17,8 @@ package engine
 import (
 	"github.com/pulumi/pulumi/pkg/v3/display"
 	"github.com/pulumi/pulumi/pkg/v3/resource/deploy"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/providers"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
@@ -28,7 +30,9 @@ import (
 // the step as it was then (a partly failed update's new inputs included, before OnResourceStepPost resets them to
 // the old ones). The returned func, which OnResourceStepPost defers, adds the timings recorded by then and sends it.
 // OnResourceStepPost ends the snapshot mutation in its return statement, which runs before its deferred calls, so
-// the event carries the record write that settled the step.
+// the event carries the record write that settled the step. OnResourceOutputs, which sends a component's and the
+// stack's outputs event, does the same with the write RegisterResourceOutputs makes; that event also carries the
+// write made when the component's step settled, since a component's step sends no event of its own.
 
 // outputsAfterRecordWrite is resourceOutputsEvent, sent after the step's record write when timings are recorded.
 func (e *eventEmitter) outputsAfterRecordWrite(
@@ -49,6 +53,13 @@ func (e *eventEmitter) outputsAfterRecordWrite(
 		payload.Metadata = withPlungeTimings(payload.Metadata, step)
 		e.sendEvent(NewEvent(payload))
 	}
+}
+
+// outputsAfterRegisterOutputs is OnResourceOutputs's resourceOutputsEvent, sent after the record write
+// RegisterResourceOutputs makes when timings are recorded, and at once, as upstream sends it, otherwise.
+func (acts *updateActions) outputsAfterRegisterOutputs(step deploy.Step) func() {
+	return acts.Opts.Events.outputsAfterRecordWrite(
+		step.Op(), step, false /*planning*/, acts.Opts.Debug, isInternalStep(step), acts.Opts.ShowSecrets)
 }
 
 // operationFailedAfterRecordWrite is resourceOperationFailedEvent, sent after the step's record write when timings
@@ -74,9 +85,26 @@ func (e *eventEmitter) operationFailedAfterRecordWrite(
 }
 
 // withPlungeTimings moves the calls recorded for step's resource onto md.
+//
+// A default provider's step event is internal, and `up --json` does not show it, so its calls are left in the
+// recorder. The first event of a resource that uses the provider carries them, ahead of its own and with the
+// provider's URN on each, and Take makes sure no later event carries them again.
 func withPlungeTimings(md StepEventMetadata, step deploy.Step) StepEventMetadata {
-	if t := deploy.StepTimings(step); t != nil {
-		md.PlungeTimings = t.Take(step.URN())
+	t := deploy.StepTimings(step)
+	if t == nil || isDefaultProviderStep(step) {
+		return md
+	}
+	var carried []apitype.PlungeTiming
+	if res := step.Res(); res != nil && res.Provider != "" {
+		if ref, err := providers.ParseReference(res.Provider); err == nil && providers.IsDefaultProvider(ref.URN()) {
+			carried = t.Take(ref.URN())
+			for i := range carried {
+				carried[i].URN = ref.URN()
+			}
+		}
+	}
+	if own := t.Take(step.URN()); len(carried) > 0 || len(own) > 0 {
+		md.PlungeTimings = append(carried, own...)
 	}
 	return md
 }
