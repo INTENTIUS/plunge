@@ -1,0 +1,2003 @@
+{
+    "version": 3,
+    "deployment": {
+        "manifest": {
+            "time": "2026-10-27T23:51:25.01309-06:00",
+            "magic": "9a15a292a881dbeb77a86955b3246fa29aae8b7d695358eee7c9e474a33b8927",
+            "version": "v3.272.0"
+        },
+        "secrets_providers": {
+            "type": "passphrase",
+            "state": {
+                "salt": "v1:DkzVblLtcrs=:v1:72cwv8Hwjf3jscjs:aL3qJr86KPSoEbUpfu+jQn7CT/KrvA=="
+            }
+        },
+        "resources": [
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1",
+                "custom": true,
+                "id": "f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "type": "pulumi:providers:aws",
+                "inputs": {
+                    "__internal": {},
+                    "accessKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:Y8tu+dharzazPgcP:Xad1928tiFWXz2SHFOmx0QSZ7Rasgg=="
+                    },
+                    "endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sns\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"ssm\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+                    "region": "us-east-1",
+                    "s3UsePathStyle": "true",
+                    "secretKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:O8efkee7/fWQLnAY:4HW45iUd7Clfo/n/8fEkoYwm5dbnLA=="
+                    },
+                    "skipCredentialsValidation": "true",
+                    "skipMetadataApiCheck": "true",
+                    "skipRegionValidation": "true",
+                    "skipRequestingAccountId": "true",
+                    "version": "7.51.1"
+                },
+                "outputs": {
+                    "accessKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:o8Om6CgLw1Tu3DmL:j8NyjagNWIy9Hwul5F/V05QB55/Rig=="
+                    },
+                    "endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sns\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"ssm\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+                    "region": "us-east-1",
+                    "s3UsePathStyle": "true",
+                    "secretKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:4Gych0ynSUnyiYVX:u9mgpqbAQtBYfIsYUhZ0z9ZMsxlPeA=="
+                    },
+                    "skipCredentialsValidation": "true",
+                    "skipMetadataApiCheck": "true",
+                    "skipRegionValidation": "true",
+                    "skipRequestingAccountId": "true",
+                    "version": "7.51.1"
+                },
+                "created": "2026-10-28T05:50:59.327036Z",
+                "modified": "2026-10-28T05:50:59.327036Z"
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "outputs": {
+                    "appRoleArn": "arn:aws:iam::000000000000:role/plc-ts-app",
+                    "dbPasswordParameter": "/plc-ts/db-password",
+                    "dbPasswordValue": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:EUd5S4a1zb+D4cth:b8T6KKbqlIzJ0dEc+rO4XNEgtK6X04h9XbbMuAA9N3rTGBWBZaR/S/bN1hWY"
+                    },
+                    "docsBucketName": "plc-ts-docs-assets",
+                    "docsTopicArn": "arn:aws:sns:us-east-1:000000000000:docs-notify-313a6f6",
+                    "eventsQueueUrl": "https://sqs.us-east-1.amazonaws.com/000000000000/events-76012a7",
+                    "securityGroupId": "sg-8a4e2e6b51f6ec8ef",
+                    "siteBucketName": "plc-ts-site",
+                    "sitePolicyBucket": "plc-ts-site",
+                    "vpcId": "vpc-46ce4a86",
+                    "vpcParameterName": "/plc-ts/vpc/vpc-46ce4a86",
+                    "westAlertsArn": "arn:aws:sns:us-west-2:000000000000:plc-ts-alerts-west",
+                    "workerQueueUrls": [
+                        "https://sqs.us-east-1.amazonaws.com/000000000000/worker-0-c8f235a",
+                        "https://sqs.us-east-1.amazonaws.com/000000000000/worker-1-312dbe7",
+                        "https://sqs.us-east-1.amazonaws.com/000000000000/worker-2-34e8acf"
+                    ]
+                },
+                "created": "2026-10-28T05:50:58.547033Z",
+                "modified": "2026-10-28T05:50:58.547033Z",
+                "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#38,19",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#38,19"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#601,38"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main",
+                "custom": true,
+                "id": "vpc-46ce4a86",
+                "type": "aws:ec2/vpc:Vpc",
+                "inputs": {
+                    "__defaults": [
+                        "enableDnsSupport"
+                    ],
+                    "cidrBlock": "10.42.0.0/16",
+                    "enableDnsSupport": true,
+                    "region": "us-east-1",
+                    "tags": {
+                        "Name": "plc-ts-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/vpc:Vpc::main"
+                    },
+                    "tagsAll": {
+                        "Name": "plc-ts-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/vpc:Vpc::main"
+                    }
+                },
+                "outputs": {
+                    "__meta": "{\"schema_version\":\"1\"}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:ec2:us-east-1:000000000000:vpc/vpc-46ce4a86",
+                    "assignGeneratedIpv6CidrBlock": false,
+                    "cidrBlock": "10.42.0.0/16",
+                    "defaultNetworkAclId": "acl-15470f7d818cd7208",
+                    "defaultRouteTableId": "rtb-434293626fa98fdff",
+                    "defaultSecurityGroupId": "sg-33c78628d5d3e9932",
+                    "dhcpOptionsId": "dopt-default",
+                    "enableDnsHostnames": false,
+                    "enableDnsSupport": true,
+                    "enableNetworkAddressUsageMetrics": false,
+                    "id": "vpc-46ce4a86",
+                    "instanceTenancy": "default",
+                    "ipv4IpamPoolId": null,
+                    "ipv4NetmaskLength": null,
+                    "ipv6AssociationId": "",
+                    "ipv6CidrBlock": "",
+                    "ipv6CidrBlockNetworkBorderGroup": "",
+                    "ipv6IpamPoolId": "",
+                    "ipv6NetmaskLength": 0,
+                    "mainRouteTableId": "rtb-434293626fa98fdff",
+                    "ownerId": "000000000000",
+                    "region": "us-east-1",
+                    "tags": {
+                        "Name": "plc-ts-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/vpc:Vpc::main"
+                    },
+                    "tagsAll": {
+                        "Name": "plc-ts-main",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/vpc:Vpc::main"
+                    }
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "cidrBlock": [],
+                    "tags": []
+                },
+                "created": "2026-10-28T05:50:59.824712Z",
+                "modified": "2026-10-28T05:50:59.824712Z",
+                "sourcePosition": "project:///index.ts#55,13",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#55,13"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role",
+                "custom": true,
+                "id": "plc-ts-app",
+                "type": "aws:iam/role:Role",
+                "inputs": {
+                    "__defaults": [
+                        "maxSessionDuration",
+                        "path"
+                    ],
+                    "assumeRolePolicy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"}}]}",
+                    "maxSessionDuration": 3600,
+                    "name": "plc-ts-app",
+                    "path": "/",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:iam/role:Role::app-role"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:iam/role:Role::app-role"
+                    }
+                },
+                "outputs": {
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "inlinePolicies": {
+                                    "arr": {}
+                                },
+                                "managedPolicyArns": {
+                                    "arr": {}
+                                },
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            },
+                            "renamed": {
+                                "inlinePolicies": "inline_policy"
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:iam::000000000000:role/plc-ts-app",
+                    "assumeRolePolicy": "{\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"}}],\"Version\":\"2012-10-17\"}",
+                    "createDate": "2026-10-28T05:50:59Z",
+                    "description": "",
+                    "forceDetachPolicies": false,
+                    "id": "plc-ts-app",
+                    "inlinePolicies": [],
+                    "managedPolicyArns": [],
+                    "maxSessionDuration": 3600,
+                    "name": "plc-ts-app",
+                    "namePrefix": "",
+                    "path": "/",
+                    "permissionsBoundary": "",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:iam/role:Role::app-role"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:iam/role:Role::app-role"
+                    },
+                    "uniqueId": "AROA6D2UTWT56CC3LJI2"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "assumeRolePolicy": [],
+                    "name": [],
+                    "tags": []
+                },
+                "created": "2026-10-28T05:50:59.784838Z",
+                "modified": "2026-10-28T05:50:59.784838Z",
+                "sourcePosition": "project:///index.ts#29,17",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#29,17"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket",
+                "custom": true,
+                "id": "plc-ts-site",
+                "type": "aws:s3/bucket:Bucket",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "plc-ts-site",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:s3/bucket:Bucket::site-bucket"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:s3/bucket:Bucket::site-bucket"
+                    }
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":1200000000000,\"delete\":3600000000000,\"read\":1200000000000,\"update\":1200000000000}}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "corsRules": {
+                                    "arr": {}
+                                },
+                                "grants": {
+                                    "arr": {
+                                        "el": {
+                                            "0": {
+                                                "obj": {
+                                                    "ps": {
+                                                        "permissions": {
+                                                            "arr": {}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "lifecycleRules": {
+                                    "arr": {}
+                                },
+                                "logging": {
+                                    "plu": {
+                                        "i": {}
+                                    }
+                                },
+                                "objectLockConfiguration": {
+                                    "plu": {
+                                        "i": {}
+                                    }
+                                },
+                                "replicationConfiguration": {
+                                    "plu": {
+                                        "i": {
+                                            "obj": {}
+                                        }
+                                    }
+                                },
+                                "serverSideEncryptionConfiguration": {
+                                    "plu": {
+                                        "i": {
+                                            "obj": {
+                                                "ps": {
+                                                    "rule": {
+                                                        "plu": {
+                                                            "i": {
+                                                                "obj": {
+                                                                    "ps": {
+                                                                        "applyServerSideEncryptionByDefault": {
+                                                                            "plu": {
+                                                                                "i": {
+                                                                                    "obj": {}
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                },
+                                "versioning": {
+                                    "plu": {
+                                        "i": {
+                                            "obj": {}
+                                        }
+                                    }
+                                },
+                                "website": {
+                                    "plu": {
+                                        "i": {}
+                                    }
+                                }
+                            },
+                            "renamed": {
+                                "corsRules": "cors_rule",
+                                "grants": "grant",
+                                "lifecycleRules": "lifecycle_rule"
+                            }
+                        }
+                    },
+                    "accelerationStatus": "",
+                    "acl": null,
+                    "arn": "arn:aws:s3:::plc-ts-site",
+                    "bucket": "plc-ts-site",
+                    "bucketDomainName": "plc-ts-site.s3.amazonaws.com",
+                    "bucketNamespace": "global",
+                    "bucketPrefix": "",
+                    "bucketRegion": "us-east-1",
+                    "bucketRegionalDomainName": "plc-ts-site.s3.us-east-1.amazonaws.com",
+                    "corsRules": [],
+                    "forceDestroy": false,
+                    "grants": [
+                        {
+                            "id": "000000000000",
+                            "permissions": [
+                                "FULL_CONTROL"
+                            ],
+                            "type": "CanonicalUser",
+                            "uri": ""
+                        }
+                    ],
+                    "hostedZoneId": "Z3AQBSTGFYJSTF",
+                    "id": "plc-ts-site",
+                    "lifecycleRules": [],
+                    "logging": null,
+                    "objectLockConfiguration": null,
+                    "objectLockEnabled": false,
+                    "policy": "",
+                    "region": "us-east-1",
+                    "replicationConfiguration": {
+                        "role": null,
+                        "rules": null
+                    },
+                    "requestPayer": "BucketOwner",
+                    "serverSideEncryptionConfiguration": {
+                        "rule": {
+                            "applyServerSideEncryptionByDefault": {
+                                "kmsMasterKeyId": "",
+                                "sseAlgorithm": "AES256"
+                            },
+                            "bucketKeyEnabled": false
+                        }
+                    },
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:s3/bucket:Bucket::site-bucket"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:s3/bucket:Bucket::site-bucket"
+                    },
+                    "versioning": {
+                        "enabled": false,
+                        "mfaDelete": false
+                    },
+                    "website": null,
+                    "websiteDomain": null,
+                    "websiteEndpoint": null
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "bucket": [],
+                    "tags": []
+                },
+                "created": "2026-10-28T05:50:59.795283Z",
+                "modified": "2026-10-28T05:50:59.795283Z",
+                "sourcePosition": "project:///index.ts#24,20",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#24,20"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucketPolicy:BucketPolicy::site-bucket-policy",
+                "custom": true,
+                "id": "plc-ts-site",
+                "type": "aws:s3/bucketPolicy:BucketPolicy",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "plc-ts-site",
+                    "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::000000000000:role/plc-ts-app\"},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::plc-ts-site/*\"]}]}",
+                    "region": "us-east-1"
+                },
+                "outputs": {
+                    "__pulumi_raw_state_delta": {
+                        "obj": {}
+                    },
+                    "bucket": "plc-ts-site",
+                    "id": "plc-ts-site",
+                    "policy": "{\"Statement\":[{\"Action\":[\"s3:GetObject\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::000000000000:role/plc-ts-app\"},\"Resource\":[\"arn:aws:s3:::plc-ts-site/*\"]}],\"Version\":\"2012-10-17\"}",
+                    "region": "us-east-1"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role",
+                    "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "bucket": [
+                        "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket"
+                    ],
+                    "policy": [
+                        "urn:pulumi:floci::corpus-aws-ts::aws:iam/role:Role::app-role",
+                        "urn:pulumi:floci::corpus-aws-ts::aws:s3/bucket:Bucket::site-bucket"
+                    ]
+                },
+                "created": "2026-10-28T05:50:59.834851Z",
+                "modified": "2026-10-28T05:50:59.834851Z",
+                "sourcePosition": "project:///index.ts#40,20",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#40,20"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::events",
+                "custom": true,
+                "id": "https://sqs.us-east-1.amazonaws.com/000000000000/events-76012a7",
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 3600,
+                    "name": "events-76012a7",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::events"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::events"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":180000000000,\"delete\":180000000000,\"update\":180000000000}}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:sqs:us-east-1:000000000000:events-76012a7",
+                    "contentBasedDeduplication": false,
+                    "deduplicationScope": "",
+                    "delaySeconds": 0,
+                    "fifoQueue": false,
+                    "fifoThroughputLimit": "",
+                    "id": "https://sqs.us-east-1.amazonaws.com/000000000000/events-76012a7",
+                    "kmsDataKeyReusePeriodSeconds": 300,
+                    "kmsMasterKeyId": "",
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 3600,
+                    "name": "events-76012a7",
+                    "namePrefix": "",
+                    "policy": "",
+                    "receiveWaitTimeSeconds": 0,
+                    "redriveAllowPolicy": "",
+                    "redrivePolicy": "",
+                    "region": "us-east-1",
+                    "sqsManagedSseEnabled": false,
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::events"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::events"
+                    },
+                    "url": "https://sqs.us-east-1.amazonaws.com/000000000000/events-76012a7",
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "messageRetentionSeconds": [],
+                    "tags": []
+                },
+                "created": "2026-10-28T05:51:24.813783Z",
+                "modified": "2026-10-28T05:51:24.813783Z",
+                "sourcePosition": "project:///index.ts#68,21",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#68,21"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-0",
+                "custom": true,
+                "id": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-0-c8f235a",
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "messageRetentionSeconds",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-0-c8f235a",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-index": "0",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-0"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "0",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-0"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":180000000000,\"delete\":180000000000,\"update\":180000000000}}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:sqs:us-east-1:000000000000:worker-0-c8f235a",
+                    "contentBasedDeduplication": false,
+                    "deduplicationScope": "",
+                    "delaySeconds": 0,
+                    "fifoQueue": false,
+                    "fifoThroughputLimit": "",
+                    "id": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-0-c8f235a",
+                    "kmsDataKeyReusePeriodSeconds": 300,
+                    "kmsMasterKeyId": "",
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-0-c8f235a",
+                    "namePrefix": "",
+                    "policy": "",
+                    "receiveWaitTimeSeconds": 0,
+                    "redriveAllowPolicy": "",
+                    "redrivePolicy": "",
+                    "region": "us-east-1",
+                    "sqsManagedSseEnabled": false,
+                    "tags": {
+                        "corpus-index": "0",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-0"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "0",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-0"
+                    },
+                    "url": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-0-c8f235a",
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "created": "2026-10-28T05:51:24.809721Z",
+                "modified": "2026-10-28T05:51:24.809721Z",
+                "sourcePosition": "project:///index.ts#76,18",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#76,18"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-1",
+                "custom": true,
+                "id": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-1-312dbe7",
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "messageRetentionSeconds",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-1-312dbe7",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-index": "1",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-1"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "1",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-1"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":180000000000,\"delete\":180000000000,\"update\":180000000000}}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:sqs:us-east-1:000000000000:worker-1-312dbe7",
+                    "contentBasedDeduplication": false,
+                    "deduplicationScope": "",
+                    "delaySeconds": 0,
+                    "fifoQueue": false,
+                    "fifoThroughputLimit": "",
+                    "id": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-1-312dbe7",
+                    "kmsDataKeyReusePeriodSeconds": 300,
+                    "kmsMasterKeyId": "",
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-1-312dbe7",
+                    "namePrefix": "",
+                    "policy": "",
+                    "receiveWaitTimeSeconds": 0,
+                    "redriveAllowPolicy": "",
+                    "redrivePolicy": "",
+                    "region": "us-east-1",
+                    "sqsManagedSseEnabled": false,
+                    "tags": {
+                        "corpus-index": "1",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-1"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "1",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-1"
+                    },
+                    "url": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-1-312dbe7",
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "created": "2026-10-28T05:51:24.809719Z",
+                "modified": "2026-10-28T05:51:24.809719Z",
+                "sourcePosition": "project:///index.ts#76,18",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#76,18"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sqs/queue:Queue::worker-2",
+                "custom": true,
+                "id": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-2-34e8acf",
+                "type": "aws:sqs/queue:Queue",
+                "inputs": {
+                    "__defaults": [
+                        "maxMessageSize",
+                        "messageRetentionSeconds",
+                        "name",
+                        "visibilityTimeoutSeconds"
+                    ],
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-2-34e8acf",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-index": "2",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-2"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "2",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-2"
+                    },
+                    "visibilityTimeoutSeconds": 30
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":180000000000,\"delete\":180000000000,\"update\":180000000000}}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:sqs:us-east-1:000000000000:worker-2-34e8acf",
+                    "contentBasedDeduplication": false,
+                    "deduplicationScope": "",
+                    "delaySeconds": 0,
+                    "fifoQueue": false,
+                    "fifoThroughputLimit": "",
+                    "id": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-2-34e8acf",
+                    "kmsDataKeyReusePeriodSeconds": 300,
+                    "kmsMasterKeyId": "",
+                    "maxMessageSize": 262144,
+                    "messageRetentionSeconds": 345600,
+                    "name": "worker-2-34e8acf",
+                    "namePrefix": "",
+                    "policy": "",
+                    "receiveWaitTimeSeconds": 0,
+                    "redriveAllowPolicy": "",
+                    "redrivePolicy": "",
+                    "region": "us-east-1",
+                    "sqsManagedSseEnabled": false,
+                    "tags": {
+                        "corpus-index": "2",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-2"
+                    },
+                    "tagsAll": {
+                        "corpus-index": "2",
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sqs/queue:Queue::worker-2"
+                    },
+                    "url": "https://sqs.us-east-1.amazonaws.com/000000000000/worker-2-34e8acf",
+                    "visibilityTimeoutSeconds": 30
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "created": "2026-10-28T05:51:24.809802Z",
+                "modified": "2026-10-28T05:51:24.809802Z",
+                "sourcePosition": "project:///index.ts#76,18",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#76,18"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ssm/parameter:Parameter::db-password",
+                "custom": true,
+                "id": "/plc-ts/db-password",
+                "type": "aws:ssm/parameter:Parameter",
+                "inputs": {
+                    "__defaults": [],
+                    "name": "/plc-ts/db-password",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ssm/parameter:Parameter::db-password"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ssm/parameter:Parameter::db-password"
+                    },
+                    "type": "SecureString",
+                    "value": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:Ekb0sqxGB9XPQEcn:OJp2rG5/z6LP3lhNbBqX76zMF/UXmqEhv3fJnL7CXSiGDgHmWZotmdVx9Een"
+                    }
+                },
+                "outputs": {
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "allowedPattern": "",
+                    "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/plc-ts/db-password",
+                    "dataType": "text",
+                    "description": "",
+                    "hasValueWo": false,
+                    "id": "/plc-ts/db-password",
+                    "insecureValue": null,
+                    "keyId": "",
+                    "name": "/plc-ts/db-password",
+                    "overwrite": null,
+                    "region": "us-east-1",
+                    "tags": {},
+                    "tagsAll": {},
+                    "tier": "",
+                    "type": "SecureString",
+                    "value": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:+L57fip1LJhiHMt3:QqmmF0J9YRJ3U2k/JU2ybzyMHhGxTbSjVO2YIbhdAU4ln89AaLNHIp3bqpLk"
+                    },
+                    "valueWo": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:wgmULnKYfnr6n9Zo:/mq70BTYsWVszvC+DPKkFCBzi0M="
+                    },
+                    "valueWoVersion": null,
+                    "version": 1
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "name": [],
+                    "tags": [],
+                    "type": [],
+                    "value": []
+                },
+                "additionalSecretOutputs": [
+                    "value",
+                    "valueWo"
+                ],
+                "created": "2026-10-28T05:50:59.781428Z",
+                "modified": "2026-10-28T05:50:59.781428Z",
+                "sourcePosition": "project:///index.ts#139,17",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#139,17"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ssm/parameter:Parameter::vpc-id",
+                "custom": true,
+                "id": "/plc-ts/vpc/vpc-46ce4a86",
+                "type": "aws:ssm/parameter:Parameter",
+                "inputs": {
+                    "__defaults": [],
+                    "name": "/plc-ts/vpc/vpc-46ce4a86",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ssm/parameter:Parameter::vpc-id"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ssm/parameter:Parameter::vpc-id"
+                    },
+                    "type": "String",
+                    "value": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:W7uB0oNXjzVCFF0r:BCRQ7JBz1mrcNWNnuUVl3qAPuAiyTJYf1Quk/n1T"
+                    }
+                },
+                "outputs": {
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "allowedPattern": "",
+                    "arn": "arn:aws:ssm:us-east-1:000000000000:parameter/plc-ts/vpc/vpc-46ce4a86",
+                    "dataType": "text",
+                    "description": "",
+                    "hasValueWo": false,
+                    "id": "/plc-ts/vpc/vpc-46ce4a86",
+                    "insecureValue": null,
+                    "keyId": "",
+                    "name": "/plc-ts/vpc/vpc-46ce4a86",
+                    "overwrite": null,
+                    "region": "us-east-1",
+                    "tags": {},
+                    "tagsAll": {},
+                    "tier": "",
+                    "type": "String",
+                    "value": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:E23ePRKCS78d7suN:xOEXyBWzWgrd5NmpFi6/hnzqQLCKLEIW5kywofek"
+                    },
+                    "valueWo": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:QUZuu3b21oHfk8PA:LfvoGE4aFfJlltODvpnXAP+WkQU="
+                    },
+                    "valueWoVersion": null,
+                    "version": 1
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "name": [],
+                    "tags": [],
+                    "type": [],
+                    "value": []
+                },
+                "additionalSecretOutputs": [
+                    "value",
+                    "valueWo"
+                ],
+                "created": "2026-10-28T05:50:59.872265Z",
+                "modified": "2026-10-28T05:50:59.872265Z",
+                "stackTrace": [
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/output.ts#519,31"
+                    },
+                    {},
+                    {}
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+                "custom": false,
+                "type": "corpus:index:Site",
+                "outputs": {
+                    "bucketName": "plc-ts-docs-assets",
+                    "topicArn": "arn:aws:sns:us-east-1:000000000000:docs-notify-313a6f6"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "created": "2026-10-28T05:50:59.310242Z",
+                "modified": "2026-10-28T05:50:59.310242Z",
+                "sourcePosition": "project:///index.ts#107,14",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#107,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::west",
+                "custom": true,
+                "id": "76ea8d2e-1f42-5d97-b451-f0b7751d729b",
+                "type": "pulumi:providers:aws",
+                "inputs": {
+                    "__internal": {},
+                    "accessKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:G/PZlA1sUVLFqvQv:2VOU7j7PZvRdwx07xyfuQTu9Uemhrg=="
+                    },
+                    "endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sns\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"ssm\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+                    "region": "us-west-2",
+                    "s3UsePathStyle": "true",
+                    "secretKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:vPF5mz/1soaoEnnl:1YUOonQ+Y8dPd/iLCU9jnM8AkuJalw=="
+                    },
+                    "skipCredentialsValidation": "true",
+                    "skipMetadataApiCheck": "true",
+                    "skipRegionValidation": "true",
+                    "skipRequestingAccountId": "true",
+                    "version": "7.51.1"
+                },
+                "outputs": {
+                    "accessKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:g4zUASbvvEqRqzjA:VR0kmokmNKb7ExS78dtdtYx/AmDffg=="
+                    },
+                    "endpoints": "[{\"ec2\":\"http://localhost:4566\",\"iam\":\"http://localhost:4566\",\"s3\":\"http://localhost:4566\",\"sns\":\"http://localhost:4566\",\"sqs\":\"http://localhost:4566\",\"ssm\":\"http://localhost:4566\",\"sts\":\"http://localhost:4566\"}]",
+                    "region": "us-west-2",
+                    "s3UsePathStyle": "true",
+                    "secretKey": {
+                        "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+                        "ciphertext": "v1:rbKSJLjhWogj6ofa:eRjnGFVPmF5ddXKUD9GCRJSzvWazPA=="
+                    },
+                    "skipCredentialsValidation": "true",
+                    "skipMetadataApiCheck": "true",
+                    "skipRegionValidation": "true",
+                    "skipRequestingAccountId": "true",
+                    "version": "7.51.1"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "propertyDependencies": {
+                    "accessKey": [],
+                    "endpoints": [],
+                    "region": [],
+                    "s3UsePathStyle": [],
+                    "secretKey": [],
+                    "skipCredentialsValidation": [],
+                    "skipMetadataApiCheck": [],
+                    "skipRegionValidation": [],
+                    "skipRequestingAccountId": []
+                },
+                "additionalSecretOutputs": [
+                    "accessKey",
+                    "secretKey",
+                    "token"
+                ],
+                "created": "2026-10-28T05:50:59.768921Z",
+                "modified": "2026-10-28T05:50:59.768921Z",
+                "sourcePosition": "project:///node_modules/@pulumi/provider.ts#148,9",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/provider.ts#148,9"
+                    },
+                    {
+                        "sourcePosition": "project:///index.ts#112,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:ec2/securityGroup:SecurityGroup::app-sg",
+                "custom": true,
+                "id": "sg-8a4e2e6b51f6ec8ef",
+                "type": "aws:ec2/securityGroup:SecurityGroup",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "description": "plunge corpus app security group",
+                    "name": "app-sg-6486a7c",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/securityGroup:SecurityGroup::app-sg"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/securityGroup:SecurityGroup::app-sg"
+                    },
+                    "vpcId": "vpc-46ce4a86"
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":600000000000,\"delete\":900000000000},\"schema_version\":\"1\"}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "egress": {
+                                    "arr": {}
+                                },
+                                "ingress": {
+                                    "arr": {}
+                                },
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "arn": "arn:aws:ec2:us-east-1:000000000000:security-group/sg-8a4e2e6b51f6ec8ef",
+                    "description": "plunge corpus app security group",
+                    "egress": [],
+                    "id": "sg-8a4e2e6b51f6ec8ef",
+                    "ingress": [],
+                    "name": "app-sg-6486a7c",
+                    "namePrefix": "",
+                    "ownerId": "000000000000",
+                    "region": "us-east-1",
+                    "revokeRulesOnDelete": false,
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/securityGroup:SecurityGroup::app-sg"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:ec2/securityGroup:SecurityGroup::app-sg"
+                    },
+                    "vpcId": "vpc-46ce4a86"
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "dependencies": [
+                    "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main"
+                ],
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "description": [],
+                    "tags": [],
+                    "vpcId": [
+                        "urn:pulumi:floci::corpus-aws-ts::aws:ec2/vpc:Vpc::main"
+                    ]
+                },
+                "created": "2026-10-28T05:51:00.089817Z",
+                "modified": "2026-10-28T05:51:00.089817Z",
+                "sourcePosition": "project:///index.ts#60,15",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#60,15"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::aws:sns/topic:Topic::alerts-west",
+                "custom": true,
+                "id": "arn:aws:sns:us-west-2:000000000000:plc-ts-alerts-west",
+                "type": "aws:sns/topic:Topic",
+                "inputs": {
+                    "__defaults": [],
+                    "name": "plc-ts-alerts-west",
+                    "region": "us-west-2",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sns/topic:Topic::alerts-west"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sns/topic:Topic::alerts-west"
+                    }
+                },
+                "outputs": {
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "applicationFailureFeedbackRoleArn": "",
+                    "applicationSuccessFeedbackRoleArn": "",
+                    "applicationSuccessFeedbackSampleRate": 0,
+                    "archivePolicy": "",
+                    "arn": "arn:aws:sns:us-west-2:000000000000:plc-ts-alerts-west",
+                    "beginningArchiveTime": "",
+                    "contentBasedDeduplication": false,
+                    "deliveryPolicy": "",
+                    "displayName": "",
+                    "fifoThroughputScope": "",
+                    "fifoTopic": false,
+                    "firehoseFailureFeedbackRoleArn": "",
+                    "firehoseSuccessFeedbackRoleArn": "",
+                    "firehoseSuccessFeedbackSampleRate": 0,
+                    "httpFailureFeedbackRoleArn": "",
+                    "httpSuccessFeedbackRoleArn": "",
+                    "httpSuccessFeedbackSampleRate": 0,
+                    "id": "arn:aws:sns:us-west-2:000000000000:plc-ts-alerts-west",
+                    "kmsMasterKeyId": "",
+                    "lambdaFailureFeedbackRoleArn": "",
+                    "lambdaSuccessFeedbackRoleArn": "",
+                    "lambdaSuccessFeedbackSampleRate": 0,
+                    "maximumMessageSize": 0,
+                    "name": "plc-ts-alerts-west",
+                    "namePrefix": "",
+                    "owner": "000000000000",
+                    "policy": "{\"Id\":\"__default_policy_ID\",\"Statement\":[{\"Action\":[\"SNS:GetTopicAttributes\",\"SNS:SetTopicAttributes\",\"SNS:AddPermission\",\"SNS:RemovePermission\",\"SNS:DeleteTopic\",\"SNS:Subscribe\",\"SNS:ListSubscriptionsByTopic\",\"SNS:Publish\"],\"Condition\":{\"StringEquals\":{\"AWS:SourceAccount\":\"000000000000\"}},\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Resource\":\"arn:aws:sns:us-west-2:000000000000:plc-ts-alerts-west\",\"Sid\":\"__default_statement_ID\"}],\"Version\":\"2012-10-17\"}",
+                    "region": "us-west-2",
+                    "signatureVersion": 0,
+                    "sqsFailureFeedbackRoleArn": "",
+                    "sqsSuccessFeedbackRoleArn": "",
+                    "sqsSuccessFeedbackSampleRate": 0,
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sns/topic:Topic::alerts-west"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "aws:sns/topic:Topic::alerts-west"
+                    },
+                    "tracingConfig": ""
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::pulumi:pulumi:Stack::corpus-aws-ts-floci",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::west::76ea8d2e-1f42-5d97-b451-f0b7751d729b",
+                "propertyDependencies": {
+                    "name": [],
+                    "tags": []
+                },
+                "created": "2026-10-28T05:50:59.837489Z",
+                "modified": "2026-10-28T05:50:59.837489Z",
+                "sourcePosition": "project:///index.ts#132,20",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#132,20"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site$aws:s3/bucket:Bucket::docs-assets",
+                "custom": true,
+                "id": "plc-ts-docs-assets",
+                "type": "aws:s3/bucket:Bucket",
+                "inputs": {
+                    "__defaults": [],
+                    "bucket": "plc-ts-docs-assets",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:s3/bucket:Bucket::docs-assets"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:s3/bucket:Bucket::docs-assets"
+                    }
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":1200000000000,\"delete\":3600000000000,\"read\":1200000000000,\"update\":1200000000000}}",
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "corsRules": {
+                                    "arr": {}
+                                },
+                                "grants": {
+                                    "arr": {
+                                        "el": {
+                                            "0": {
+                                                "obj": {
+                                                    "ps": {
+                                                        "permissions": {
+                                                            "arr": {}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "lifecycleRules": {
+                                    "arr": {}
+                                },
+                                "logging": {
+                                    "plu": {
+                                        "i": {}
+                                    }
+                                },
+                                "objectLockConfiguration": {
+                                    "plu": {
+                                        "i": {}
+                                    }
+                                },
+                                "replicationConfiguration": {
+                                    "plu": {
+                                        "i": {
+                                            "obj": {}
+                                        }
+                                    }
+                                },
+                                "serverSideEncryptionConfiguration": {
+                                    "plu": {
+                                        "i": {
+                                            "obj": {
+                                                "ps": {
+                                                    "rule": {
+                                                        "plu": {
+                                                            "i": {
+                                                                "obj": {
+                                                                    "ps": {
+                                                                        "applyServerSideEncryptionByDefault": {
+                                                                            "plu": {
+                                                                                "i": {
+                                                                                    "obj": {}
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                },
+                                "versioning": {
+                                    "plu": {
+                                        "i": {
+                                            "obj": {}
+                                        }
+                                    }
+                                },
+                                "website": {
+                                    "plu": {
+                                        "i": {}
+                                    }
+                                }
+                            },
+                            "renamed": {
+                                "corsRules": "cors_rule",
+                                "grants": "grant",
+                                "lifecycleRules": "lifecycle_rule"
+                            }
+                        }
+                    },
+                    "accelerationStatus": "",
+                    "acl": null,
+                    "arn": "arn:aws:s3:::plc-ts-docs-assets",
+                    "bucket": "plc-ts-docs-assets",
+                    "bucketDomainName": "plc-ts-docs-assets.s3.amazonaws.com",
+                    "bucketNamespace": "global",
+                    "bucketPrefix": "",
+                    "bucketRegion": "us-east-1",
+                    "bucketRegionalDomainName": "plc-ts-docs-assets.s3.us-east-1.amazonaws.com",
+                    "corsRules": [],
+                    "forceDestroy": false,
+                    "grants": [
+                        {
+                            "id": "000000000000",
+                            "permissions": [
+                                "FULL_CONTROL"
+                            ],
+                            "type": "CanonicalUser",
+                            "uri": ""
+                        }
+                    ],
+                    "hostedZoneId": "Z3AQBSTGFYJSTF",
+                    "id": "plc-ts-docs-assets",
+                    "lifecycleRules": [],
+                    "logging": null,
+                    "objectLockConfiguration": null,
+                    "objectLockEnabled": false,
+                    "policy": "",
+                    "region": "us-east-1",
+                    "replicationConfiguration": {
+                        "role": null,
+                        "rules": null
+                    },
+                    "requestPayer": "BucketOwner",
+                    "serverSideEncryptionConfiguration": {
+                        "rule": {
+                            "applyServerSideEncryptionByDefault": {
+                                "kmsMasterKeyId": "",
+                                "sseAlgorithm": "AES256"
+                            },
+                            "bucketKeyEnabled": false
+                        }
+                    },
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:s3/bucket:Bucket::docs-assets"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:s3/bucket:Bucket::docs-assets"
+                    },
+                    "versioning": {
+                        "enabled": false,
+                        "mfaDelete": false
+                    },
+                    "website": null,
+                    "websiteDomain": null,
+                    "websiteEndpoint": null
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "bucket": [],
+                    "tags": []
+                },
+                "created": "2026-10-28T05:50:59.833022Z",
+                "modified": "2026-10-28T05:50:59.833022Z",
+                "sourcePosition": "project:///index.ts#94,24",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#94,24"
+                    },
+                    {
+                        "sourcePosition": "project:///index.ts#107,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site$aws:sns/topic:Topic::docs-notify",
+                "custom": true,
+                "id": "arn:aws:sns:us-east-1:000000000000:docs-notify-313a6f6",
+                "type": "aws:sns/topic:Topic",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "name": "docs-notify-313a6f6",
+                    "region": "us-east-1",
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:sns/topic:Topic::docs-notify"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:sns/topic:Topic::docs-notify"
+                    }
+                },
+                "outputs": {
+                    "__pulumi_raw_state_delta": {
+                        "obj": {
+                            "ps": {
+                                "tags": {
+                                    "map": {}
+                                },
+                                "tagsAll": {
+                                    "map": {}
+                                }
+                            }
+                        }
+                    },
+                    "applicationFailureFeedbackRoleArn": "",
+                    "applicationSuccessFeedbackRoleArn": "",
+                    "applicationSuccessFeedbackSampleRate": 0,
+                    "archivePolicy": "",
+                    "arn": "arn:aws:sns:us-east-1:000000000000:docs-notify-313a6f6",
+                    "beginningArchiveTime": "",
+                    "contentBasedDeduplication": false,
+                    "deliveryPolicy": "",
+                    "displayName": "",
+                    "fifoThroughputScope": "",
+                    "fifoTopic": false,
+                    "firehoseFailureFeedbackRoleArn": "",
+                    "firehoseSuccessFeedbackRoleArn": "",
+                    "firehoseSuccessFeedbackSampleRate": 0,
+                    "httpFailureFeedbackRoleArn": "",
+                    "httpSuccessFeedbackRoleArn": "",
+                    "httpSuccessFeedbackSampleRate": 0,
+                    "id": "arn:aws:sns:us-east-1:000000000000:docs-notify-313a6f6",
+                    "kmsMasterKeyId": "",
+                    "lambdaFailureFeedbackRoleArn": "",
+                    "lambdaSuccessFeedbackRoleArn": "",
+                    "lambdaSuccessFeedbackSampleRate": 0,
+                    "maximumMessageSize": 0,
+                    "name": "docs-notify-313a6f6",
+                    "namePrefix": "",
+                    "owner": "000000000000",
+                    "policy": "{\"Id\":\"__default_policy_ID\",\"Statement\":[{\"Action\":[\"SNS:GetTopicAttributes\",\"SNS:SetTopicAttributes\",\"SNS:AddPermission\",\"SNS:RemovePermission\",\"SNS:DeleteTopic\",\"SNS:Subscribe\",\"SNS:ListSubscriptionsByTopic\",\"SNS:Publish\"],\"Condition\":{\"StringEquals\":{\"AWS:SourceAccount\":\"000000000000\"}},\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Resource\":\"arn:aws:sns:us-east-1:000000000000:docs-notify-313a6f6\",\"Sid\":\"__default_statement_ID\"}],\"Version\":\"2012-10-17\"}",
+                    "region": "us-east-1",
+                    "signatureVersion": 0,
+                    "sqsFailureFeedbackRoleArn": "",
+                    "sqsSuccessFeedbackRoleArn": "",
+                    "sqsSuccessFeedbackSampleRate": 0,
+                    "tags": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:sns/topic:Topic::docs-notify"
+                    },
+                    "tagsAll": {
+                        "corpus-owner": "plunge",
+                        "corpus-program": "aws-ts",
+                        "plunge-stack": "corpus-aws-ts/floci",
+                        "plunge-urn": "corpus:index:Site$aws:sns/topic:Topic::docs-notify"
+                    },
+                    "tracingConfig": ""
+                },
+                "parent": "urn:pulumi:floci::corpus-aws-ts::corpus:index:Site::docs",
+                "provider": "urn:pulumi:floci::corpus-aws-ts::pulumi:providers:aws::default_7_51_1::f0abf461-6d5c-5c0f-9748-778fc145e2d0",
+                "propertyDependencies": {
+                    "tags": []
+                },
+                "created": "2026-10-28T05:50:59.829246Z",
+                "modified": "2026-10-28T05:50:59.829246Z",
+                "sourcePosition": "project:///index.ts#98,24",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///index.ts#98,24"
+                    },
+                    {
+                        "sourcePosition": "project:///index.ts#107,14"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3009,23"
+                    },
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/pulumi/vendor/ts-node@7.0.1/index.js#3011,12"
+                    },
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/cmd/run/run.ts#541,33"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/runtime/stack.ts#79,28"
+                    },
+                    {
+                        "sourcePosition": "project:///node_modules/@pulumi/resource.ts#1687,22"
+                    }
+                ]
+            }
+        ],
+        "metadata": {}
+    }
+}
