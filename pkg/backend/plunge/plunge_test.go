@@ -26,6 +26,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/stretchr/testify/assert"
@@ -453,6 +454,61 @@ func TestEmptyPropertyDependenciesAreNotARewrite(t *testing.T) {
 		require.NoError(t, p.Save(deployment(refreshed)))
 		assert.Equal(t, 1, store.total(), "property dependencies %v rewrote the record", refreshed)
 	}
+}
+
+// A refresh that reads back the record's ID and outputs, with the inputs in the provider's own form (pulumi-random's
+// RandomString hands back keepers {v: "1"} for a program's {v: 1}) and the modification time it stamps on that, is the
+// same resource, so the record is not rewritten, and neither is it by the same step that follows and puts the
+// program's inputs back. That rewrite made each of two concurrent runs on disjoint RandomStrings write the other's
+// record, and the second to write lost (scripts/plunge-record-store-acceptance.sh on floci, INTENTIUS/plunge#6).
+func TestRefreshReadingBackTheSameResourceIsNotARewrite(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	urn := resource.URN("urn:pulumi:test::test::random:index/randomString:RandomString::resX")
+	recorded := time.Date(2026, 10, 28, 5, 19, 20, 0, time.UTC)
+	refreshed := recorded.Add(time.Minute)
+
+	state := func(v any, modified time.Time, result string) apitype.ResourceV3 {
+		return apitype.ResourceV3{
+			URN: urn, Type: "random:index/randomString:RandomString", Custom: true, ID: "SdSejRlYYUBE",
+			Inputs:   map[string]any{"keepers": map[string]any{"v": v}, "length": 12},
+			Outputs:  map[string]any{"keepers": map[string]any{"v": "1"}, "length": 12, "result": result},
+			Created:  &recorded,
+			Modified: &modified,
+		}
+	}
+	deployment := func(s apitype.ResourceV3) apitype.TypedDeployment {
+		return apitype.TypedDeployment{Deployment: &apitype.DeploymentV3{Resources: []apitype.ResourceV3{s}}}
+	}
+	run := func(store *countingStore) *recordPersister {
+		l, err := load(ctx, store, testKeys)
+		require.NoError(t, err)
+		return newRecordPersister(ctx, store, l, Generation{}, true, nil)
+	}
+
+	store := newCountingStore(t)
+	require.NoError(t, run(store).Save(deployment(state(1, recorded, "SdSejRlYYUBE"))))
+	require.Equal(t, 1, store.total())
+
+	p := run(store)
+	require.NoError(t, p.Save(deployment(state("1", refreshed, "SdSejRlYYUBE"))))
+	assert.Equal(t, 1, store.total(), "the refresh rewrote the record")
+	require.NoError(t, p.Save(deployment(state(1, refreshed, "SdSejRlYYUBE"))))
+	assert.Equal(t, 1, store.total(), "the same step after the refresh rewrote the record")
+
+	// A refresh that reads back different outputs is drift, and is written.
+	store = newCountingStore(t)
+	require.NoError(t, run(store).Save(deployment(state(1, recorded, "SdSejRlYYUBE"))))
+	require.NoError(t, run(store).Save(deployment(state("1", refreshed, "drifted"))))
+	assert.Equal(t, 2, store.total(), "a refresh that read different outputs was not written")
+
+	// New inputs under the record's own modification time come from the program (a same step), not from a refresh,
+	// and are written as before.
+	store = newCountingStore(t)
+	require.NoError(t, run(store).Save(deployment(state(1, recorded, "SdSejRlYYUBE"))))
+	require.NoError(t, run(store).Save(deployment(state(2, recorded, "SdSejRlYYUBE"))))
+	assert.Equal(t, 2, store.total(), "a same step's new inputs were not written")
 }
 
 type mapDecrypter map[string]string
