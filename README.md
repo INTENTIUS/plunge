@@ -152,11 +152,14 @@ upstream merge as well as at the fork point. The maintainer runs it with the inp
 
 ## Record store acceptance
 
-`scripts/plunge-record-store-acceptance.sh` is the maintainer's run of the record backend on a real
-store (INTENTIUS/plunge#6), by default floci's S3 on localhost; a store off loopback needs
-`PLUNGE_ACCEPTANCE_REAL_STORE=yes`. Its `VERDICT` lines cover two concurrent updates on disjoint
-resources, one record per URN in the store listing, and an older program's run leaving a newer run's
-resource in place. Inputs and outputs are in the script's header.
+The record store acceptance check is `scripts/plunge-races/races.sh lifecycle` on floci's S3, with a
+`plunge+s3://` store (INTENTIUS/plunge#6). Its `VERDICT` lines cover preview, up, two concurrent updates
+on disjoint resources with no lock object in the store, an export that assembles with integrity checking
+and has one record per URN, an older program's run keeping a newer run's resource, drift and destroy. The
+recorded verdicts are in [`tests/plunge-races/lifecycle/verdicts.txt`](tests/plunge-races/lifecycle/verdicts.txt).
+`races.sh readback` runs the same concurrent check on pulumi-random RandomStrings, whose refresh reads
+inputs back in the provider's form, and checks that a plain re-run writes no record. The environment is
+in `scripts/plunge-races/lib.sh`.
 
 ## Merging upstream
 

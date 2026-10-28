@@ -247,9 +247,9 @@ legs skip unless their variable names a store on a loopback emulator:
 Opening a bucket store checks its settings (INTENTIUS/plunge#20), so each
 bucket or container needs versioning, a lifecycle rule deleting noncurrent
 versions, and its public access settings closed, the same settings
-`scripts/plunge-record-store-acceptance.sh` puts on its bucket. Its setup
-is inline in that script, not in functions another script can source, so
-here it is for the three stores, run once per emulator start (each starts
+`secure_bucket` in `scripts/plunge-races/lib.sh` puts on each race's S3
+bucket. That file runs its floci checks when sourced, so here is the
+setup for the three stores, run once per emulator start (each starts
 empty):
 
 ```sh
