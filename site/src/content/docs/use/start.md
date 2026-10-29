@@ -2,7 +2,7 @@
 title: Start a new stack
 description: A five-minute offline quickstart, then installing plunge for real, choosing a plunge+ backend URL and running the first update.
 prompt: |
-  Follow https://intentius.io/plunge/use/start/. Install plunge from its v0.1.0 release, choose a plunge+ URL for this project with me, and run `plunge preview`. Report the preview.
+  Follow https://intentius.io/plunge/use/start/. Install plunge from its v0.2.0 release, choose a plunge+ URL for this project with me, and run `plunge preview`. Report the preview.
   Never run `plunge up`, `plunge destroy` or `plunge stack adopt --yes`, approve or apply a saved plan, or merge; never edit or remove a plunge-stack or plunge-urn tag or label by hand.
 ---
 
@@ -16,7 +16,7 @@ arm64; set `OS` and `ARCH` for your machine.
 1. Download the release, check it and unpack it:
 
    ```sh
-   V=v0.1.0 OS=linux ARCH=x64    # or OS=darwin, ARCH=arm64
+   V=v0.2.0 OS=linux ARCH=x64    # or OS=darwin, ARCH=arm64
    U=https://github.com/INTENTIUS/plunge/releases/download/plunge-$V
    curl -fLO "$U/plunge-$V-$OS-$ARCH.tar.gz"
    curl -fLO "$U/plunge-$V-checksums.txt"
@@ -26,7 +26,7 @@ arm64; set `OS` and `ARCH` for your machine.
    plunge version
    ```
 
-   `plunge version` prints `plunge v0.1.0` and `pulumi v3.272.0`.
+   `plunge version` prints `plunge v0.2.0` and `pulumi v3.272.0`.
 
 2. Log in to a local [plunge+ store](../../glossary/#plunge-store):
 
@@ -78,8 +78,8 @@ with `could not determine organization name`.
 
 ## Install
 
-The [releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.1.0)
-has plunge `v0.1.0` (Pulumi-compatible `3.272.0`). There is a `.tar.gz` for
+The [releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.2.0)
+has plunge `v0.2.0` (Pulumi-compatible `3.272.0`). There is a `.tar.gz` for
 darwin and linux and a `.zip` for windows, each on arm64 and x64. Step 1 of
 the quickstart downloads, checks and unpacks one.
 
@@ -108,7 +108,7 @@ xattr -dr com.apple.quarantine plunge
 On Windows the zip unpacks to `plunge\bin\`, with `plunge.exe` and the
 hosts; add that directory to `PATH`. The Windows binaries are unsigned, so
 SmartScreen may warn. Check the zip with
-`Get-FileHash plunge-v0.1.0-windows-x64.zip` against the checksums file.
+`Get-FileHash plunge-v0.2.0-windows-x64.zip` against the checksums file.
 
 ### Uninstall
 
@@ -129,7 +129,7 @@ go build -C pkg -o ../bin/plunge -ldflags "$(./scripts/plunge-version.sh ldflags
 make plunge_language_hosts   # the bundled dotnet and yaml hosts
 ```
 
-A source build reports `plunge v0.1.0-dev.0`. The
+A source build reports `plunge v0.2.0-dev.0`. The
 [README](https://github.com/INTENTIUS/plunge/blob/main/README.md#building)
 covers the rest.
 
