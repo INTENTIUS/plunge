@@ -2,7 +2,7 @@
 
 What plunge's recorded runs show, how each was checked, and what has no run yet. The docs site does not carry these. This file is updated with each release.
 
-Each row is a recorded run with its date and files. Open work is tracked in
+This file is current as of plunge v0.2.0, released 2026-10-29. Each row is a recorded run with its date and files. Open work is tracked in
 [GitHub issues](https://github.com/INTENTIUS/plunge/issues).
 
 ## How runs are checked
