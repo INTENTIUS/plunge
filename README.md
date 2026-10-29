@@ -1,6 +1,8 @@
 # plunge
 
-Pulumi with resource level concurrency and no stack lock.
+Pulumi with per-resource locking.
+
+The engine plywood can run with `engine: plunge`.
 
 plunge runs stock Pulumi's programs, SDKs,
 language hosts and providers, and changes where state lives and how a run decides ownership:

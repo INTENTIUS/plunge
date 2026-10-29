@@ -28,7 +28,7 @@ export async function pages() {
 
 export const PREAMBLE = `# plunge
 
-> Pulumi with resource level concurrency and no stack lock
+> Pulumi with per-resource locking.
 
 The source, and the reference material the site links to, is at https://github.com/INTENTIUS/plunge.
 
