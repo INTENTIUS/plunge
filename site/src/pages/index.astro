@@ -7,12 +7,12 @@ import Landing from '../components/Landing.astro';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 // The maintainer's tagline, word for word.
-const tagline = 'Pulumi with resource level concurrency and no stack lock';
+const tagline = 'Pulumi with per-resource locking.';
 ---
 <StarlightPage
 	frontmatter={{
 		title: 'plunge',
-		description: 'Pulumi with resource level concurrency and no stack lock',
+		description: 'Pulumi with per-resource locking.',
 		template: 'splash',
 		// The site title alone, in place of "plunge | plunge".
 		head: [{ tag: 'title', content: 'plunge' }],
