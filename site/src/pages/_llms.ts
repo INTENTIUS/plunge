@@ -5,7 +5,7 @@ import { bodyMarkdown, pageUrl } from '../markdown';
 import { neverLine } from '../prompts';
 
 // Sidebar order. A page not listed here comes after these, by id.
-const ORDER = ['use/start', 'how-it-works', 'claims'];
+const ORDER = ['use/start', 'how-it-works'];
 
 export async function pages() {
 	const docs = await getCollection('docs');
@@ -31,7 +31,5 @@ export const PREAMBLE = `# plunge
 > Pulumi with resource level concurrency and no stack lock
 
 The source, and the reference material the site links to, is at https://github.com/INTENTIUS/plunge.
-
-https://intentius.io/plunge/claims/ lists the recorded runs with their dates and files.
 
 A page's prompt sits under "Optional: hand this page to your coding agent" and in llms.txt under the page. Every prompt ends with this rule, left out below: ${neverLine}`;

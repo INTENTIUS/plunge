@@ -8,8 +8,7 @@ prompt: |
 
 This tutorial runs the `aws-ts` corpus program under plunge on
 [floci](../../glossary/#floci), a local AWS emulator, so nothing reaches AWS.
-Two of the recorded runs came from a run like this one
-([Claims and runs](../../claims/)). For a first look without Docker, the
+For a first look without Docker, the
 [quickstart](../start/#quickstart) takes five minutes.
 
 :::caution[How it ends]
@@ -97,9 +96,7 @@ ownership. Each URN has one record. The queues are `events-<hash>` and
 
 After the update plunge lists each marked type and warns about marked objects
 with no record. Since [#28](https://github.com/INTENTIUS/plunge/issues/28) it
-matches recorded queues and Lambda functions by their other names, and a clean
-`up` and destroy of each corpus program on floci on 2026-10-27 printed no such
-warning.
+matches recorded queues and Lambda functions by their other names.
 
 ## 7. Read one resource's drift
 

@@ -1,10 +1,8 @@
 ---
-// The home page under the hero: plunge in plain words, the picker, then a
-// link to the claims.
+// The home page under the hero: plunge in plain words, then the picker.
 import Picker from './Picker.astro';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const CLAIMS = `${base}/claims/`;
 const G = `${base}/glossary/`;
 ---
 <div class="pl-landing not-content">
@@ -16,7 +14,6 @@ const G = `${base}/glossary/`;
 		</p>
 	</section>
 	<Picker />
-	<p class="claims"><a href={CLAIMS}>Claims and runs</a></p>
 </div>
 
 <style>
@@ -39,15 +36,8 @@ const G = `${base}/glossary/`;
 		font-size: var(--sl-text-base);
 		color: var(--sl-color-gray-2);
 	}
-	.about a,
-	.claims a {
+	.about a {
 		color: var(--pl-accent);
 		text-decoration-color: color-mix(in srgb, var(--pl-accent) 35%, transparent);
-	}
-	.claims {
-		text-align: center;
-	}
-	.claims a:hover {
-		text-decoration-color: var(--pl-sand);
 	}
 </style>

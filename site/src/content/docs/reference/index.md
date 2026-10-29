@@ -93,3 +93,4 @@ beside them:
 - [CONCURRENCY.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/CONCURRENCY.md): every race, refusal and listing, in full
 - [ADOPT.md](https://github.com/INTENTIUS/plunge/blob/main/docs/plunge/ADOPT.md): the adopt document's contract
 - [The corpus](https://github.com/INTENTIUS/plunge/blob/main/tests/plunge-corpus/README.md): the seven programs and how a baseline is recorded
+- [EVIDENCE.md](https://github.com/INTENTIUS/plunge/blob/main/EVIDENCE.md): the recorded runs and how each was checked

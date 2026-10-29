@@ -1,7 +1,7 @@
-// The claims source for src/content/docs/claims.md (INTENTIUS/plunge#57,
+// The claims source for EVIDENCE.md (INTENTIUS/plunge#57,
 // chant#4586 ruling C).
 //
-// src/data/claims.json lists the claims that cite a product's scenario row:
+// scripts/plunge-evidence/claims.json lists the claims that cite a product's scenario row:
 //
 //   { "format": 1,
 //     "claims": [
@@ -25,8 +25,8 @@
 // yet; it shows as pending and never as a run. A product row never replaces
 // the engine's own runs, which stay in the table above.
 //
-//   node scripts/claims.mjs --check    fail when claims.json is wrong or claims.md is not what it renders to
-//   node scripts/claims.mjs --write    rewrite the block of claims.md between the markers
+//   node scripts/plunge-evidence/claims.mjs --check    fail when claims.json is wrong or EVIDENCE.md is not what it renders to
+//   node scripts/plunge-evidence/claims.mjs --write    rewrite the block of EVIDENCE.md between the markers
 //
 // The block is the text between START and END below.
 
@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 
 export const KIND = 'product-scenario';
 export const FIELDS = ['repo', 'scenario', 'claim', 'commit', 'date', 'engine_version'];
-export const START = '<!-- product-scenario rows: written by `npm run claims:render` from src/data/claims.json -->';
+export const START = '<!-- product-scenario rows: written by `node scripts/plunge-evidence/claims.mjs --write` from scripts/plunge-evidence/claims.json -->';
 export const END = '<!-- end product-scenario rows -->';
 
 const SHAPES = {
@@ -126,33 +126,33 @@ export function render(doc) {
 export function splice(page, block) {
 	const a = page.indexOf(START);
 	const b = page.indexOf(END);
-	if (a === -1 || b === -1 || b < a) throw new Error('claims.md has no product-scenario block between its markers');
+	if (a === -1 || b === -1 || b < a) throw new Error('EVIDENCE.md has no product-scenario block between its markers');
 	return page.slice(0, a) + block + page.slice(b + END.length);
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dataFile = join(here, '..', 'src', 'data', 'claims.json');
-const pageFile = join(here, '..', 'src', 'content', 'docs', 'claims.md');
+const dataFile = join(here, 'claims.json');
+const pageFile = join(here, '..', '..', 'EVIDENCE.md');
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 	const mode = process.argv[2];
 	if (mode !== '--check' && mode !== '--write') {
-		console.error('usage: node scripts/claims.mjs --check | --write');
+		console.error('usage: node scripts/plunge-evidence/claims.mjs --check | --write');
 		process.exit(2);
 	}
 	const doc = JSON.parse(readFileSync(dataFile, 'utf8'));
 	const bad = problems(doc);
 	if (bad.length) {
-		console.error(`src/data/claims.json:\n  ${bad.join('\n  ')}`);
+		console.error(`scripts/plunge-evidence/claims.json:\n  ${bad.join('\n  ')}`);
 		process.exit(1);
 	}
 	const page = readFileSync(pageFile, 'utf8');
 	const want = splice(page, render(doc));
 	if (mode === '--write') {
 		writeFileSync(pageFile, want);
-		console.log('claims.md written');
+		console.log('EVIDENCE.md written');
 	} else if (want !== page) {
-		console.error('claims.md does not match src/data/claims.json; run `npm run claims:render` and commit the page');
+		console.error('EVIDENCE.md does not match scripts/plunge-evidence/claims.json; run `node scripts/plunge-evidence/claims.mjs --write` and commit EVIDENCE.md');
 		process.exit(1);
 	}
 }

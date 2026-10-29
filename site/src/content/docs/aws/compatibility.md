@@ -29,8 +29,7 @@ issues are closed with their tests passing.
 ## Types with no tags
 
 A type with no tags argument is record-owned, with the reason in its
-`ownership` entry. `aws:s3/bucketPolicy:BucketPolicy` carried no markers in the
-recorded `aws-ts` run ([Claims and runs](/plunge/claims/)).
+`ownership` entry. `aws:s3/bucketPolicy:BucketPolicy` carries no markers.
 
 ## Refused
 

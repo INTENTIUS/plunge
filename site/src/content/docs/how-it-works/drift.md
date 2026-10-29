@@ -24,11 +24,10 @@ line followed by `drift-settle`. Its `reads` counts record reads, provider
 Reads and refreshes. `--member`
 sets chant's member name (default: the stack name).
 
-## The recorded run
+## An example
 
-On 2026-10-26, against the `aws-ts` corpus stack on floci, after a tag was
-changed through floci's API (chant
-[`plunge-drift/`](https://github.com/INTENTIUS/chant/tree/main/lexicons/pulumi/src/testdata/plunge-drift)):
+Against the `aws-ts` corpus stack on floci, after a tag was
+changed through floci's API:
 
 | Resource | Status | Reads |
 |---|---|---|

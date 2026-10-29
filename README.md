@@ -19,8 +19,7 @@ The ownership model is chant's identity markers, carried into Pulumi as choudouf
 OpenTofu. Both are chant engines (a chant workspace runs a plunge stack as a member) that also work
 standalone, planned in INTENTIUS/plunge#2 with the design record in INTENTIUS/plunge#9.
 
-The documentation at https://intentius.io/plunge is built from `site/`, and its
-[claims page](https://intentius.io/plunge/claims/) lists the recorded runs. Design details are in
+The documentation at https://intentius.io/plunge is built from `site/`. Design details are in
 `docs/plunge/CONCURRENCY.md` and `docs/plunge/ADOPT.md`. `just site-serve` (live reload) and
 `just site-preview` (the built site) serve http://127.0.0.1:4321/plunge/, or another port given as an
 argument; `just site` builds it with its link and contrast checks.

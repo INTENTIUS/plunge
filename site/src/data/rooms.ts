@@ -48,7 +48,6 @@ const records = { label: 'Records', href: '/how-it-works/records/' };
 const concurrency = { label: 'Resource-level concurrency', href: '/how-it-works/concurrency/' };
 const glossary = { label: 'Glossary', href: '/glossary/' };
 const reference = { label: 'Commands, URLs and variables', href: '/reference/' };
-const claims = { label: 'Claims and runs', href: '/claims/' };
 
 /** The tiles under "You run today". Each sends you to a room, with its own first step. */
 export const FROM: { id: string; label: string; blurb: string; room: string; first: Link; differs: string[] }[] = [
@@ -105,7 +104,7 @@ export const ROOMS: Room[] = [
 		title: 'Adopt a Pulumi stack',
 		lede: 'You run Pulumi today, on a DIY backend (a directory, S3, GCS or Azure Blob) or on Pulumi Cloud.',
 		works: [
-			'plunge stack adopt --json classifies your checkpoint and writes nothing (recorded on floci)',
+			'plunge stack adopt --json classifies your checkpoint and writes nothing',
 			'Adoption keeps every ID and gives each resource its own record',
 			'Adopting the same checkpoint again does nothing',
 			'A stock pulumi stack export from Pulumi Cloud gives the file plunge stack adopt --file takes',
@@ -120,14 +119,13 @@ export const ROOMS: Room[] = [
 	{
 		id: 'evaluate',
 		title: 'Evaluate',
-		lede: 'You are evaluating plunge and want the recorded runs.',
+		lede: 'You are evaluating plunge and want to see what it does.',
 		works: [
-			'Each recorded run has its date and its files',
 			'Runs on different resources of one stack proceed together, with no stack lock',
 			'scripts/plunge-baseline.sh compares plunge with stock Pulumi on seven corpus programs',
 		],
 		differs: DIFFERS,
-		first: claims,
+		first: quickstart,
 		howto: [quickstart, tutorial],
 		explain: [overview, concurrency],
 		reference: [{ label: 'The corpus', href: repo('tests/plunge-corpus/README.md') }, glossary, reference],

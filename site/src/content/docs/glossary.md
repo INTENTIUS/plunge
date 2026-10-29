@@ -30,7 +30,7 @@ changed it since it was read
 
 ## C1 and C2
 
-These are the two concurrency claims about creates. In the first, two runs
+These are the two concurrency cases about creates. In the first, two runs
 create the same resource; its fixed name makes the cloud refuse the second
 create, and the loser's next run binds the winner's object
 ([Names](../how-it-works/names/#c1-two-creates-of-one-resource)). In the
@@ -53,8 +53,8 @@ six has run yet ([#7](https://github.com/INTENTIUS/plunge/issues/7)).
 
 [floci](https://github.com/lex00/floci) is a free AWS emulator that runs
 locally in Docker. floci-gcp and floci-az emulate Google Cloud and Azure.
-Every run on the claims page used one of them, and none touched a real
-cloud ([Claims and runs](../claims/)).
+The test runs use one of them, and none touches a real
+cloud.
 
 ## chant
 
@@ -91,8 +91,7 @@ creating a second one. A run binds an object whose markers name the resource
 ## Lexicon
 
 A lexicon is a chant package for one platform or engine. chant's Pulumi
-lexicon reads the stack output and drift stream, and its test data holds two
-of the recorded runs.
+lexicon reads the stack output and drift stream.
 
 ## Adopt
 

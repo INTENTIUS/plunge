@@ -20,7 +20,3 @@ stack:
   "then": { "effect": "deny" }
 }
 ```
-
-## Recorded runs
-
-None. [#45](https://github.com/INTENTIUS/plunge/issues/45) holds a gate run for plunge's markers.

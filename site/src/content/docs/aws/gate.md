@@ -37,12 +37,6 @@ policy can condition on it.
 Which actions honour `aws:ResourceTag` and `aws:RequestTag` differs by
 service; the service authorization reference lists them.
 
-## Recorded runs
-
-None. No policy has been run against plunge's markers on floci or AWS;
-[#45](https://github.com/INTENTIUS/plunge/issues/45) holds that run. Until it
-lands, this page shows the policy's shape and claims no fencing of plunge's writes.
-
 ## Guarding the marker
 
 An SCP denying removal of `plunge-` tag keys keeps the markers in member

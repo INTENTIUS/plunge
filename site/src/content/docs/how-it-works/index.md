@@ -55,10 +55,6 @@ stack list, stack tags, the default secrets manager), as for stock Pulumi.
 
 Source: `pkg/backend/plunge/backend.go`.
 
-## Recorded runs
-
-[Claims and runs](../claims/) lists the recorded runs.
-
 ## Lineage
 
 In [chant](https://intentius.io/chant/), identity markers on the live object

@@ -1,7 +1,7 @@
 ---
 // Starlight's Prev and Next, kept inside the page's own section: a link that
 // would cross into another section (Azure's Proof to How it works, say) is
-// dropped. A section is the first path segment; claims and glossary belong to
+// dropped. A section is the first path segment; glossary belongs to
 // reference. A page that sets prev or next itself (the room pages) keeps it.
 import Default from '@astrojs/starlight/components/Pagination.astro';
 
@@ -9,7 +9,7 @@ const route = Astro.locals.starlightRoute;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const section = (path: string) => {
 	const first = path.replace(base, '').split('/').filter(Boolean)[0] ?? '';
-	return first === 'claims' || first === 'glossary' ? 'reference' : first;
+	return first === 'glossary' ? 'reference' : first;
 };
 const here = section(Astro.url.pathname);
 const keep = (link: { href: string } | undefined) => (link && section(link.href) === here ? link : undefined);

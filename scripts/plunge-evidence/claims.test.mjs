@@ -1,5 +1,5 @@
-// Tests for the product-scenario proof kind (scripts/claims.mjs). Run with
-// `npm run test:claims`.
+// Tests for the product-scenario proof kind (scripts/plunge-evidence/claims.mjs). Run with
+// `node --test scripts/plunge-evidence/claims.test.mjs`.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -74,12 +74,12 @@ test('splice replaces only the block and refuses a page without markers', () => 
 	assert.throws(() => splice('no markers', 'NEW'), /no product-scenario block/);
 });
 
-test('the committed claims.json is valid, lists the three plywood scenarios as pending, and claims.md is what it renders to', () => {
+test('the committed claims.json is valid, lists the three plywood scenarios as pending, and EVIDENCE.md is what it renders to', () => {
 	const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
-	const doc = JSON.parse(read('../src/data/claims.json'));
+	const doc = JSON.parse(read('./claims.json'));
 	assert.deepEqual(problems(doc), []);
 	const pending = doc.claims.flatMap((c) => c.pending.map((p) => `${c.id}:${p.scenario}`));
 	for (const want of ['c5-disjoint:pw-disjoint', 'c3:pw-moved-plan', 'adopt:pw-adopt']) assert.ok(pending.includes(want), want);
-	const page = read('../src/content/docs/claims.md');
+	const page = read('../../EVIDENCE.md');
 	assert.equal(splice(page, render(doc)), page);
 });

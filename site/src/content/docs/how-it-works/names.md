@@ -13,9 +13,8 @@ name. It is the same across runs and machines and differs between stacks in
 one account. plunge deletes first on replace
 ([below](#replacing-a-named-resource)).
 
-In the recorded `aws-ts` run, queue `events` became `events-76012a7` and
-topic `docs-notify` became `docs-notify-313a6f6`
-([Claims and runs](../../claims/)). In the stock-parity baseline these names
+On the `aws-ts` corpus program, queue `events` becomes `events-76012a7` and
+topic `docs-notify` becomes `docs-notify-313a6f6`. Against stock Pulumi these names
 are the only preview difference on the AWS and Azure corpus programs.
 
 ## C1: two creates of one resource

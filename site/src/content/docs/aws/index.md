@@ -11,4 +11,3 @@ The create call writes `plunge-stack` (`<project>/<stack>`) and `plunge-urn` tag
 - [Gate](/plunge/aws/gate/): fence writes by the owning stack.
 - [Operate](/plunge/aws/operate/): rename, remove, saved plans, two runs at once.
 - [Compatibility](/plunge/aws/compatibility/): which providers and types take markers, and how they are listed.
-- [Proof](/plunge/aws/proof/): recorded runs on floci, the AWS emulator.

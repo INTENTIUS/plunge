@@ -15,7 +15,3 @@ them. Each value is the digest of `<project>/<stack>`:
 ```sh
 printf %s 'myproject/prod' | shasum -a 256 | cut -c1-16
 ```
-
-## Recorded runs
-
-None. [#45](https://github.com/INTENTIUS/plunge/issues/45) holds a gate run for plunge's markers.
