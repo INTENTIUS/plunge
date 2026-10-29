@@ -115,8 +115,7 @@ for (const l of detail) console.log(l);
 
 // choudoufu's lint also fails on hedge phrases ("not yet", "is refused",
 // "limitations"). plunge's site leaves that check out: a refusal by name is
-// what plunge does, and the claims convention (INTENTIUS/plunge#44) needs a
-// page to say plainly what has not run and link its issue.
+// what plunge does, and a page says plainly what has not run and links its issue.
 
 // Cross-platform pointers. Each platform page states its own content, so a
 // sentence that only defers to another platform's page fails. It reads the

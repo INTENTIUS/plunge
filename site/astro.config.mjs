@@ -136,7 +136,6 @@ export default defineConfig({
 							{ label: 'Gate', slug: `${p}/gate` },
 							{ label: 'Operate', slug: `${p}/operate` },
 							{ label: 'Compatibility', slug: `${p}/compatibility` },
-							...(p === 'kubernetes' ? [] : [{ label: 'Proof', slug: `${p}/proof` }]),
 						],
 					};
 				}),
@@ -146,7 +145,6 @@ export default defineConfig({
 					items: [
 						{ label: 'Reference', slug: 'reference' },
 						{ label: 'The adopt document', slug: 'reference/adopt-json' },
-						{ label: 'Claims and runs', slug: 'claims' },
 						{ label: 'Glossary', slug: 'glossary' },
 					],
 				},

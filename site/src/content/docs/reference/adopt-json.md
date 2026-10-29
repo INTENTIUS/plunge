@@ -39,8 +39,7 @@ as one JSON document on stdout, without prompting. chant and behold read it; the
 }
 ```
 
-That is the start of the recorded `would-adopt.json` (2026-10-26) in behold's
-[fixture](https://github.com/INTENTIUS/behold/tree/main/src/__fixtures__/plunge-adopt-30806be26b).
+That is the start of a `would-adopt.json`.
 
 | Field | Meaning |
 |---|---|

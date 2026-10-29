@@ -7,5 +7,9 @@
  "/for/azure/": "/plunge/azure/",
  "/for/security/": "/plunge/how-it-works/identity/",
  "/for/agents/": "/plunge/llms.txt",
- "/for/contribute/": "https://github.com/INTENTIUS/plunge/blob/main/README.md"
+ "/for/contribute/": "https://github.com/INTENTIUS/plunge/blob/main/README.md",
+ "/claims/": "/plunge/",
+ "/aws/proof/": "/plunge/aws/",
+ "/azure/proof/": "/plunge/azure/",
+ "/gcp/proof/": "/plunge/gcp/"
 }

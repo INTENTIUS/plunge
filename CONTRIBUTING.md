@@ -128,6 +128,8 @@ Whenever a new PR is merged in this repository, the latest draft release on the 
 
 A weekly job runs every Wednesday.  It bumps `sdk/.version` to the next minor version and opens a PR containing the changelog the release is expected to publish, which is approved and queued to merge automatically.  Merging that PR "freezes" the draft release for the previous version, which is the one we are about to publish.
 
+`EVIDENCE.md` at the repo root lists plunge's recorded runs and what has no run yet. It is updated with each plunge release; the docs site does not carry them. `node scripts/plunge-evidence/claims.mjs --write` rewrites its product-scenario block from `scripts/plunge-evidence/claims.json`.
+
 To cut a patch release instead, bump `sdk/.version` to the next patch version by hand using `scripts/set-version.py <next-patch-version>`, and merge that.
 
 The next step, to gain some additional confidence in the release is to run the [Test examples](https://github.com/pulumi/examples/actions/workflows/test-examples.yml), and [Test templates](https://github.com/pulumi/templates/actions/workflows/test-templates.yml) test suites.  These run the tests in the `pulumi/examples` and `pulumi/templates` repositories using the latest `pulumi/pulumi` dev version, thus including all the latest changes.

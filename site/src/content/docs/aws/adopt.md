@@ -28,12 +28,7 @@ A type with no tags argument, such as `aws:s3/bucketPolicy:BucketPolicy`,
 is record-owned, with fate `pending` at adoption until the first run classes
 it from the schema.
 
-## Recorded runs
-
-On 2026-10-26 a stock pulumi v3.272.0 `aws-ts` stack on floci gave
-`would-adopt`, `adopted`, `already-adopted`, and `refused` with
-`adopted-from-another-checkpoint` ([Claims and runs](/plunge/claims/)). With no
-provider schema loaded, every resource was `pending`.
+With no provider schema loaded, every resource is `pending`.
 
 ## Leaving
 

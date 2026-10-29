@@ -20,10 +20,9 @@ A URN longer than one tag value (256 characters on AWS and Azure) continues
 in `plunge-urn-2` up to `plunge-urn-4`, as choudoufu's `tofu-address`
 continuation tags do.
 
-In the recorded `aws-ts` run, bucket `docs-assets` (a child of component
+On the `aws-ts` corpus program, bucket `docs-assets` (a child of component
 `docs`) carries `plunge-stack = corpus-aws-ts/floci` and
-`plunge-urn = corpus:index:Site$aws:s3/bucket:Bucket::docs-assets`
-([Claims and runs](../../claims/)).
+`plunge-urn = corpus:index:Site$aws:s3/bucket:Bucket::docs-assets`.
 
 ## Where the marker goes
 
@@ -43,7 +42,7 @@ are recorded and left alone.
 A type is record-owned when it has no tags argument, an unwritable tags
 shape or an unreadable schema, or when choudoufu's `pkg/identity` classes it
 markerless. Its record's `ownership` entry says `"by": "record"` and why; the
-bucket policy in the recorded `aws-ts` run is one.
+bucket policy of the `aws-ts` corpus program is one.
 
 ## Refusals
 

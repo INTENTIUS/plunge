@@ -8,9 +8,7 @@ prompt: |
 
 As in choudoufu, a record is never permission to delete. Every object a run
 would delete, under `plunge destroy` too, is first checked against its live
-marker. Its tests passed on 2026-10-27 and
-[#37](https://github.com/INTENTIUS/plunge/issues/37) is closed, but no run of
-it is recorded ([Claims and runs](../../claims/)).
+marker.
 
 | The live object | Outcome |
 |---|---|

@@ -86,7 +86,3 @@ No single update exists for a history entry to describe, so plunge keeps no
 stack history or backups and refuses `plunge stack history`,
 `plunge stack export --version` and `plunge stack rm --remove-backups`
 (`UnsupportedOnRecordsError`). Bucket versioning keeps earlier record versions.
-
-## Recorded runs
-
-The local store ran in the recorded `aws-ts` runs ([Claims and runs](../../claims/)).

@@ -12,6 +12,8 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'EVIDENCE.md'
+      - 'scripts/plunge-evidence/**'
       - '.github/workflows/plunge-pages.yml'
   workflow_dispatch: {}
 
@@ -45,10 +47,11 @@ jobs:
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
       - name: Install
         run: npm ci
+      - name: Check EVIDENCE.md and its source
+        working-directory: .
+        run: node scripts/plunge-evidence/claims.mjs --check && node --test scripts/plunge-evidence/claims.test.mjs
       - name: Lint prose
         run: npm run lint:prose
-      - name: Check the claims source
-        run: npm run check:claims && npm run test:claims
       - name: Build the site
         env:
           PUBLIC_POSTHOG_KEY: '${{ vars.PUBLIC_POSTHOG_KEY }}'
