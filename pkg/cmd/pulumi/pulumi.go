@@ -266,7 +266,7 @@ func NewPulumiCmd() (*cobra.Command, func()) {
 		Version:       plunge.VersionString(),
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		Long: "plunge - Pulumi with per-resource ownership\n" +
+		Long: "plunge - Pulumi with per-resource locking.\n" +
 			"\n" +
 			"plunge is a fork of Pulumi (https://github.com/INTENTIUS/plunge). It runs Pulumi programs\n" +
 			"and providers unchanged. Command examples below and in subcommand help use the upstream\n" +
