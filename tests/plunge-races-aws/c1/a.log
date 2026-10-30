@@ -1,0 +1,53 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c1-14491437603708e):
+    pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update..............
+ +  aws:iam:Role role create 
+@ previewing update.........
+ +  aws:s3:Bucket site create 
+ +  pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-14491437603708e):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 3 to create
+
+Updating (race-c1-14491437603708e):
+    pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating........
+    aws:iam:Role role  plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+ +  aws:iam:Role role creating (0s) plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+ +  aws:iam:Role role creating (0s) error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-14491437603708e::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-14491437603708e/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTE0NDkxNDM3NjAzNzA4ZTo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-14491437603708e/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTE0NDkxNDM3NjAzNzA4ZTo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"629c1ef31370dcf47609a40c58889ee8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    aws:s3:Bucket site  plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: Post "https://cloudcontrolapi.us-east-1.amazonaws.com/": context canceled
+@ updating....
+    pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e running error: update failed
+ +  aws:iam:Role role **creating failed** 1 error; 1 message
+    pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e **failed** 1 error; 1 warning
+    aws:s3:Bucket site  1 message
+Diagnostics:
+  aws:s3:Bucket (site):
+    plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: Post "https://cloudcontrolapi.us-east-1.amazonaws.com/": context canceled
+
+  aws:iam:Role (role):
+    plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-14491437603708e::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-14491437603708e/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTE0NDkxNDM3NjAzNzA4ZTo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-14491437603708e/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTE0NDkxNDM3NjAzNzA4ZTo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"629c1ef31370dcf47609a40c58889ee8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  pulumi:pulumi:Stack (plunge-races-race-c1-14491437603708e):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    error: update failed
+
+Resources:
+    1 unchanged
+    2 errored
+
+Duration: 7s
+
+warning: plunge: unrecorded marked object: the aws:s3/bucket:Bucket plrc114491437603708e-site carries this stack's ownership marker, and its markers name urn:pulumi:race-c1-14491437603708e::plunge-races::aws:s3/bucket:Bucket::site, but no record of the stack names it (listed through aws family lister). A racing create whose record write lost leaves one behind, and so does a run still in flight that has not recorded its create yet. plunge does not delete it: if a second run reports it too, delete it if it is a duplicate, or import it into the stack
+error: writing records: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-14491437603708e::plunge-races::aws:iam/role:Role::role at "stacks/plunge-races/race-c1-14491437603708e/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTE0NDkxNDM3NjAzNzA4ZTo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-14491437603708e/resources/dXJuOnB1bHVtaTpyYWNlLWMxLTE0NDkxNDM3NjAzNzA4ZTo6cGx1bmdlLXJhY2VzOjphd3M6aWFtL3JvbGU6Um9sZTo6cm9sZQ": expected no record to exist, but found version "\"629c1ef31370dcf47609a40c58889ee8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now

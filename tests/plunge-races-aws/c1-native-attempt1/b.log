@@ -1,0 +1,43 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c1-native-14523216024242c):
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update............
+ +  aws-native:iam:Role native-role create 
+@ previewing update.........
+ +  aws-native:s3:Bucket native-site create 
+ +  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-native-14523216024242c):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 3 to create
+
+Updating (race-c1-native-14523216024242c):
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c creating (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.........
+ +  aws-native:s3:Bucket native-site creating (0s) 
+@ updating...........
+    aws-native:iam:Role native-role  plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+ +  aws-native:iam:Role native-role creating (0s) plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+@ updating....................
+ +  aws-native:s3:Bucket native-site created (24s) 
+@ updating..............
+ +  aws-native:iam:Role native-role created (27s) plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+ +  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c created (42s) 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-native-14523216024242c):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+  aws-native:iam:Role (native-role):
+    plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: ThrottlingException (HTTP 400): Rate exceeded
+
+Resources:
+    + 3 created
+
+Duration: 43s
+

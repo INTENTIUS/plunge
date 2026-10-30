@@ -1,0 +1,7 @@
+plunge: /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/plunge
+  plunge v0.2.0
+  pulumi v3.272.0
+target: real AWS, us-east-1 (PLUNGE_RACES_TARGET=aws)
+caller: arn:aws:iam::354867293429:user/alex account 354867293429
+aws:    aws-cli/2.35.24 Python/3.14.6 Darwin/25.6.0 source/arm64
+tree:   f884d9a16000721fb4d435a56a8d616d7236ee5e

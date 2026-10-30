@@ -1,0 +1,50 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c2-151839456d0f2c6/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE1MTgzOTQ1NmQwZjJjNjo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA",
+            "LastModified": "2026-10-30T15:18:55+00:00",
+            "ETag": "\"8a553052b82a174ca3d3ad55e0a47c37\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5319,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c2-151839456d0f2c6/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE1MTgzOTQ1NmQwZjJjNjo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHJvdmlkZXJzOmF3czo6ZGVmYXVsdF83XzUxXzE",
+            "LastModified": "2026-10-30T15:18:52+00:00",
+            "ETag": "\"3d5fe6acd5ae03cfe58ec7a3abfc482d\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 705,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c2-151839456d0f2c6/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE1MTgzOTQ1NmQwZjJjNjo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHVsdW1pOlN0YWNrOjpwbHVuZ2UtcmFjZXMtcmFjZS1jMi0xNTE4Mzk0NTZkMGYyYzY",
+            "LastModified": "2026-10-30T15:18:52+00:00",
+            "ETag": "\"64edcbbd45c01c1889c09f31ca1d720e\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 2473,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c2-151839456d0f2c6/secrets",
+            "LastModified": "2026-10-30T15:18:45+00:00",
+            "ETag": "\"0bee0480bdaa9436d48ce161c1f025c6\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

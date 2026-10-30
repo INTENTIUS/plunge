@@ -1,0 +1,61 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-1503475150eae1/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTE1MDM0NzUxNTBlYWUxOjpwbHVuZ2UtcmFjZXM6OmF3czpzcXMvcXVldWU6UXVldWU6OnF1ZXVlLWE",
+            "LastModified": "2026-10-30T15:04:59+00:00",
+            "ETag": "\"d7c3408c52d6b9aac9f87b26ba8c9861\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5730,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-1503475150eae1/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTE1MDM0NzUxNTBlYWUxOjpwbHVuZ2UtcmFjZXM6OmF3czpzcXMvcXVldWU6UXVldWU6OnF1ZXVlLWI",
+            "LastModified": "2026-10-30T15:04:59+00:00",
+            "ETag": "\"2e7ba810d4fdcf41281dc94963a2b0c9\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5730,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-1503475150eae1/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTE1MDM0NzUxNTBlYWUxOjpwbHVuZ2UtcmFjZXM6OnB1bHVtaTpwcm92aWRlcnM6YXdzOjpkZWZhdWx0XzdfNTFfMQ",
+            "LastModified": "2026-10-30T15:03:59+00:00",
+            "ETag": "\"8118e50fa5d4c06bf3b9ef1c5bdb36b5\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 721,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-1503475150eae1/resources/dXJuOnB1bHVtaTpyYWNlLWM1LWRpc2pvaW50LTE1MDM0NzUxNTBlYWUxOjpwbHVuZ2UtcmFjZXM6OnB1bHVtaTpwdWx1bWk6U3RhY2s6OnBsdW5nZS1yYWNlcy1yYWNlLWM1LWRpc2pvaW50LTE1MDM0NzUxNTBlYWUx",
+            "LastModified": "2026-10-30T15:03:58+00:00",
+            "ETag": "\"b81df9e1249496b341b007fd62556714\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 2505,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-disjoint-1503475150eae1/secrets",
+            "LastModified": "2026-10-30T15:03:54+00:00",
+            "ETag": "\"0664f475abf343483801c5f81ee96881\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

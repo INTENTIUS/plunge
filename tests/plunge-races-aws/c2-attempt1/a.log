@@ -1,0 +1,33 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c2-145610294f514fe):
+    pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update.....
+ +  aws:ec2:Vpc net create 
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c2-145610294f514fe):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 2 to create
+
+Updating (race-c2-145610294f514fe):
+    pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe creating (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating....
+ +  aws:ec2:Vpc net creating (0s) 
+@ updating.....
+ +  aws:ec2:Vpc net created (1s) 
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe created (3s) 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c2-145610294f514fe):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 2 created
+
+Duration: 4s
+

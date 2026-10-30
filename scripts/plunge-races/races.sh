@@ -3,7 +3,7 @@
 # The concurrency races C1 to C6 on floci (INTENTIUS/plunge#7, the parity table on INTENTIUS/plunge#2), mirroring
 # choudoufu's claim 2 (no-self-managed-locks, two-writers-one-record, cas-holds-under-every-sse-flavour), claim 5
 # (recovery-is-a-rerun) and claim 15 (saved-plan refusal). The maintainer runs this by hand; it talks only to a
-# local floci.
+# local floci unless PLUNGE_RACES_TARGET=aws, which runs the same races on real AWS in us-east-1 (see lib.sh).
 #
 # Usage:
 #   scripts/plunge-races/races.sh [race ...]
@@ -106,8 +106,15 @@ race_c2() {
   local rc=0
   pl "${WORK}/a" "${WORK}/a-rerun.log" up --yes || rc=$?
   records
-  awsf ec2 describe-vpcs --filters "Name=cidr,Values=10.77.0.0/16" "Name=tag-key,Values=plunge-urn" \
-    --query 'Vpcs[].VpcId' --output text | tr '\t' '\n' | sed '/^$/d' | sort > "${WORK}/marked-vpcs.txt"
+  if [ "${TARGET}" = aws ]; then
+    # A real account has other VPCs; count only the ones marked for this race's stack.
+    awsf ec2 describe-vpcs --filters "Name=cidr,Values=10.77.0.0/16" "Name=tag-key,Values=plunge-urn" \
+      --query "Vpcs[?Tags[?Key=='plunge-stack' && Value=='plunge-races/${STACK}']].VpcId" --output text |
+      tr '\t' '\n' | sed '/^$/d' | sort > "${WORK}/marked-vpcs.txt"
+  else
+    awsf ec2 describe-vpcs --filters "Name=cidr,Values=10.77.0.0/16" "Name=tag-key,Values=plunge-urn" \
+      --query 'Vpcs[].VpcId' --output text | tr '\t' '\n' | sed '/^$/d' | sort > "${WORK}/marked-vpcs.txt"
+  fi
   local n
   n="$(wc -l < "${WORK}/marked-vpcs.txt" | tr -d ' ')"
   echo "marked VPCs: ${n} ($(tr '\n' ' ' < "${WORK}/marked-vpcs.txt")); re-run exit ${rc}" | tee -a "${WORK}/race.txt"
@@ -191,7 +198,11 @@ race_c4() {
   pl "${WORK}/a" "${WORK}/a-preview.log" preview --json || true
   records
   local live
-  live="$(awsf sqs list-queues --queue-name-prefix "${PREFIX}-w1" --query 'QueueUrls' --output text 2>/dev/null | wc -w | tr -d ' ')"
+  if [ "${TARGET}" = aws ]; then
+    live="$(live_queues "${PREFIX}-w1")"
+  else
+    live="$(awsf sqs list-queues --queue-name-prefix "${PREFIX}-w1" --query 'QueueUrls' --output text 2>/dev/null | wc -w | tr -d ' ')"
+  fi
   local in_records=no
   grep -q "::worker-1 " "${WORK}/records.txt" && in_records=yes
   echo "after convergence on A's program: live worker-1 queues ${live}, in records ${in_records}" | tee -a "${WORK}/race.txt"
@@ -420,7 +431,11 @@ PY2
   records
   cp "${WORK}/records.txt" "${WORK}/records-after-destroy.txt"
   local live left
-  live="$(awsf sqs list-queues --queue-name-prefix "${PREFIX}-" --query 'QueueUrls' --output text 2>/dev/null | sed 's/None//' | wc -w | tr -d ' ')"
+  if [ "${TARGET}" = aws ]; then
+    live="$(live_queues "${PREFIX}-")"
+  else
+    live="$(awsf sqs list-queues --queue-name-prefix "${PREFIX}-" --query 'QueueUrls' --output text 2>/dev/null | sed 's/None//' | wc -w | tr -d ' ')"
+  fi
   left="$(grep -c '^resources .*::queue-' "${WORK}/records-after-destroy.txt" || true)"
   echo "destroy: exit ${zrc}; live queues ${live}; queue records left ${left}" | tee -a "${WORK}/race.txt"
   if [ "${zrc}" = 0 ] && [ "${live}" = 0 ] && [ "${left}" = 0 ]; then
@@ -528,10 +543,16 @@ race_c5_sse() {
           '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}' >/dev/null
         ;;
       sse-kms)
-        local key
-        key="$(awsf kms create-key --query KeyMetadata.KeyId --output text)"
-        awsf s3api put-bucket-encryption --bucket "${BUCKET}" --server-side-encryption-configuration \
-          "{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"aws:kms\",\"KMSMasterKeyID\":\"${key}\"}}]}" >/dev/null
+        if [ "${TARGET}" = aws ]; then
+          # No customer key is created on real AWS: aws:kms with no KMSMasterKeyID uses the AWS-managed aws/s3 key.
+          awsf s3api put-bucket-encryption --bucket "${BUCKET}" --server-side-encryption-configuration \
+            '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"aws:kms"}}]}' >/dev/null
+        else
+          local key
+          key="$(awsf kms create-key --query KeyMetadata.KeyId --output text)"
+          awsf s3api put-bucket-encryption --bucket "${BUCKET}" --server-side-encryption-configuration \
+            "{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"aws:kms\",\"KMSMasterKeyID\":\"${key}\"}}]}" >/dev/null
+        fi
         ;;
     esac
     awsf s3api get-bucket-encryption --bucket "${BUCKET}" > "${WORK}/encryption.json"
@@ -574,6 +595,9 @@ race_c6() {
   fi
 }
 
+if [ "${TARGET}" = aws ]; then
+  trap 'aws_cleanup_all' EXIT
+fi
 ALL=(c1 c1-native c2 c3 c4 c5-disjoint c5-same c5-sse c6)
 if [ "$#" -gt 0 ]; then RACES=("$@"); else RACES=("${ALL[@]}"); fi
 for r in "${RACES[@]}"; do
@@ -591,7 +615,9 @@ for r in "${RACES[@]}"; do
     readback) race_readback ;;
     *) die "unknown race ${r} (races: ${ALL[*]})" ;;
   esac
+  aws_cleanup_all
 done
+aws_leftovers
 
 echo "results in ${OUT}"
 if grep -q ' FAIL ' "${VERDICTS}"; then

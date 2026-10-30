@@ -1,0 +1,36 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-lifecycle-1446335401eb836):
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update....
+ +  aws:sqs:Queue queue-b create 
+ +  aws:sqs:Queue queue-a create 
+ +  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-lifecycle-1446335401eb836):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 3 to create
+
+Updating (race-lifecycle-1446335401eb836):
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 creating (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating....
+ +  aws:sqs:Queue queue-b creating (0s) 
+ +  aws:sqs:Queue queue-a creating (0s) 
+@ updating..............................
+ +  aws:sqs:Queue queue-b created (26s) 
+ +  aws:sqs:Queue queue-a created (26s) 
+ +  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 created (28s) 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-lifecycle-1446335401eb836):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 3 created
+
+Duration: 29s
+

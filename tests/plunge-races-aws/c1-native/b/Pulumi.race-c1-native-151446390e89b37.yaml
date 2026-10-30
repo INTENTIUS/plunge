@@ -1,0 +1,4 @@
+config:
+  aws:region: us-east-1
+  aws-native:region: us-east-1
+encryptionsalt: v1:EqHAbCjcy20=:v1:AEhV8bfa48j6NrE9:OuMMt5c/ZR8qVx3VPMHOIExiHD4XgA==

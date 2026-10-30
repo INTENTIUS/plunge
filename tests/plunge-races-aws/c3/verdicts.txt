@@ -1,0 +1,2 @@
+VERDICT C3 c3 PASS the moved saved plan is refused with exit 40 naming queue-a, and the queue keeps run B's 1800
+VERDICT C3 c3-control PASS an unmoved saved plan applies (retention 7200)

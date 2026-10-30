@@ -1,0 +1,23 @@
+== cleanup c5-same (prefix plrc5same1505566763d60d8, stack race-c5-same-1505566763d60d8) 15:07:08Z
+-- destroy from a
+Destroying (race-c5-same-1505566763d60d8):
+    pulumi:pulumi:Stack plunge-races-race-c5-same-1505566763d60d8  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ -  aws:sqs:Queue queue-a deleting (0s) 
+@ destroying...............................................
+ -  aws:sqs:Queue queue-a deleted (43s) 
+ -  pulumi:pulumi:Stack plunge-races-race-c5-same-1505566763d60d8 deleting (0s) 
+    pulumi:pulumi:Stack plunge-races-race-c5-same-1505566763d60d8  1 warning
+ -  pulumi:pulumi:Stack plunge-races-race-c5-same-1505566763d60d8 deleted (0.08s) 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-same-1505566763d60d8):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 deleted
+
+Duration: 45s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm race-c5-same-1505566763d60d8`.
+-- delete record store plr-c5-same-354867293429-1505566763d60d8

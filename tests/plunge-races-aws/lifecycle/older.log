@@ -1,0 +1,53 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-lifecycle-1446335401eb836):
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-b refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+ ~  aws:sqs:Queue queue-b refresh 
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update.....
+    aws:sqs:Queue queue-a  
+ ~  aws:sqs:Queue queue-b refresh warning: not deleting urn:pulumi:race-lifecycle-1446335401eb836::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    aws:sqs:Queue queue-b  warning: not deleting urn:pulumi:race-lifecycle-1446335401eb836::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-lifecycle-1446335401eb836):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+  aws:sqs:Queue (queue-b):
+    warning: not deleting urn:pulumi:race-lifecycle-1446335401eb836::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+
+Resources:
+    3 unchanged
+
+Updating (race-lifecycle-1446335401eb836):
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-b refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue queue-b refresh (0.24s) 
+ ~  aws:sqs:Queue queue-a refresh (0.24s) 
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.....
+    aws:sqs:Queue queue-a  
+ ~  aws:sqs:Queue queue-b refresh (0.24s) warning: not deleting urn:pulumi:race-lifecycle-1446335401eb836::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    aws:sqs:Queue queue-b  warning: not deleting urn:pulumi:race-lifecycle-1446335401eb836::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+    pulumi:pulumi:Stack plunge-races-race-lifecycle-1446335401eb836  1 warning
+Diagnostics:
+  aws:sqs:Queue (queue-b):
+    warning: not deleting urn:pulumi:race-lifecycle-1446335401eb836::plunge-races::aws:sqs/queue:Queue::queue-b: its record was last written by program newer (commit time 2000000000), newer than this run's older (commit time 1000000000); a run of an older program version does not delete what a newer one wrote (run from the newer commit, or set PLUNGE_PROGRAM_TIME, to delete it)
+
+  pulumi:pulumi:Stack (plunge-races-race-lifecycle-1446335401eb836):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    3 unchanged
+
+Duration: 3s
+

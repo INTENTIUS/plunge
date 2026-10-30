@@ -1,0 +1,23 @@
+== cleanup c1 (prefix plrc114491437603708e, stack race-c1-14491437603708e) 14:52:18Z
+-- destroy from a
+@ destroying.....
+ -  aws:iam:Role role deleting (0s) 
+ -  aws:s3:Bucket site deleting (0s) 
+ -  aws:iam:Role role deleted (0.39s) 
+ -  aws:s3:Bucket site deleted (0.58s) 
+ -  pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e deleting (0s) 
+@ destroying....
+ -  pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e deleted (0.08s) 
+    pulumi:pulumi:Stack plunge-races-race-c1-14491437603708e  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-14491437603708e):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    - 3 deleted
+
+Duration: 4s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm race-c1-14491437603708e`.
+-- delete record store plr-c1-354867293429-14491437603708e

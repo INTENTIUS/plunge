@@ -1,0 +1,2 @@
+== c3: bucket plr-c3-354867293429-1456494444418e8, prefix plrc31456494444418e8, stack race-c3-1456494444418e8
+up --plan exit 40; live retention 1800

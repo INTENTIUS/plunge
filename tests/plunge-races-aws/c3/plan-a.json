@@ -1,0 +1,131 @@
+{
+    "manifest": {
+        "time": "2026-10-30T08:57:27.867434-06:00",
+        "magic": "9a15a292a881dbeb77a86955b3246fa29aae8b7d695358eee7c9e474a33b8927",
+        "version": "v3.272.0"
+    },
+    "config": {
+        "aws-native:region": "us-east-1",
+        "aws:region": "us-east-1",
+        "plunge-races:prefix": "plrc31456494444418e8",
+        "plunge-races:retentionA": "7200",
+        "plunge-races:retentionB": "3600",
+        "plunge-races:retentionW": "3600"
+    },
+    "resourcePlans": {
+        "urn:pulumi:race-c3-1456494444418e8::plunge-races::aws:sqs/queue:Queue::queue-a": {
+            "goal": {
+                "type": "aws:sqs/queue:Queue",
+                "name": "queue-a",
+                "custom": true,
+                "inputDiff": {
+                    "updates": {
+                        "messageRetentionSeconds": 7200
+                    }
+                },
+                "outputDiff": {},
+                "parent": "urn:pulumi:race-c3-1456494444418e8::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c3-1456494444418e8",
+                "protect": false,
+                "provider": "urn:pulumi:race-c3-1456494444418e8::plunge-races::pulumi:providers:aws::default_7_51_1::60d0310f-4a29-5cf5-a1a3-7b9a41442300",
+                "propertyDependencies": {
+                    "messageRetentionSeconds": [],
+                    "name": [],
+                    "tags": []
+                },
+                "customTimeouts": {}
+            },
+            "steps": [
+                "update"
+            ],
+            "state": {
+                "__meta": "{\"_new_extra_shim\":{},\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":180000000000,\"delete\":180000000000,\"update\":180000000000}}",
+                "__pulumi_raw_state_delta": {
+                    "obj": {
+                        "ps": {
+                            "tags": {
+                                "map": {}
+                            },
+                            "tagsAll": {
+                                "map": {}
+                            }
+                        }
+                    }
+                },
+                "arn": "arn:aws:sqs:us-east-1:354867293429:plrc31456494444418e8-a",
+                "contentBasedDeduplication": false,
+                "deduplicationScope": "",
+                "delaySeconds": 0,
+                "fifoQueue": false,
+                "fifoThroughputLimit": "",
+                "id": "https://sqs.us-east-1.amazonaws.com/354867293429/plrc31456494444418e8-a",
+                "kmsDataKeyReusePeriodSeconds": 300,
+                "kmsMasterKeyId": "",
+                "maxMessageSize": 262144,
+                "messageRetentionSeconds": 7200,
+                "name": "plrc31456494444418e8-a",
+                "namePrefix": "",
+                "policy": "",
+                "receiveWaitTimeSeconds": 0,
+                "redriveAllowPolicy": "",
+                "redrivePolicy": "",
+                "region": "us-east-1",
+                "sqsManagedSseEnabled": true,
+                "tags": {
+                    "plunge-stack": "plunge-races/race-c3-1456494444418e8",
+                    "plunge-urn": "aws:sqs/queue:Queue::queue-a",
+                    "race": "plunge"
+                },
+                "tagsAll": {
+                    "plunge-stack": "plunge-races/race-c3-1456494444418e8",
+                    "plunge-urn": "aws:sqs/queue:Queue::queue-a",
+                    "race": "plunge"
+                },
+                "url": "https://sqs.us-east-1.amazonaws.com/354867293429/plrc31456494444418e8-a",
+                "visibilityTimeoutSeconds": 30
+            },
+            "seed": "TCFKShEv4C8uMlQIad0Cige+gspCrqNeeZi+Ye0Z5Nw="
+        },
+        "urn:pulumi:race-c3-1456494444418e8::plunge-races::pulumi:providers:aws::default_7_51_1": {
+            "goal": {
+                "type": "pulumi:providers:aws",
+                "name": "default_7_51_1",
+                "custom": true,
+                "inputDiff": {},
+                "outputDiff": {},
+                "protect": false,
+                "customTimeouts": {}
+            },
+            "steps": [
+                "same"
+            ],
+            "state": {
+                "region": "us-east-1",
+                "skipCredentialsValidation": "false",
+                "skipRegionValidation": "true",
+                "version": "7.51.1"
+            },
+            "seed": "Vz9I3PSz2KuUG4cISp7RETrjdLAJVL1H0WXWmIBybZs="
+        },
+        "urn:pulumi:race-c3-1456494444418e8::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c3-1456494444418e8": {
+            "goal": {
+                "type": "pulumi:pulumi:Stack",
+                "name": "plunge-races-race-c3-1456494444418e8",
+                "custom": false,
+                "inputDiff": {},
+                "outputDiff": {},
+                "protect": false,
+                "customTimeouts": {}
+            },
+            "steps": [
+                "same"
+            ],
+            "state": {},
+            "seed": "DCduu4F9nJ2Up6L9+AwjCdWl+Oh7PD5BWyPPPioE0O8="
+        }
+    },
+    "plungeRecordVersions": {
+        "urn:pulumi:race-c3-1456494444418e8::plunge-races::aws:sqs/queue:Queue::queue-a": "\"3110df1921a91e47c2b2128faa452b7e\"",
+        "urn:pulumi:race-c3-1456494444418e8::plunge-races::pulumi:providers:aws::default_7_51_1": "\"f4d988a9a074a3b8edf6b231906ecb04\"",
+        "urn:pulumi:race-c3-1456494444418e8::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c3-1456494444418e8": "\"664318bd62d77949648571678ee82169\""
+    }
+}

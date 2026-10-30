@@ -1,0 +1,49 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c5-sse-s3-152932352161c6b):
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update.....
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-sse-s3-152932352161c6b):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Updating (race-c5-sse-s3-152932352161c6b):
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refresh (0.24s) 
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.....
+ ~  aws:sqs:Queue queue-a updating (0s) [diff: ~messageRetentionSeconds]
+ ~  aws:sqs:Queue queue-a updating (0s) [diff: ~messageRetentionSeconds]; error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c5-sse-s3-152932352161c6b::plunge-races::aws:sqs/queue:Queue::queue-a at "stacks/plunge-races/race-c5-sse-s3-152932352161c6b/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0xNTI5MzIzNTIxNjFjNmI6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c5-sse-s3-152932352161c6b/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0xNTI5MzIzNTIxNjFjNmI6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ": expected version "\"f9416c7083651ded8f0923c3ecd62aa3\"", found version "\"9522529686554c9b78bc6289e69656d8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b running error: update failed
+ ~  aws:sqs:Queue queue-a **updating failed** [diff: ~messageRetentionSeconds]; 1 error
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152932352161c6b **failed** 1 error; 1 warning
+Diagnostics:
+  aws:sqs:Queue (queue-a):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c5-sse-s3-152932352161c6b::plunge-races::aws:sqs/queue:Queue::queue-a at "stacks/plunge-races/race-c5-sse-s3-152932352161c6b/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0xNTI5MzIzNTIxNjFjNmI6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c5-sse-s3-152932352161c6b/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0xNTI5MzIzNTIxNjFjNmI6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ": expected version "\"f9416c7083651ded8f0923c3ecd62aa3\"", found version "\"9522529686554c9b78bc6289e69656d8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  pulumi:pulumi:Stack (plunge-races-race-c5-sse-s3-152932352161c6b):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    error: update failed
+
+Resources:
+    1 unchanged
+    2 errored
+
+Duration: 3s
+
+error: writing records: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c5-sse-s3-152932352161c6b::plunge-races::aws:sqs/queue:Queue::queue-a at "stacks/plunge-races/race-c5-sse-s3-152932352161c6b/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0xNTI5MzIzNTIxNjFjNmI6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c5-sse-s3-152932352161c6b/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNzZS1zMy0xNTI5MzIzNTIxNjFjNmI6OnBsdW5nZS1yYWNlczo6YXdzOnNxcy9xdWV1ZTpRdWV1ZTo6cXVldWUtYQ": expected version "\"f9416c7083651ded8f0923c3ecd62aa3\"", found version "\"9522529686554c9b78bc6289e69656d8\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now

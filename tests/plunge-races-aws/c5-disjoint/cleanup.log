@@ -1,0 +1,23 @@
+== cleanup c5-disjoint (prefix plrc5disjoint1503475150eae1, stack race-c5-disjoint-1503475150eae1) 15:05:01Z
+-- destroy from a
+@ destroying....
+ -  aws:sqs:Queue queue-a deleting (0s) 
+ -  aws:sqs:Queue queue-b deleting (0s) 
+@ destroying..............................................
+ -  aws:sqs:Queue queue-a deleted (43s) 
+ -  aws:sqs:Queue queue-b deleted (43s) 
+ -  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 deleting (0s) 
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1  1 warning
+ -  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 deleted (0.09s) 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-disjoint-1503475150eae1):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    - 3 deleted
+
+Duration: 45s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm race-c5-disjoint-1503475150eae1`.
+-- delete record store plr-c5-disjoint-354867293429-1503475150eae1

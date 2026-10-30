@@ -1,0 +1,7 @@
+{
+    "Tags": {
+        "race": "plunge",
+        "plunge-urn": "aws:sqs/queue:Queue::queue-a",
+        "plunge-stack": "plunge-races/race-lifecycle-1446335401eb836"
+    }
+}

@@ -1,0 +1,1 @@
+VERDICT C5 c5-sse-s3 FAIL the setup up failed

@@ -1,0 +1,50 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c5-disjoint-1503475150eae1):
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-b refreshing 
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+ ~  aws:sqs:Queue queue-b refresh 
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update.....
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+    aws:sqs:Queue queue-b  
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-disjoint-1503475150eae1):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    2 unchanged
+
+Updating (race-c5-disjoint-1503475150eae1):
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue queue-b refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refresh (0.27s) 
+ ~  aws:sqs:Queue queue-b refresh (0.27s) 
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.....
+    aws:sqs:Queue queue-b  
+ ~  aws:sqs:Queue queue-a updating (0s) [diff: ~messageRetentionSeconds]
+@ updating............................
+ ~  aws:sqs:Queue queue-a updated (25s) [diff: ~messageRetentionSeconds]
+@ updating....
+    pulumi:pulumi:Stack plunge-races-race-c5-disjoint-1503475150eae1  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-disjoint-1503475150eae1):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 updated
+    2 unchanged
+
+Duration: 28s
+

@@ -1,0 +1,61 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTppYW06Um9sZTo6bmF0aXZlLXJvbGU",
+            "LastModified": "2026-10-30T14:54:25+00:00",
+            "ETag": "\"ace09cf22ecd1a904b37a71f7e9d4391\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5674,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl",
+            "LastModified": "2026-10-30T14:53:42+00:00",
+            "ETag": "\"ce69ec8f0986b4d1906fbf245fe3c0e3\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5727,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6cHVsdW1pOnB1bHVtaTpTdGFjazo6cGx1bmdlLXJhY2VzLXJhY2UtYzEtbmF0aXZlLTE0NTIzMjE2MDI0MjQyYw",
+            "LastModified": "2026-10-30T14:53:11+00:00",
+            "ETag": "\"47f11ebe7265585dbd26429720ad8038\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 2501,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6cHVsdW1pOnByb3ZpZGVyczphd3MtbmF0aXZlOjpkZWZhdWx0XzFfODNfMQ",
+            "LastModified": "2026-10-30T14:53:12+00:00",
+            "ETag": "\"a427cc261958ea026cfc7f9dae08a37e\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 608,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c1-native-14523216024242c/secrets",
+            "LastModified": "2026-10-30T14:52:38+00:00",
+            "ETag": "\"74aa91761eaed0c62ad7a81f7181dce8\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

@@ -1,0 +1,16 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c5-sse-s3-150801333fa1da5):
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-150801333fa1da5  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-150801333fa1da5 create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update....
+ +  aws:sqs:Queue queue-a create 
+ +  pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-150801333fa1da5 create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-sse-s3-150801333fa1da5):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 2 to create
+
+error: plunge: reading the records under "stacks/plunge-races/race-c5-sse-s3-150801333fa1da5/": staterecord: s3: reading everything under "stacks/plunge-races/race-c5-sse-s3-150801333fa1da5/": the listing named "stacks/plunge-races/race-c5-sse-s3-150801333fa1da5/secrets" and no record was there, twice over: the listing and the reads that follow it disagree about what this namespace holds, so what came back is not a snapshot of it and is refused rather than returned short (GitHub issue #1355)

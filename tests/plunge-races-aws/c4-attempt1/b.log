@@ -1,0 +1,59 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c4-1459382640978be):
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be refreshing 
+ ~  aws:sqs:Queue worker-1 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+ ~  aws:sqs:Queue worker-1 refresh 
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be running 
+@ previewing update.....
+    aws:sqs:Queue queue-a  
+ ~  aws:sqs:Queue worker-1 update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be  1 warning
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be  
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c4-1459382640978be):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    2 unchanged
+
+Updating (race-c4-1459382640978be):
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  aws:sqs:Queue worker-1 refreshing (0s) 
+ ~  aws:sqs:Queue worker-1 refresh (0.26s) 
+ ~  aws:sqs:Queue queue-a refresh (0.26s) 
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating....
+    aws:sqs:Queue queue-a  
+ ~  aws:sqs:Queue worker-1 updating (0s) [diff: ~messageRetentionSeconds]
+@ updating....
+ ~  aws:sqs:Queue worker-1 updating (0s) [diff: ~messageRetentionSeconds]; error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c4-1459382640978be::plunge-races::aws:sqs/queue:Queue::worker-1 at "stacks/plunge-races/race-c4-1459382640978be/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTE0NTkzODI2NDA5NzhiZTo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c4-1459382640978be/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTE0NTkzODI2NDA5NzhiZTo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ": expected version "\"ebfdea23cae61b8d3c60daf7f88cbff3\"", found version "\"7a3d4d4689e7b2644dd4f1508ec56970\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be running error: update failed
+ ~  aws:sqs:Queue worker-1 **updating failed** [diff: ~messageRetentionSeconds]; 1 error
+    pulumi:pulumi:Stack plunge-races-race-c4-1459382640978be **failed** 1 error; 1 warning
+Diagnostics:
+  aws:sqs:Queue (worker-1):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c4-1459382640978be::plunge-races::aws:sqs/queue:Queue::worker-1 at "stacks/plunge-races/race-c4-1459382640978be/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTE0NTkzODI2NDA5NzhiZTo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c4-1459382640978be/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTE0NTkzODI2NDA5NzhiZTo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ": expected version "\"ebfdea23cae61b8d3c60daf7f88cbff3\"", found version "\"7a3d4d4689e7b2644dd4f1508ec56970\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  pulumi:pulumi:Stack (plunge-races-race-c4-1459382640978be):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    error: update failed
+
+Resources:
+    2 unchanged
+    2 errored
+
+Duration: 3s
+
+plunge: the sweep for unrecorded aws:sqs/queue:Queue objects could not list them: cloudcontrol: GetResource: ResourceNotFoundException (HTTP 400): AWS::SQS::Queue Handler returned status FAILED: Resource of type 'AWS::SQS::Queue' with identifier 'https://sqs.us-east-1.amazonaws.com/354867293429/plrc41459382640978be-w1' was not found. (HandlerErrorCode: NotFound, RequestToken: 7273c1b8-1752-4c03-b697-a704204e7eb4)
+
+error: writing records: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c4-1459382640978be::plunge-races::aws:sqs/queue:Queue::worker-1 at "stacks/plunge-races/race-c4-1459382640978be/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTE0NTkzODI2NDA5NzhiZTo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c4-1459382640978be/resources/dXJuOnB1bHVtaTpyYWNlLWM0LTE0NTkzODI2NDA5NzhiZTo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjp3b3JrZXItMQ": expected version "\"ebfdea23cae61b8d3c60daf7f88cbff3\"", found version "\"7a3d4d4689e7b2644dd4f1508ec56970\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now

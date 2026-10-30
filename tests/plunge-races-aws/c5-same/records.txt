@@ -1,0 +1,4 @@
+resources urn:pulumi:race-c5-same-1505566763d60d8::plunge-races::aws:sqs/queue:Queue::queue-a 5682
+resources urn:pulumi:race-c5-same-1505566763d60d8::plunge-races::pulumi:providers:aws::default_7_51_1 715
+resources urn:pulumi:race-c5-same-1505566763d60d8::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c5-same-1505566763d60d8 2493
+stacks/plunge-races/race-c5-same-1505566763d60d8/secrets 138

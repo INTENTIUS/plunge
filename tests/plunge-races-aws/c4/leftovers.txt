@@ -1,0 +1,6 @@
+buckets:
+plr-dbgsse-354867293429-16622
+queues:
+https://sqs.us-east-1.amazonaws.com/354867293429/plrdbg61815-q
+roles:
+vpcs:

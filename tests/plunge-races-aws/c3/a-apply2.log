@@ -1,0 +1,47 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c3-1456494444418e8):
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 running 
+@ previewing update.....
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  1 warning
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c3-1456494444418e8):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Updating (race-c3-1456494444418e8):
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refresh (0.27s) 
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 running 
+@ updating.....
+ ~  aws:sqs:Queue queue-a updating (0s) [diff: ~messageRetentionSeconds]
+@ updating.............................
+ ~  aws:sqs:Queue queue-a updated (25s) [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  1 warning
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c3-1456494444418e8):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 updated
+    1 unchanged
+
+Duration: 29s
+
+plunge: the sweep for unrecorded aws:sqs/queue:Queue objects could not list them: cloudcontrol: GetResource: ResourceNotFoundException (HTTP 400): AWS::SQS::Queue Handler returned status FAILED: Resource of type 'AWS::SQS::Queue' with identifier 'https://sqs.us-east-1.amazonaws.com/354867293429/plg14555111-a' was not found. (HandlerErrorCode: NotFound, RequestToken: 3421f9b9-0d85-4783-a47a-f75dacd26541)
+

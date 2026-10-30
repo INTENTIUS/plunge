@@ -1,0 +1,16 @@
+{
+    "TagSet": [
+        {
+            "Key": "race",
+            "Value": "plunge"
+        },
+        {
+            "Key": "plunge-urn",
+            "Value": "aws-native:s3:Bucket::native-site"
+        },
+        {
+            "Key": "plunge-stack",
+            "Value": "plunge-races/race-c1-native-151446390e89b37"
+        }
+    ]
+}

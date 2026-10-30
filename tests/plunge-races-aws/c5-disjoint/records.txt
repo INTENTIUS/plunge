@@ -1,0 +1,5 @@
+resources urn:pulumi:race-c5-disjoint-1503475150eae1::plunge-races::aws:sqs/queue:Queue::queue-a 5730
+resources urn:pulumi:race-c5-disjoint-1503475150eae1::plunge-races::aws:sqs/queue:Queue::queue-b 5730
+resources urn:pulumi:race-c5-disjoint-1503475150eae1::plunge-races::pulumi:providers:aws::default_7_51_1 721
+resources urn:pulumi:race-c5-disjoint-1503475150eae1::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c5-disjoint-1503475150eae1 2505
+stacks/plunge-races/race-c5-disjoint-1503475150eae1/secrets 138

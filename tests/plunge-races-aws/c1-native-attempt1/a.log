@@ -1,0 +1,50 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c1-native-14523216024242c):
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update..............
+ +  aws-native:iam:Role native-role create 
+@ previewing update..........
+ +  aws-native:s3:Bucket native-site create 
+ +  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-native-14523216024242c):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 3 to create
+
+Updating (race-c1-native-14523216024242c):
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.........
+ +  aws-native:s3:Bucket native-site creating (0s) 
+ +  aws-native:s3:Bucket native-site creating (0s) error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site at "stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl": expected no record to exist, but found version "\"1835116ebf1b5962ca1551cc9f51e5d0\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    aws-native:iam:Role native-role  plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: Post "https://cloudcontrolapi.us-east-1.amazonaws.com/": context canceled
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c running error: update failed
+    aws-native:iam:Role native-role  1 message
+ +  aws-native:s3:Bucket native-site **creating failed** 1 error
+    pulumi:pulumi:Stack plunge-races-race-c1-native-14523216024242c **failed** 1 error; 1 warning
+Diagnostics:
+  aws-native:iam:Role (native-role):
+    plunge: the marker listing for this create failed, so no bind or collision check ran: cloudcontrol: GetResource: Post "https://cloudcontrolapi.us-east-1.amazonaws.com/": context canceled
+
+  aws-native:s3:Bucket (native-site):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site at "stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl": expected no record to exist, but found version "\"1835116ebf1b5962ca1551cc9f51e5d0\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  pulumi:pulumi:Stack (plunge-races-race-c1-native-14523216024242c):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    error: update failed
+
+Resources:
+    1 unchanged
+    2 errored
+
+Duration: 7s
+
+warning: plunge: unrecorded marked object: the aws-native:s3:Bucket plrc1native14523216024242c-nsite carries this stack's ownership marker, and its markers name urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site, but no record of the stack names it (listed through aws-native family lister). A racing create whose record write lost leaves one behind, and so does a run still in flight that has not recorded its create yet. plunge does not delete it: if a second run reports it too, delete it if it is a duplicate, or import it into the stack
+error: writing records: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site at "stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c1-native-14523216024242c/resources/dXJuOnB1bHVtaTpyYWNlLWMxLW5hdGl2ZS0xNDUyMzIxNjAyNDI0MmM6OnBsdW5nZS1yYWNlczo6YXdzLW5hdGl2ZTpzMzpCdWNrZXQ6Om5hdGl2ZS1zaXRl": expected no record to exist, but found version "\"1835116ebf1b5962ca1551cc9f51e5d0\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
