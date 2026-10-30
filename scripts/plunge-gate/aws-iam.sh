@@ -264,7 +264,7 @@ note "running plunge as $(cat "${OUT}/role-identity.txt")"
 # refused <log>: print the line where AWS refused an SQS call, empty when none did.
 # Only a refusal of an SQS action counts: a refusal of anything else (the record store, Cloud Control) would be a gap in the
 # policy, not the tag condition working.
-refused() { grep -m1 -iE 'sqs.*(AccessDenied|not authorized|StatusCode: 403)|(AccessDenied|not authorized).*sqs:' "$1" | sed 's/^[[:space:]]*//' | cut -c1-400; }
+refused() { grep -m1 -iE 'sqs.*(AccessDenied|not authorized|StatusCode: 403)|(AccessDenied|not authorized).*sqs:' "$1" | sed -e 's/^[[:space:]]*//' -e "s/${ACCOUNT}/ACCOUNT/g" | cut -c1-400; }
 role_pl() { as_role pl "$@"; }
 
 # --- 1. create stack A's queue as the role: the request tag matches ---------------------------------------
