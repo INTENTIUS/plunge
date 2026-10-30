@@ -1,0 +1,43 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+Previewing update (gate-c-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-c-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+@ previewing update....
+ +  aws:sqs:Queue queue create 
+@ previewing update....
+ +  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-c-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    + 2 to create
+
+Updating (gate-c-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-c-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 creating (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+@ updating.....
+ +  aws:sqs:Queue queue creating (0s) 
+ +  aws:sqs:Queue queue creating (0s) error:   sdk-v2/provider2.go:571: sdk.helper_schema: creating SQS Queue (plg14555111-c): operation error SQS: CreateQueue, https response error StatusCode: 403, RequestID: 10370853-824b-59ea-a4c4-6b0d309aef80, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-c because no identity-based policy allows the sqs:createqueue action: provider=aws@7.51.1
+ +  aws:sqs:Queue queue creating (0s) error: 1 error occurred:
+ +  aws:sqs:Queue queue **creating failed** error: 1 error occurred:
+ +  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 creating (2s) error: update failed
+ +  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 **creating failed (2s)** 1 error; 1 warning
+Diagnostics:
+  aws:sqs:Queue (queue):
+    error:   sdk-v2/provider2.go:571: sdk.helper_schema: creating SQS Queue (plg14555111-c): operation error SQS: CreateQueue, https response error StatusCode: 403, RequestID: 10370853-824b-59ea-a4c4-6b0d309aef80, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-c because no identity-based policy allows the sqs:createqueue action: provider=aws@7.51.1
+    error: 1 error occurred:
+    	* creating SQS Queue (plg14555111-c): operation error SQS: CreateQueue, https response error StatusCode: 403, RequestID: 10370853-824b-59ea-a4c4-6b0d309aef80, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-c because no identity-based policy allows the sqs:createqueue action
+
+  pulumi:pulumi:Stack (plunge-gate-gate-c-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+    error: update failed
+
+Resources:
+    + 1 created
+    2 errored
+
+Duration: 3s
+

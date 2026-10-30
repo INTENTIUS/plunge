@@ -1,0 +1,2 @@
+
+aws: [ERROR]: An error occurred (AccessDenied) when calling the CreateQueue operation: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:createqueue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-d because no identity-based policy allows the sqs:createqueue action

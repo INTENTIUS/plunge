@@ -1,0 +1,99 @@
+Previewing destroy (gate-a-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ -  aws:sqs:Queue queue delete 
+ -  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 delete 
+@ previewing destroy....
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  1 warning
+ -  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 delete 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-a-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 to delete
+
+Destroying (gate-a-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ -  aws:sqs:Queue queue deleting (0s) 
+@ destroying...............................................
+ -  aws:sqs:Queue queue deleted (43s) 
+ -  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 deleting (0s) 
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  1 warning
+ -  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 deleted (0.12s) 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-a-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 deleted
+
+Duration: 45s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm gate-a-14555111`.
+Previewing destroy (gate-b-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+@ previewing destroy....
+ -  aws:sqs:Queue queue delete 
+ -  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 delete 
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  1 warning
+ -  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 delete 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-b-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 to delete
+
+Destroying (gate-b-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+@ destroying....
+ -  aws:sqs:Queue queue deleting (0s) 
+@ destroying..............................................
+ -  aws:sqs:Queue queue deleted (43s) 
+ -  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 deleting (0s) 
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  1 warning
+ -  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 deleted (0.10s) 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-b-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 deleted
+
+Duration: 45s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm gate-b-14555111`.
+Previewing destroy (gate-c-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-c-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ -  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 delete warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ -  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 delete 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-c-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 1 to delete
+
+Destroying (gate-c-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-c-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ -  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 deleting (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ -  pulumi:pulumi:Stack plunge-gate-gate-c-14555111 deleted (0.08s) 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-c-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 1 deleted
+
+Duration: 1s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm gate-c-14555111`.

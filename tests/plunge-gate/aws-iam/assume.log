@@ -1,0 +1,5 @@
+
+aws: [ERROR]: An error occurred (AccessDenied) when calling the AssumeRole operation: User: arn:aws:iam::ACCOUNT:user/alex is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::ACCOUNT:role/plg-gate-14555111
+
+aws: [ERROR]: An error occurred (AccessDenied) when calling the AssumeRole operation: User: arn:aws:iam::ACCOUNT:user/alex is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::ACCOUNT:role/plg-gate-14555111
+assume-role succeeded on attempt 3

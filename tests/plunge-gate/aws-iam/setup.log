@@ -1,0 +1,45 @@
+{
+    "Location": "/plg-gate-14555111",
+    "BucketArn": "arn:aws:s3:::plg-gate-14555111"
+}
+{
+    "TransitionDefaultMinimumObjectSize": "all_storage_classes_128K"
+}
+Created stack 'gate-a-14555111'
+Created stack 'gate-b-14555111'
+Created stack 'gate-c-14555111'
+{
+    "Policy": {
+        "PolicyName": "plg-gate-14555111",
+        "PolicyId": "ANPAVFH55FT25KUUTPWVM",
+        "Arn": "arn:aws:iam::ACCOUNT:policy/plg-gate-14555111",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2026-10-30T14:56:40+00:00",
+        "UpdateDate": "2026-10-30T14:56:40+00:00"
+    }
+}
+{
+    "Role": {
+        "Path": "/",
+        "RoleName": "plg-gate-14555111",
+        "RoleId": "AROAVFH55FT26FW7UITO2",
+        "Arn": "arn:aws:iam::ACCOUNT:role/plg-gate-14555111",
+        "CreateDate": "2026-10-30T14:56:40+00:00",
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "AWS": "arn:aws:iam::ACCOUNT:user/alex"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+    }
+}

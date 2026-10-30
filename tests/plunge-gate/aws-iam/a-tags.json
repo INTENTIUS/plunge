@@ -1,0 +1,7 @@
+{
+    "Tags": {
+        "plunge-urn": "aws:sqs/queue:Queue::queue",
+        "plunge-stack": "plunge-gate/gate-a-14555111",
+        "gate": "plunge"
+    }
+}

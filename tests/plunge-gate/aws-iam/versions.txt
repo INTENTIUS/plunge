@@ -1,0 +1,8 @@
+plunge: /private/tmp/claude-501/scratch-plg/bin/plunge/plunge
+  plunge v0.2.0
+  pulumi v3.272.0
+aws:    aws-cli/2.35.24 Python/3.14.6 Darwin/25.6.0 source/arm64
+region: us-east-1
+prefix: plg14555111 (bucket, role and policy plg-gate-14555111)
+stacks: plunge-gate/gate-a-14555111 (allowed), plunge-gate/gate-b-14555111 and plunge-gate/gate-c-14555111 (not)
+date:   2026-10-30T14:55:52Z

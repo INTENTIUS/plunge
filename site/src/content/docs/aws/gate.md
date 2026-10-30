@@ -34,6 +34,14 @@ policy can condition on it.
 }
 ```
 
+This shape has run against real AWS for SQS queues. A role with it could create
+and change a queue marked with its own stack and was refused by SQS on another
+stack's queue and on a create under another stack's marker; the role also
+needed `cloudformation:ListResources` and `cloudformation:GetResource` for
+plunge's bind sweep. The S3 actions above have not been run. The recording is
+in `tests/plunge-gate/aws-iam/` in the repository
+([#45](https://github.com/INTENTIUS/plunge/issues/45)).
+
 Which actions honour `aws:ResourceTag` and `aws:RequestTag` differs by
 service; the service authorization reference lists them.
 
