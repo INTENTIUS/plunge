@@ -1,13 +1,16 @@
 ---
-// The home page: the hero and the picker. A Starlight page rather than an MDX
+// The home page: ProductHome and the picker. A Starlight page rather than an MDX
 // file in the docs collection, so the build bundles no MDX module (whose
 // component imports each raise a Vite MODULE_LEVEL_DIRECTIVE warning).
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import Landing from '../components/Landing.astro';
+import ProductHome from '../components/ProductHome.astro';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-// The maintainer's tagline, word for word.
-const tagline = 'Pulumi with per-resource locking.';
+// The release this site documents, read from .plunge-version at the repository root (the build runs in site/).
+const version = `v${readFileSync(resolve(process.cwd(), '..', '.plunge-version'), 'utf8').trim()}`;
 ---
 <StarlightPage
 	frontmatter={{
@@ -16,14 +19,10 @@ const tagline = 'Pulumi with per-resource locking.';
 		template: 'splash',
 		// The site title alone, in place of "plunge | plunge".
 		head: [{ tag: 'title', content: 'plunge' }],
-		hero: {
-			title: 'plunge',
-			tagline,
-			image: {
-				html: `<img class="pl-hero-diver" src="${base}/brand/plunge-160.png" width="256" height="256" alt="The plunge diver, a pixel-art cliff diver over the sea" />`,
-			},
-		},
 	}}
 >
+	<ProductHome id="plunge" version={version}>
+		<img slot="art" class="pl-hero-diver" src={`${base}/brand/plunge-160.png`} width="256" height="256" alt="The plunge diver, a pixel-art cliff diver over the sea" />
+	</ProductHome>
 	<Landing />
 </StarlightPage>
