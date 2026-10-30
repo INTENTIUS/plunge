@@ -91,7 +91,7 @@ export const ROOMS: Room[] = [
 		works: [
 			'The quickstart runs offline in five minutes, on a local backend with no cloud account',
 			'The tutorial runs a corpus program on floci, a local AWS emulator, and needs Docker, Node.js, git and the AWS CLI',
-			'Install v0.1.0 from its release archive',
+			'Install v0.2.0 from its release archive',
 		],
 		differs: DIFFERS,
 		first: quickstart,

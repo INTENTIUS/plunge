@@ -39,8 +39,8 @@ argument; `just site` builds it with its link and contrast checks.
 
 ## Install
 
-plunge `v0.1.0` (Pulumi-compatible `3.272.0`) is on the
-[releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.1.0) with a checksums
+plunge `v0.2.0` (Pulumi-compatible `3.272.0`) is on the
+[releases page](https://github.com/INTENTIUS/plunge/releases/tag/plunge-v0.2.0) with a checksums
 file, for darwin, linux and windows on arm64 and x64. Each archive unpacks to `plunge/` (on Windows
 `plunge/bin/`), the CLI beside its language hosts; put that directory on `PATH`. The
 [quickstart](https://intentius.io/plunge/use/start/#quickstart) has the commands and the checksum
@@ -78,7 +78,7 @@ A plunge build carries two versions:
 
 ```console
 $ plunge version
-plunge v0.1.0-dev.0
+plunge v0.2.0
 pulumi v3.272.0
 $ plunge version --pulumi-compatible
 v3.272.0
