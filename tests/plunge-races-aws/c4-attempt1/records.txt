@@ -1,0 +1,4 @@
+resources urn:pulumi:race-c4-1459382640978be::plunge-races::aws:sqs/queue:Queue::queue-a 5608
+resources urn:pulumi:race-c4-1459382640978be::plunge-races::pulumi:providers:aws::default_7_51_1 705
+resources urn:pulumi:race-c4-1459382640978be::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c4-1459382640978be 2473
+stacks/plunge-races/race-c4-1459382640978be/secrets 138

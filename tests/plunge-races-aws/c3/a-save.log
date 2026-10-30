@@ -1,0 +1,24 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c3-1456494444418e8):
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 refreshing 
+ ~  pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 refreshing 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8 running 
+@ previewing update....
+ ~  aws:sqs:Queue queue-a update [diff: ~messageRetentionSeconds]
+@ previewing update....
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  1 warning
+    pulumi:pulumi:Stack plunge-races-race-c3-1456494444418e8  
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c3-1456494444418e8):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Update plan written to '/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/runs/default1/c3/plan-a.json'
+Run `pulumi up --plan='/private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/runs/default1/c3/plan-a.json'` to constrain the update to the operations planned by this preview

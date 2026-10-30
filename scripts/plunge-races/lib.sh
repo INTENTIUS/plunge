@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 #
 # Shared helpers for the plunge race scripts (INTENTIUS/plunge#7). Sourced, never run. The maintainer runs the
-# scripts by hand against a local floci; nothing here talks to AWS or Pulumi Cloud.
+# scripts by hand against a local floci; by default nothing here talks to AWS or Pulumi Cloud. PLUNGE_RACES_TARGET=aws is the
+# one explicit exception (below).
 #
 # Environment:
 #   PLUNGE   plunge binary           (default: bin/plunge)
 #   PULUMI   stock pulumi binary     (default: pulumi on PATH; adopt-and-back-out.sh only)
 #   FLOCI    floci endpoint          (default: http://localhost:4566; loopback only)
 #   OUT      output directory        (default: plunge-races-out/<UTC timestamp>)
+#
+#   PLUNGE_RACES_TARGET   floci (default) or aws. aws is an explicit opt-in to REAL AWS, us-east-1 only, with the
+#                         caller's own credentials from the default chain. Nothing is scrubbed and no endpoint is
+#                         overridden. Every resource name carries the run prefix (plr...), and after each race a
+#                         cleanup deletes only what carries that prefix. See aws_cleanup below.
 #
 # Each race gets its own S3 bucket on floci as its record store (plunge+s3://), its own resource name prefix and
 # its own stack, so races never see each other's objects. Two "checkouts" of one program are two directories with
@@ -27,31 +33,54 @@ die() {
   exit 2
 }
 
-case "${FLOCI}" in
-  http://localhost:[0-9]*|http://127.0.0.1:[0-9]*) ;;
-  *) die "FLOCI=${FLOCI} is not a loopback endpoint; the races only run against a local floci" ;;
+TARGET="${PLUNGE_RACES_TARGET:-floci}"
+case "${TARGET}" in
+  floci|aws) ;;
+  *) die "PLUNGE_RACES_TARGET=${TARGET} is not floci or aws" ;;
 esac
 [ -x "${PLUNGE}" ] || die "plunge binary not found at ${PLUNGE} (run 'make plunge' or set PLUNGE)"
 PLUNGE="$(cd "$(dirname "${PLUNGE}")" && pwd)/$(basename "${PLUNGE}")"
-command -v aws >/dev/null || die "the aws CLI is required (it only ever talks to ${FLOCI})"
 command -v python3 >/dev/null || die "python3 is required"
+command -v aws >/dev/null || die "the aws CLI is required"
 
-# Offline: no real cloud credentials reach plunge, a provider or the aws CLI.
-for v in $(env | sed -n 's/^\(AWS_[A-Z_]*\)=.*/\1/p;s/^\(AZURE_[A-Z_]*\)=.*/\1/p;s/^\(ARM_[A-Z_]*\)=.*/\1/p;s/^\(GOOGLE_[A-Z_]*\)=.*/\1/p'); do
-  unset "${v}"
-done
-export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1
-export AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null AWS_EC2_METADATA_DISABLED=true
-export AWS_ENDPOINT_URL="${FLOCI}"
-# The bind phase's Cloud Control lister (pkg/backend/plunge/listers.go) calls floci too.
-export PLUNGE_CLOUDCONTROL_ENDPOINT="${FLOCI}"
-export PULUMI_SKIP_UPDATE_CHECK=true PULUMI_SKIP_CONFIRMATIONS=true
-unset PULUMI_ACCESS_TOKEN PULUMI_BACKEND_URL
+if [ "${TARGET}" = aws ]; then
+  # Real AWS: the caller's credentials stay, in us-east-1, with no endpoint override anywhere. A stray
+  # AWS_ENDPOINT_URL or a Cloud Control endpoint would send part of the run somewhere else, so they are removed.
+  unset AWS_ENDPOINT_URL PLUNGE_CLOUDCONTROL_ENDPOINT AWS_ENDPOINT_URL_S3 AWS_ENDPOINT_URL_SQS AWS_ENDPOINT_URL_IAM \
+    AWS_ENDPOINT_URL_EC2 AWS_ENDPOINT_URL_STS AWS_ENDPOINT_URL_CLOUDCONTROL
+  export AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1
+  export PULUMI_SKIP_UPDATE_CHECK=true PULUMI_SKIP_CONFIRMATIONS=true
+  unset PULUMI_ACCESS_TOKEN PULUMI_BACKEND_URL
+  awsf() { aws --output json "$@"; }
+  CALLER="$(aws sts get-caller-identity --output json 2>/dev/null)" ||
+    die "no usable AWS credentials in the default chain (aws sts get-caller-identity failed)"
+  ACCOUNT="$(python3 -I -c 'import json,sys; print(json.load(sys.stdin)["Account"])' <<<"${CALLER}")"
+  if [ -n "${PLUNGE_RACES_AWS_ACCOUNT:-}" ] && [ "${PLUNGE_RACES_AWS_ACCOUNT}" != "${ACCOUNT}" ]; then
+    die "caller is account ${ACCOUNT}, but PLUNGE_RACES_AWS_ACCOUNT=${PLUNGE_RACES_AWS_ACCOUNT}"
+  fi
+else
+  case "${FLOCI}" in
+    http://localhost:[0-9]*|http://127.0.0.1:[0-9]*) ;;
+    *) die "FLOCI=${FLOCI} is not a loopback endpoint; the races only run against a local floci" ;;
+  esac
 
-awsf() { aws --endpoint-url "${FLOCI}" --output json "$@"; }
+  # Offline: no real cloud credentials reach plunge, a provider or the aws CLI.
+  for v in $(env | sed -n 's/^\(AWS_[A-Z_]*\)=.*/\1/p;s/^\(AZURE_[A-Z_]*\)=.*/\1/p;s/^\(ARM_[A-Z_]*\)=.*/\1/p;s/^\(GOOGLE_[A-Z_]*\)=.*/\1/p'); do
+    unset "${v}"
+  done
+  export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1
+  export AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null AWS_EC2_METADATA_DISABLED=true
+  export AWS_ENDPOINT_URL="${FLOCI}"
+  # The bind phase's Cloud Control lister (pkg/backend/plunge/listers.go) calls floci too.
+  export PLUNGE_CLOUDCONTROL_ENDPOINT="${FLOCI}"
+  export PULUMI_SKIP_UPDATE_CHECK=true PULUMI_SKIP_CONFIRMATIONS=true
+  unset PULUMI_ACCESS_TOKEN PULUMI_BACKEND_URL
 
-aws sts get-caller-identity --endpoint-url "${FLOCI}" >/dev/null 2>&1 ||
-  die "floci is not answering at ${FLOCI} (start it: docker run -d --rm -p 127.0.0.1:4566:4566 \"\$(cat <choudoufu>/live/floci-image)\")"
+  awsf() { aws --endpoint-url "${FLOCI}" --output json "$@"; }
+
+  aws sts get-caller-identity --endpoint-url "${FLOCI}" >/dev/null 2>&1 ||
+    die "floci is not answering at ${FLOCI} (start it: docker run -d --rm -p 127.0.0.1:4566:4566 \"\$(cat <choudoufu>/live/floci-image)\")"
+fi
 
 mkdir -p "${OUT}"
 VERDICTS="${OUT}/verdicts.txt"
@@ -59,7 +88,13 @@ touch "${VERDICTS}"
 {
   echo "plunge: ${PLUNGE}"
   "${PLUNGE}" version 2>&1 | sed 's/^/  /'
-  echo "floci:  ${FLOCI}"
+  if [ "${TARGET}" = aws ]; then
+    echo "target: real AWS, us-east-1 (PLUNGE_RACES_TARGET=aws)"
+    echo "caller: $(python3 -I -c 'import json,sys; d=json.load(sys.stdin); print(d["Arn"], "account", d["Account"])' <<<"${CALLER}")"
+    echo "aws:    $(aws --version 2>&1)"
+  else
+    echo "floci:  ${FLOCI}"
+  fi
   echo "tree:   $(git -C "${ROOT}" rev-parse HEAD 2>/dev/null || echo unknown)"
 } > "${OUT}/versions.txt"
 
@@ -83,18 +118,33 @@ secure_bucket() {
 # race_begin <name>: a fresh bucket, prefix, stack and backend for one race. Sets RACE, WORK, BUCKET, PREFIX, STACK,
 # BACKEND. The stack name goes into every object's plunge-stack marker, so a stack per race keeps one race's bind
 # phase from binding objects an earlier race left on the same floci.
+AWS_BEGUN=()
 race_begin() {
   RACE="$1"
   WORK="${OUT}/${RACE}"
   mkdir -p "${WORK}"
   local stamp
   stamp="$(date -u +%H%M%S)$((RANDOM % 1000))"
-  BUCKET="plr-${RACE}-${stamp}"
+  if [ "${TARGET}" = aws ]; then
+    # Bucket names are global: the account id and a random suffix keep them unique. The prefix stays short (an
+    # IAM role name is capped at 64 characters) and starts with plr, which is all the cleanup will ever match.
+    local rnd
+    rnd="$(python3 -I -c 'import secrets; print(secrets.token_hex(3))')"
+    stamp="${stamp}${rnd}"
+    BUCKET="plr-${RACE}-${ACCOUNT}-${stamp}"
+  else
+    BUCKET="plr-${RACE}-${stamp}"
+  fi
   PREFIX="plr${RACE//[^a-z0-9]/}${stamp}"
   STACK="race-${RACE}-${stamp}"
   awsf s3api create-bucket --bucket "${BUCKET}" >/dev/null
   secure_bucket "${BUCKET}"
-  BACKEND="plunge+s3://${BUCKET}?region=us-east-1&endpoint=${FLOCI}&s3ForcePathStyle=true"
+  if [ "${TARGET}" = aws ]; then
+    BACKEND="plunge+s3://${BUCKET}?region=us-east-1"
+    AWS_BEGUN+=("${RACE}|${BUCKET}|${PREFIX}|${STACK}|${WORK}")
+  else
+    BACKEND="plunge+s3://${BUCKET}?region=us-east-1&endpoint=${FLOCI}&s3ForcePathStyle=true"
+  fi
   echo "== ${RACE}: bucket ${BUCKET}, prefix ${PREFIX}, stack ${STACK}" | tee "${WORK}/race.txt"
 }
 
@@ -149,6 +199,13 @@ stack_config() {
   local dir="$1"
   shift
   {
+    if [ "${TARGET}" = aws ]; then
+      cat <<YAML
+config:
+  aws:region: us-east-1
+  aws-native:region: us-east-1
+YAML
+    else
     cat <<YAML
 config:
   aws:region: us-east-1
@@ -167,6 +224,7 @@ config:
       sts: ${FLOCI}
   aws-native:region: us-east-1
 YAML
+    fi
     local kv
     for kv in "$@"; do
       echo "  plunge-races:${kv%%=*}: ${kv#*=}"
@@ -271,7 +329,8 @@ no_changes() {
 import json, sys
 raw = open(sys.argv[1]).read()
 start = raw.find("{")
-doc = json.loads(raw[start:]) if start >= 0 else {}
+# The log holds stdout and stderr together, so plunge's own warnings can follow the JSON document; read the first value.
+doc = json.JSONDecoder().raw_decode(raw[start:])[0] if start >= 0 else {}
 def change(s):
   if s.get("op") == "same":
     return False
@@ -286,12 +345,146 @@ PY
 # The aws-native provider takes its endpoint from AWS_ENDPOINT_URL (exported above), not from stack config, so a
 # race over aws-native types checks for these before reading anything else.
 real_cloud_rejections() {
+  if [ "${TARGET}" = aws ]; then
+    # Real AWS answering from amazonaws.com is the point of this mode. What still fails a race is the cloud
+    # refusing the caller's credentials.
+    grep -hE 'UnrecognizedClientException|InvalidClientTokenId|SignatureDoesNotMatch|ExpiredToken' "$@" 2>/dev/null || true
+    return
+  fi
   grep -hE 'UnrecognizedClientException|InvalidClientTokenId|SignatureDoesNotMatch|ExpiredToken|https://[a-z0-9.-]+\.amazonaws\.com' "$@" \
     2>/dev/null || true
+}
+
+# live_queues <name-prefix>: how many queues carry the prefix. SQS list-queues lags a delete by up to a minute on
+# real AWS, so in aws mode this waits (up to 120 s) for the count to reach 0 and returns what it last saw; on floci it
+# lists once, as before.
+live_queues() {
+  local n i
+  for i in $(seq 1 24); do
+    n="$(awsf sqs list-queues --queue-name-prefix "$1" --query 'QueueUrls' --output text 2>/dev/null | sed 's/None//' | wc -w | tr -d ' ')"
+    { [ "${TARGET}" = aws ] && [ "${n}" != 0 ] && [ "${i}" -lt 24 ]; } || break
+    sleep 5
+  done
+  echo "${n}"
 }
 
 # lockish_keys: every key in the race bucket that looks like a lock, plus the DIY backend's lock directory.
 lockish_keys() {
   awsf s3api list-objects-v2 --bucket "${BUCKET}" --query 'Contents[].Key' --output text 2>/dev/null |
     tr '\t' '\n' | grep -iE '(^|/)\.pulumi/locks/|lock' || true
+}
+
+# ---- aws mode only: cleanup and the leftover check -------------------------------------------------------------
+#
+# Every resource a race creates carries its run prefix (plr<race><stamp>): buckets, queues and roles by name, VPCs by
+# the plunge-stack tag naming the race's stack plus race=plunge. The record store bucket is plr-<race>-<account>-<stamp>.
+# Nothing is deleted unless its name or tag matches, and the prefix itself must look like plr + lowercase/digits.
+
+# aws_empty_bucket <bucket>: delete every object version and delete marker, then the bucket.
+aws_delete_bucket() {
+  local b="$1"
+  case "${b}" in plr-*|plr[a-z0-9]*) ;; *) >&2 echo "cleanup: refusing bucket ${b}"; return 0 ;; esac
+  aws s3api head-bucket --bucket "${b}" >/dev/null 2>&1 || return 0
+  python3 -I - "${b}" <<'PY'
+import json, subprocess, sys
+b = sys.argv[1]
+def aws(*a):
+  r = subprocess.run(["aws", "--output", "json", *a], capture_output=True, text=True)
+  return json.loads(r.stdout) if r.stdout.strip() else {}
+while True:
+  doc = aws("s3api", "list-object-versions", "--bucket", b, "--max-items", "1000")
+  objs = [{"Key": v["Key"], "VersionId": v["VersionId"]} for v in (doc.get("Versions") or []) + (doc.get("DeleteMarkers") or [])]
+  if not objs:
+    break
+  subprocess.run(["aws", "s3api", "delete-objects", "--bucket", b, "--delete", json.dumps({"Objects": objs, "Quiet": True})],
+                 capture_output=True, text=True)
+PY
+  aws s3api delete-bucket --bucket "${b}" 2>&1 || true
+}
+
+# aws_cleanup <race> <bucket> <prefix> <stack> <work>: destroy the race's stack if records remain, then delete what
+# carries the prefix, then the record store. Output goes to <work>/cleanup.log.
+aws_cleanup() {
+  local race="$1" bucket="$2" prefix="$3" stack="$4" work="$5" log="$5/cleanup.log"
+  case "${prefix}" in plr[a-z0-9]*) ;; *) echo "cleanup: refusing prefix ${prefix}" >> "${log}"; return 0 ;; esac
+  case "${bucket}" in plr-*) ;; *) echo "cleanup: refusing bucket ${bucket}" >> "${log}"; return 0 ;; esac
+  {
+    echo "== cleanup ${race} (prefix ${prefix}, stack ${stack}) $(date -u +%H:%M:%SZ)"
+    local d
+    for d in a c b; do
+      if [ -f "${work}/${d}/Pulumi.yaml" ] && [ -f "${work}/${d}/Pulumi.${stack}.yaml" ]; then
+        if aws s3api list-objects-v2 --bucket "${bucket}" --prefix ".pulumi/records/" --max-keys 1 \
+          --query 'length(Contents || `[]`)' --output text 2>/dev/null | grep -qv '^0$'; then
+          echo "-- destroy from ${d}"
+          (cd "${work}/${d}" && PULUMI_BACKEND_URL="plunge+s3://${bucket}?region=us-east-1" \
+            "${PLUNGE}" destroy --yes --stack "${stack}" --non-interactive 2>&1 | tail -20) || true
+        fi
+        break
+      fi
+    done
+    # S3 buckets created by the race program.
+    local n
+    for n in $(aws s3api list-buckets --query "Buckets[?starts_with(Name, \`${prefix}\`)].Name" --output text); do
+      echo "-- delete bucket ${n}"; aws_delete_bucket "${n}"
+    done
+    # SQS queues.
+    local u
+    for u in $(aws sqs list-queues --region us-east-1 --queue-name-prefix "${prefix}" --query 'QueueUrls' --output text 2>/dev/null | sed 's/None//'); do
+      echo "-- delete queue ${u}"; aws sqs delete-queue --region us-east-1 --queue-url "${u}" || true
+    done
+    # IAM roles (no policies are attached by the race program, but detach anything found).
+    for n in $(aws iam list-roles --query "Roles[?starts_with(RoleName, \`${prefix}\`)].RoleName" --output text); do
+      echo "-- delete role ${n}"
+      for p in $(aws iam list-attached-role-policies --role-name "${n}" --query 'AttachedPolicies[].PolicyArn' --output text); do
+        aws iam detach-role-policy --role-name "${n}" --policy-arn "${p}" || true
+      done
+      for p in $(aws iam list-role-policies --role-name "${n}" --query 'PolicyNames[]' --output text); do
+        aws iam delete-role-policy --role-name "${n}" --policy-name "${p}" || true
+      done
+      aws iam delete-role --role-name "${n}" || true
+    done
+    # VPCs: tagged race=plunge and carrying this stack's plunge-stack marker.
+    local v
+    for v in $(aws ec2 describe-vpcs --region us-east-1 --filters "Name=tag:race,Values=plunge" "Name=tag-key,Values=plunge-urn" \
+      --query 'Vpcs[].VpcId' --output text); do
+      if aws ec2 describe-vpcs --region us-east-1 --vpc-ids "${v}" --query 'Vpcs[0].Tags[?Key==`plunge-stack`].Value' --output text |
+        grep -qxF "plunge-races/${stack}"; then
+        echo "-- delete vpc ${v}"; aws ec2 delete-vpc --region us-east-1 --vpc-id "${v}" || true
+      fi
+    done
+    # The record store last.
+    echo "-- delete record store ${bucket}"
+    aws_delete_bucket "${bucket}"
+  } >> "${log}" 2>&1
+}
+
+# aws_cleanup_all: clean every race begun and not yet cleaned (the main loop calls it after each race; an EXIT trap
+# calls it again so an aborted run still cleans up).
+AWS_CLEANED=0
+aws_cleanup_all() {
+  [ "${TARGET}" = aws ] || return 0
+  local i rec
+  for ((i = AWS_CLEANED; i < ${#AWS_BEGUN[@]}; i++)); do
+    IFS='|' read -r r b p s w <<<"${AWS_BEGUN[$i]}"
+    echo "cleanup: ${r}"
+    aws_cleanup "${r}" "${b}" "${p}" "${s}" "${w}"
+  done
+  AWS_CLEANED=${#AWS_BEGUN[@]}
+}
+
+# aws_leftovers: what is still in the account in us-east-1 under the run's naming: plr* buckets, plr* queues, plr*
+# roles, and VPCs tagged race=plunge. Written to ${OUT}/leftovers.txt; "none" when empty.
+aws_leftovers() {
+  [ "${TARGET}" = aws ] || return 0
+  {
+    echo "buckets:"; aws s3api list-buckets --query 'Buckets[?starts_with(Name, `plr`)].Name' --output text | tr '\t' '\n' | sed '/^$/d'
+    echo "queues:"; aws sqs list-queues --region us-east-1 --queue-name-prefix plr --query 'QueueUrls' --output text | tr '\t' '\n' | sed '/^$/d;/^None$/d'
+    echo "roles:"; aws iam list-roles --query 'Roles[?starts_with(RoleName, `plr`)].RoleName' --output text | tr '\t' '\n' | sed '/^$/d'
+    echo "vpcs:"; aws ec2 describe-vpcs --region us-east-1 --filters "Name=tag:race,Values=plunge" --query 'Vpcs[].VpcId' --output text | tr '\t' '\n' | sed '/^$/d'
+  } > "${OUT}/leftovers.txt" 2>&1
+  if [ "$(grep -vcE '^(buckets|queues|roles|vpcs):$' "${OUT}/leftovers.txt")" = 0 ]; then
+    echo "leftovers: none" | tee -a "${OUT}/leftovers.txt"
+  else
+    echo "leftovers found:"; cat "${OUT}/leftovers.txt"
+  fi
 }

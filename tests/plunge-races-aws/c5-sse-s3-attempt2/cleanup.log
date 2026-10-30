@@ -1,0 +1,23 @@
+== cleanup c5-sse-s3 (prefix plrc5sses3152326148a06728, stack race-c5-sse-s3-152326148a06728) 15:24:46Z
+-- destroy from a
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-sse-s3-152326148a06728):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+
+Destroying (race-c5-sse-s3-152326148a06728):
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152326148a06728  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+    pulumi:pulumi:Stack plunge-races-race-c5-sse-s3-152326148a06728  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c5-sse-s3-152326148a06728):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+
+Duration: 1s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm race-c5-sse-s3-152326148a06728`.
+-- delete record store plr-c5-sse-s3-354867293429-152326148a06728

@@ -1,0 +1,50 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-same-1505566763d60d8/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNhbWUtMTUwNTU2Njc2M2Q2MGQ4OjpwbHVuZ2UtcmFjZXM6OmF3czpzcXMvcXVldWU6UXVldWU6OnF1ZXVlLWE",
+            "LastModified": "2026-10-30T15:07:06+00:00",
+            "ETag": "\"74697bab30fef88fe6a52cf9fa1bbf74\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5682,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-same-1505566763d60d8/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNhbWUtMTUwNTU2Njc2M2Q2MGQ4OjpwbHVuZ2UtcmFjZXM6OnB1bHVtaTpwcm92aWRlcnM6YXdzOjpkZWZhdWx0XzdfNTFfMQ",
+            "LastModified": "2026-10-30T15:06:07+00:00",
+            "ETag": "\"f8320444ea50f74d4d642c5885ab33b5\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 715,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-same-1505566763d60d8/resources/dXJuOnB1bHVtaTpyYWNlLWM1LXNhbWUtMTUwNTU2Njc2M2Q2MGQ4OjpwbHVuZ2UtcmFjZXM6OnB1bHVtaTpwdWx1bWk6U3RhY2s6OnBsdW5nZS1yYWNlcy1yYWNlLWM1LXNhbWUtMTUwNTU2Njc2M2Q2MGQ4",
+            "LastModified": "2026-10-30T15:06:06+00:00",
+            "ETag": "\"50678e7920937bb567f15db53135e884\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 2493,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c5-same-1505566763d60d8/secrets",
+            "LastModified": "2026-10-30T15:06:03+00:00",
+            "ETag": "\"cc94559bc7a791de4d19bc276a9093f4\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

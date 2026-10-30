@@ -1,0 +1,5 @@
+resources urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:iam:Role::native-role 5674
+resources urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site 5727
+resources urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c 2501
+resources urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1 608
+stacks/plunge-races/race-c1-native-14523216024242c/secrets 138

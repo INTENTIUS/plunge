@@ -1,0 +1,17 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-lifecycle-1446335401eb836/secrets",
+            "LastModified": "2026-10-30T14:46:40+00:00",
+            "ETag": "\"ddc7864f9fc23b37dea93540e8bd68e5\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

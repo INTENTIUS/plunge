@@ -1,0 +1,911 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+{
+    "config": {
+        "aws-native:region": "us-east-1",
+        "aws:region": "us-east-1",
+        "plunge-races:prefix": "plrc1native14523216024242c",
+        "plunge-races:retentionA": "3600",
+        "plunge-races:retentionB": "3600",
+        "plunge-races:retentionW": "3600"
+    },
+    "steps": [
+        {
+            "op": "refresh",
+            "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:iam:Role::native-role",
+            "provider": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1::5c0885bb-bcbe-5c6b-9657-23bda7da429d",
+            "oldState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:iam:Role::native-role",
+                "custom": true,
+                "id": "plrc1native14523216024242c-napp",
+                "type": "aws-native:iam:Role",
+                "inputs": {
+                    "assumeRolePolicyDocument": {
+                        "Statement": [
+                            {
+                                "Action": "sts:AssumeRole",
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                }
+                            }
+                        ],
+                        "Version": "2012-10-17"
+                    },
+                    "roleName": "plrc1native14523216024242c-napp",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:iam:Role::native-role"
+                        }
+                    ]
+                },
+                "outputs": {
+                    "__inputs": {
+                        "assumeRolePolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": "sts:AssumeRole",
+                                    "Effect": "Allow",
+                                    "Principal": {
+                                        "Service": "lambda.amazonaws.com"
+                                    }
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "roleName": "plrc1native14523216024242c-napp",
+                        "tags": [
+                            {
+                                "key": "race",
+                                "value": "plunge"
+                            },
+                            {
+                                "key": "plunge-stack",
+                                "value": "plunge-races/race-c1-native-14523216024242c"
+                            },
+                            {
+                                "key": "plunge-urn",
+                                "value": "aws-native:iam:Role::native-role"
+                            }
+                        ]
+                    },
+                    "arn": "arn:aws:iam::354867293429:role/plrc1native14523216024242c-napp",
+                    "assumeRolePolicyDocument": {
+                        "Statement": [
+                            {
+                                "Action": "sts:AssumeRole",
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                }
+                            }
+                        ],
+                        "Version": "2012-10-17"
+                    },
+                    "description": "",
+                    "maxSessionDuration": 3600,
+                    "path": "/",
+                    "roleId": "AROAVFH55FT2557A2IJS3",
+                    "roleName": "plrc1native14523216024242c-napp",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:iam:Role::native-role"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        }
+                    ]
+                },
+                "parent": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "provider": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1::5c0885bb-bcbe-5c6b-9657-23bda7da429d",
+                "propertyDependencies": {
+                    "assumeRolePolicyDocument": [],
+                    "roleName": [],
+                    "tags": []
+                },
+                "created": "2026-10-30T14:53:52.416659Z",
+                "modified": "2026-10-30T14:53:52.416659Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1270"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1123"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#526"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#318"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/pulumi/run.go#144"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ],
+                "replaceOnChanges": [
+                    "path",
+                    "roleName"
+                ]
+            },
+            "newState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:iam:Role::native-role",
+                "custom": true,
+                "id": "plrc1native14523216024242c-napp",
+                "type": "aws-native:iam:Role",
+                "inputs": {
+                    "assumeRolePolicyDocument": {
+                        "Statement": [
+                            {
+                                "Action": "sts:AssumeRole",
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                }
+                            }
+                        ],
+                        "Version": "2012-10-17"
+                    },
+                    "roleName": "plrc1native14523216024242c-napp",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:iam:Role::native-role"
+                        }
+                    ]
+                },
+                "outputs": {
+                    "__inputs": {
+                        "assumeRolePolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": "sts:AssumeRole",
+                                    "Effect": "Allow",
+                                    "Principal": {
+                                        "Service": "lambda.amazonaws.com"
+                                    }
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "roleName": "plrc1native14523216024242c-napp",
+                        "tags": [
+                            {
+                                "key": "race",
+                                "value": "plunge"
+                            },
+                            {
+                                "key": "plunge-stack",
+                                "value": "plunge-races/race-c1-native-14523216024242c"
+                            },
+                            {
+                                "key": "plunge-urn",
+                                "value": "aws-native:iam:Role::native-role"
+                            }
+                        ]
+                    },
+                    "arn": "arn:aws:iam::354867293429:role/plrc1native14523216024242c-napp",
+                    "assumeRolePolicyDocument": {
+                        "Statement": [
+                            {
+                                "Action": "sts:AssumeRole",
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                }
+                            }
+                        ],
+                        "Version": "2012-10-17"
+                    },
+                    "description": "",
+                    "maxSessionDuration": 3600,
+                    "path": "/",
+                    "roleId": "AROAVFH55FT2557A2IJS3",
+                    "roleName": "plrc1native14523216024242c-napp",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:iam:Role::native-role"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        }
+                    ]
+                },
+                "parent": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "provider": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1::5c0885bb-bcbe-5c6b-9657-23bda7da429d",
+                "propertyDependencies": {
+                    "assumeRolePolicyDocument": [],
+                    "roleName": [],
+                    "tags": []
+                },
+                "created": "2026-10-30T14:53:52.416659Z",
+                "modified": "2026-10-30T14:53:52.416659Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1270"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1123"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#526"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#318"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/pulumi/run.go#144"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ],
+                "replaceOnChanges": [
+                    "path",
+                    "roleName"
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "refresh",
+            "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site",
+            "provider": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1::5c0885bb-bcbe-5c6b-9657-23bda7da429d",
+            "oldState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site",
+                "custom": true,
+                "id": "plrc1native14523216024242c-nsite",
+                "type": "aws-native:s3:Bucket",
+                "inputs": {
+                    "bucketName": "plrc1native14523216024242c-nsite",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:s3:Bucket::native-site"
+                        }
+                    ]
+                },
+                "outputs": {
+                    "__inputs": {
+                        "bucketName": "plrc1native14523216024242c-nsite",
+                        "tags": [
+                            {
+                                "key": "race",
+                                "value": "plunge"
+                            },
+                            {
+                                "key": "plunge-stack",
+                                "value": "plunge-races/race-c1-native-14523216024242c"
+                            },
+                            {
+                                "key": "plunge-urn",
+                                "value": "aws-native:s3:Bucket::native-site"
+                            }
+                        ]
+                    },
+                    "abacStatus": "Disabled",
+                    "arn": "arn:aws:s3:::plrc1native14523216024242c-nsite",
+                    "bucketEncryption": {
+                        "serverSideEncryptionConfiguration": [
+                            {
+                                "blockedEncryptionTypes": {
+                                    "encryptionType": [
+                                        "SSE-C"
+                                    ]
+                                },
+                                "bucketKeyEnabled": false,
+                                "serverSideEncryptionByDefault": {
+                                    "sseAlgorithm": "AES256"
+                                }
+                            }
+                        ]
+                    },
+                    "bucketName": "plrc1native14523216024242c-nsite",
+                    "domainName": "plrc1native14523216024242c-nsite.s3.amazonaws.com",
+                    "dualStackDomainName": "plrc1native14523216024242c-nsite.s3.dualstack.us-east-1.amazonaws.com",
+                    "ownershipControls": {
+                        "rules": [
+                            {
+                                "objectOwnership": "BucketOwnerEnforced"
+                            }
+                        ]
+                    },
+                    "publicAccessBlockConfiguration": {
+                        "blockPublicAcls": true,
+                        "blockPublicPolicy": true,
+                        "ignorePublicAcls": true,
+                        "restrictPublicBuckets": true
+                    },
+                    "regionalDomainName": "plrc1native14523216024242c-nsite.s3.us-east-1.amazonaws.com",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:s3:Bucket::native-site"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        }
+                    ],
+                    "websiteUrl": "http://plrc1native14523216024242c-nsite.s3-website-us-east-1.amazonaws.com"
+                },
+                "parent": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "provider": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1::5c0885bb-bcbe-5c6b-9657-23bda7da429d",
+                "propertyDependencies": {
+                    "bucketName": [],
+                    "tags": []
+                },
+                "created": "2026-10-30T14:53:41.497087Z",
+                "modified": "2026-10-30T14:53:41.497087Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1270"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1123"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#526"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#318"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/pulumi/run.go#144"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ],
+                "replaceOnChanges": [
+                    "bucketName",
+                    "bucketNamePrefix",
+                    "bucketNamespace"
+                ]
+            },
+            "newState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::aws-native:s3:Bucket::native-site",
+                "custom": true,
+                "id": "plrc1native14523216024242c-nsite",
+                "type": "aws-native:s3:Bucket",
+                "inputs": {
+                    "bucketName": "plrc1native14523216024242c-nsite",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:s3:Bucket::native-site"
+                        }
+                    ]
+                },
+                "outputs": {
+                    "__inputs": {
+                        "bucketName": "plrc1native14523216024242c-nsite",
+                        "tags": [
+                            {
+                                "key": "race",
+                                "value": "plunge"
+                            },
+                            {
+                                "key": "plunge-stack",
+                                "value": "plunge-races/race-c1-native-14523216024242c"
+                            },
+                            {
+                                "key": "plunge-urn",
+                                "value": "aws-native:s3:Bucket::native-site"
+                            }
+                        ]
+                    },
+                    "abacStatus": "Disabled",
+                    "arn": "arn:aws:s3:::plrc1native14523216024242c-nsite",
+                    "bucketEncryption": {
+                        "serverSideEncryptionConfiguration": [
+                            {
+                                "blockedEncryptionTypes": {
+                                    "encryptionType": [
+                                        "SSE-C"
+                                    ]
+                                },
+                                "bucketKeyEnabled": false,
+                                "serverSideEncryptionByDefault": {
+                                    "sseAlgorithm": "AES256"
+                                }
+                            }
+                        ]
+                    },
+                    "bucketName": "plrc1native14523216024242c-nsite",
+                    "domainName": "plrc1native14523216024242c-nsite.s3.amazonaws.com",
+                    "dualStackDomainName": "plrc1native14523216024242c-nsite.s3.dualstack.us-east-1.amazonaws.com",
+                    "ownershipControls": {
+                        "rules": [
+                            {
+                                "objectOwnership": "BucketOwnerEnforced"
+                            }
+                        ]
+                    },
+                    "publicAccessBlockConfiguration": {
+                        "blockPublicAcls": true,
+                        "blockPublicPolicy": true,
+                        "ignorePublicAcls": true,
+                        "restrictPublicBuckets": true
+                    },
+                    "regionalDomainName": "plrc1native14523216024242c-nsite.s3.us-east-1.amazonaws.com",
+                    "tags": [
+                        {
+                            "key": "race",
+                            "value": "plunge"
+                        },
+                        {
+                            "key": "plunge-urn",
+                            "value": "aws-native:s3:Bucket::native-site"
+                        },
+                        {
+                            "key": "plunge-stack",
+                            "value": "plunge-races/race-c1-native-14523216024242c"
+                        }
+                    ],
+                    "websiteUrl": "http://plrc1native14523216024242c-nsite.s3-website-us-east-1.amazonaws.com"
+                },
+                "parent": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "provider": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:providers:aws-native::default_1_83_1::5c0885bb-bcbe-5c6b-9657-23bda7da429d",
+                "propertyDependencies": {
+                    "bucketName": [],
+                    "tags": []
+                },
+                "created": "2026-10-30T14:53:41.497087Z",
+                "modified": "2026-10-30T14:53:41.497087Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1026"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1270"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#1123"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/pulumiyaml/run.go#526"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#318"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/pulumi/run.go#144"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ],
+                "replaceOnChanges": [
+                    "bucketName",
+                    "bucketNamePrefix",
+                    "bucketNamespace"
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "refresh",
+            "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+            "oldState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "created": "2026-10-30T14:53:10.626295Z",
+                "modified": "2026-10-30T14:53:10.626295Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ]
+            },
+            "newState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "created": "2026-10-30T14:53:10.626295Z",
+                "modified": "2026-10-30T14:53:10.626295Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        },
+        {
+            "op": "same",
+            "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+            "oldState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "created": "2026-10-30T14:53:10.626295Z",
+                "modified": "2026-10-30T14:53:10.626295Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ]
+            },
+            "newState": {
+                "urn": "urn:pulumi:race-c1-native-14523216024242c::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c1-native-14523216024242c",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "created": "2026-10-30T14:53:10.626295Z",
+                "modified": "2026-10-30T14:53:10.626295Z",
+                "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#316"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#588"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#301"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/grpc-ecosystem/grpc-opentracing@v0.0.0-20180507213350-8e809c8a8645/go/otgrpc/server.go#57"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1256"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/go/common/util/rpcutil/interceptor.go#228"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1247"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.254.0/proto/go/language_grpc.pb.go#590"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1443"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1858"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.82.1/server.go#1078"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../../../../../opt/hostedtoolcache/go/1.25.11/x64/src/runtime/asm_arm64.s#1268"
+                    }
+                ]
+            },
+            "detailedDiff": null
+        }
+    ],
+    "diagnostics": [
+        {
+            "message": "warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml\n",
+            "severity": "warning"
+        }
+    ],
+    "duration": 1319188292,
+    "changeSummary": {
+        "same": 3
+    }
+}

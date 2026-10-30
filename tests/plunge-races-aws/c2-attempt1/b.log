@@ -1,0 +1,42 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c2-145610294f514fe):
+    pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe create warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update.....
+ +  aws:ec2:Vpc net create 
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe create 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c2-145610294f514fe):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    + 2 to create
+
+Updating (race-c2-145610294f514fe):
+    pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe creating (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.....
+ +  aws:ec2:Vpc net creating (0s) 
+ +  aws:ec2:Vpc net creating (0s) error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-145610294f514fe::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA": expected no record to exist, but found version "\"0d940b96dacd0cf487145eef56cb0c9e\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe creating (2s) error: resource complete event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-145610294f514fe::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA": expected no record to exist, but found version "\"0d940b96dacd0cf487145eef56cb0c9e\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe creating (2s) error: update failed
+ +  aws:ec2:Vpc net **creating failed** 1 error
+ +  pulumi:pulumi:Stack plunge-races-race-c2-145610294f514fe **creating failed (2s)** 2 errors; 1 warning
+Diagnostics:
+  aws:ec2:Vpc (net):
+    error: pre-step event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-145610294f514fe::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA": expected no record to exist, but found version "\"0d940b96dacd0cf487145eef56cb0c9e\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+
+  pulumi:pulumi:Stack (plunge-races-race-c2-145610294f514fe):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    error: resource complete event returned an error: failed to save snapshot: plunge: the record for resource urn:pulumi:race-c2-145610294f514fe::plunge-races::aws:ec2/vpc:Vpc::net at "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA" changed under this run (staterecord: version conflict for "stacks/plunge-races/race-c2-145610294f514fe/resources/dXJuOnB1bHVtaTpyYWNlLWMyLTE0NTYxMDI5NGY1MTRmZTo6cGx1bmdlLXJhY2VzOjphd3M6ZWMyL3ZwYzpWcGM6Om5ldA": expected no record to exist, but found version "\"0d940b96dacd0cf487145eef56cb0c9e\""); another run wrote it, so this run wrote nothing over it. Re-run to plan against the records as they are now
+    error: update failed
+
+Resources:
+    + 1 created
+    2 errored
+
+Duration: 3s
+
+warning: plunge: unrecorded marked object: the aws:ec2/vpc:Vpc vpc-0348ee5a6dd13d914 carries this stack's ownership marker, and its markers name urn:pulumi:race-c2-145610294f514fe::plunge-races::aws:ec2/vpc:Vpc::net, but no record of the stack names it (listed through aws family lister). A racing create whose record write lost leaves one behind, and so does a run still in flight that has not recorded its create yet. plunge does not delete it: if a second run reports it too, delete it if it is a duplicate, or import it into the stack

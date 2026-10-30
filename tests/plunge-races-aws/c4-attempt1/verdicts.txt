@@ -1,0 +1,1 @@
+VERDICT C4 c4 FAIL loser named=yes, live worker-1=1, in records=no; see a.log, b.log, a-preview.log

@@ -1,0 +1,23 @@
+== cleanup c2 (prefix plrc2151839456d0f2c6, stack race-c2-151839456d0f2c6) 15:19:06Z
+-- destroy from a
+    pulumi:pulumi:Stack plunge-races-race-c2-151839456d0f2c6  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+@ destroying....
+ -  aws:ec2:Vpc net deleting (0s) 
+@ destroying....
+ -  aws:ec2:Vpc net deleted (1s) 
+ -  pulumi:pulumi:Stack plunge-races-race-c2-151839456d0f2c6 deleting (0s) 
+ -  pulumi:pulumi:Stack plunge-races-race-c2-151839456d0f2c6 deleted (0.10s) 
+    pulumi:pulumi:Stack plunge-races-race-c2-151839456d0f2c6  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c2-151839456d0f2c6):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 deleted
+
+Duration: 3s
+
+The resources in the stack have been deleted, but the history and configuration associated with the stack are still maintained. 
+If you want to remove the stack completely, run `pulumi stack rm race-c2-151839456d0f2c6`.
+-- delete record store plr-c2-354867293429-151839456d0f2c6

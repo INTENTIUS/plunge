@@ -1,0 +1,5 @@
+config:
+  aws:region: us-east-1
+  aws-native:region: us-east-1
+  plunge-races:retentionA: 7200
+encryptionsalt: v1:I7nV8Z5sl7s=:v1:l2I6Vi198UJGYdzy:MRlOlBILQNw13UWWdipngUzYZlmx7g==

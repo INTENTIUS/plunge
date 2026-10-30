@@ -1,0 +1,4 @@
+resources urn:pulumi:race-c5-sse-kms-1530448996819f1::plunge-races::aws:sqs/queue:Queue::queue-a 5724
+resources urn:pulumi:race-c5-sse-kms-1530448996819f1::plunge-races::pulumi:providers:aws::default_7_51_1 721
+resources urn:pulumi:race-c5-sse-kms-1530448996819f1::plunge-races::pulumi:pulumi:Stack::plunge-races-race-c5-sse-kms-1530448996819f1 2505
+stacks/plunge-races/race-c5-sse-kms-1530448996819f1/secrets 138

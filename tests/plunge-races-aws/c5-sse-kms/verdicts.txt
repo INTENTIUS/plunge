@@ -1,0 +1,2 @@
+VERDICT C5 c5-sse-kms PASS one write landed (record retention 7200); the other run was refused by name for queue-a's record
+VERDICT C5 c5-sse-kms-no-locks PASS no lock object appeared in the record store during the race

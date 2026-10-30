@@ -1,0 +1,51 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c4-1519198693a7af8):
+    pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing 
+ ~  aws:sqs:Queue worker-1 refreshing 
+ ~  aws:sqs:Queue worker-1 refresh 
+ ~  aws:sqs:Queue queue-a refresh 
+    pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ previewing update.....
+    aws:sqs:Queue queue-a  
+ -  aws:sqs:Queue worker-1 delete 
+    pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c4-1519198693a7af8):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    - 1 to delete
+    2 unchanged
+
+Updating (race-c4-1519198693a7af8):
+    pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue-a refreshing (0s) 
+ ~  pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue worker-1 refreshing (0s) 
+ ~  aws:sqs:Queue queue-a refresh (0.26s) 
+ ~  aws:sqs:Queue worker-1 refresh (0.27s) 
+    pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+@ updating.....
+    aws:sqs:Queue queue-a  
+ -  aws:sqs:Queue worker-1 deleting (0s) 
+@ updating..............................................
+ -  aws:sqs:Queue worker-1 deleted (43s) 
+    pulumi:pulumi:Stack plunge-races-race-c4-1519198693a7af8  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c4-1519198693a7af8):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    - 1 deleted
+    2 unchanged
+
+Duration: 46s
+
+plunge: the sweep for unrecorded aws:sqs/queue:Queue objects could not list them: cloudcontrol: GetResource: ResourceNotFoundException (HTTP 400): AWS::SQS::Queue Handler returned status FAILED: Resource of type 'AWS::SQS::Queue' with identifier 'https://sqs.us-east-1.amazonaws.com/354867293429/plrc41519198693a7af8-w1' was not found. (HandlerErrorCode: NotFound, RequestToken: 3cb1d99e-2949-491c-90d7-bb2338220739)
+

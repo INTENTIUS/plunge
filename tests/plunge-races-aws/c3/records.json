@@ -1,0 +1,50 @@
+{
+    "Contents": [
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c3-1456494444418e8/resources/dXJuOnB1bHVtaTpyYWNlLWMzLTE0NTY0OTQ0NDQ0MThlODo6cGx1bmdlLXJhY2VzOjphd3M6c3FzL3F1ZXVlOlF1ZXVlOjpxdWV1ZS1h",
+            "LastModified": "2026-10-30T14:58:03+00:00",
+            "ETag": "\"b9b1334583b9f8d9b91a406aeaa9e906\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 5608,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c3-1456494444418e8/resources/dXJuOnB1bHVtaTpyYWNlLWMzLTE0NTY0OTQ0NDQ0MThlODo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHJvdmlkZXJzOmF3czo6ZGVmYXVsdF83XzUxXzE",
+            "LastModified": "2026-10-30T14:57:00+00:00",
+            "ETag": "\"f4d988a9a074a3b8edf6b231906ecb04\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 705,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c3-1456494444418e8/resources/dXJuOnB1bHVtaTpyYWNlLWMzLTE0NTY0OTQ0NDQ0MThlODo6cGx1bmdlLXJhY2VzOjpwdWx1bWk6cHVsdW1pOlN0YWNrOjpwbHVuZ2UtcmFjZXMtcmFjZS1jMy0xNDU2NDk0NDQ0NDE4ZTg",
+            "LastModified": "2026-10-30T14:56:59+00:00",
+            "ETag": "\"664318bd62d77949648571678ee82169\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 2471,
+            "StorageClass": "STANDARD"
+        },
+        {
+            "Key": ".pulumi/records/stacks/plunge-races/race-c3-1456494444418e8/secrets",
+            "LastModified": "2026-10-30T14:56:54+00:00",
+            "ETag": "\"25e58c2b81ee96143d3bb93349401166\"",
+            "ChecksumAlgorithm": [
+                "CRC32"
+            ],
+            "ChecksumType": "FULL_OBJECT",
+            "Size": 138,
+            "StorageClass": "STANDARD"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ".pulumi/records/"
+}

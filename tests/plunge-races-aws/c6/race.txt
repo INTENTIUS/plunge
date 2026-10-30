@@ -1,0 +1,2 @@
+== c6: bucket plr-c6-354867293429-1510258706f8a94, prefix plrc61510258706f8a94, stack race-c6-1510258706f8a94
+killed after 48 polls; re-run exit 0; live queues 6

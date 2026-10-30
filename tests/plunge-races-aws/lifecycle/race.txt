@@ -1,0 +1,6 @@
+== lifecycle: bucket plr-lifecycle-354867293429-1446335401eb836, prefix plrlifecycle1446335401eb836, stack race-lifecycle-1446335401eb836
+concurrent updates: exits a=0 b=0; live a=7200 b=1800; lock-like keys seen 0
+export: exit 0; a=7200 b=1800 resources=4 records=4 one-per-urn=yes
+older run: exit 0; live b=1800
+drift: exits 0; drifted/{"providerReads": 1, "recordKeys": 2, "recordListCalls": 0, "recordsRead": 2, "stackRefreshes": 0} in-sync/{"providerReads": 1, "recordKeys": 2, "recordListCalls": 0, "recordsRead": 2, "stackRefreshes": 0}
+destroy: exit 0; live queues 0; queue records left 0

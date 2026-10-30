@@ -1,0 +1,1 @@
+VERDICT C6 c6 PASS after kill -9 mid-run the plain re-run finished with no cancel or unlock, six queues each once, no changes planned

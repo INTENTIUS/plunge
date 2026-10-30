@@ -1,0 +1,45 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+Previewing update (race-c1-native-151446390e89b37):
+    pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws-native:iam:Role native-role refreshing 
+ ~  aws-native:s3:Bucket native-site refreshing 
+ ~  aws-native:iam:Role native-role refresh 
+@ previewing update....
+ ~  aws-native:s3:Bucket native-site refresh 
+    pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    aws-native:iam:Role native-role  
+    aws-native:s3:Bucket native-site  
+    pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-native-151446390e89b37):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    3 unchanged
+
+Updating (race-c1-native-151446390e89b37):
+    pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+ ~  aws-native:s3:Bucket native-site refreshing (0s) 
+ ~  aws-native:iam:Role native-role refreshing (0s) 
+ ~  aws-native:iam:Role native-role refresh (0.37s) 
+@ updating....
+ ~  aws-native:s3:Bucket native-site refresh (0.79s) 
+    pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+    aws-native:iam:Role native-role  
+    aws-native:s3:Bucket native-site  
+    pulumi:pulumi:Stack plunge-races-race-c1-native-151446390e89b37  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-races-race-c1-native-151446390e89b37):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/-Users-alex-Documents-checkouts-intentius/3a235c73-bef1-4338-b6ed-ddc5aa15d1ca/scratchpad/rel/plunge/pulumi-language-yaml
+
+Resources:
+    3 unchanged
+
+Duration: 2s
+
