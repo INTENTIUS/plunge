@@ -1,0 +1,13 @@
+name: plunge-gate
+runtime: yaml
+config:
+  retention: {type: integer, default: 3600}
+resources:
+  queue:
+    type: aws:sqs:Queue
+    properties:
+      name: plg14555111-a
+      messageRetentionSeconds: ${retention}
+      tags: {gate: plunge}
+    options:
+      version: 7.51.1

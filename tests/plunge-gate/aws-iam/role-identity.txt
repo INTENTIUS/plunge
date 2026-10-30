@@ -1,0 +1,1 @@
+arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate

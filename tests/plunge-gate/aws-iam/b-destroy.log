@@ -1,0 +1,39 @@
+Previewing destroy (gate-b-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ -  aws:sqs:Queue queue delete 
+ -  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 delete 
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  1 warning
+ -  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 delete 
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-b-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    - 2 to delete
+
+Destroying (gate-b-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ -  aws:sqs:Queue queue deleting (0s) 
+@ destroying....
+ -  aws:sqs:Queue queue deleting (0s) error:   sdk-v2/provider2.go:571: sdk.helper_schema: deleting SQS Queue (https://sqs.us-east-1.amazonaws.com/ACCOUNT/plg14555111-b): operation error SQS: DeleteQueue, https response error StatusCode: 403, RequestID: e4b6fabd-10b0-589f-aa86-99e3a279015d, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:deletequeue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-b because no identity-based policy allows the sqs:deletequeue action: provider=aws@7.51.1
+ -  aws:sqs:Queue queue deleting (0s) error: deleting urn:pulumi:gate-b-14555111::plunge-gate::aws:sqs/queue:Queue::queue: 1 error occurred:
+ -  aws:sqs:Queue queue **deleting failed** error: deleting urn:pulumi:gate-b-14555111::plunge-gate::aws:sqs/queue:Queue::queue: 1 error occurred:
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  error: update failed
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111 **failed** 1 error; 1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-b-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+    error: update failed
+
+  aws:sqs:Queue (queue):
+    error:   sdk-v2/provider2.go:571: sdk.helper_schema: deleting SQS Queue (https://sqs.us-east-1.amazonaws.com/ACCOUNT/plg14555111-b): operation error SQS: DeleteQueue, https response error StatusCode: 403, RequestID: e4b6fabd-10b0-589f-aa86-99e3a279015d, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:deletequeue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-b because no identity-based policy allows the sqs:deletequeue action: provider=aws@7.51.1
+    error: deleting urn:pulumi:gate-b-14555111::plunge-gate::aws:sqs/queue:Queue::queue: 1 error occurred:
+    	* deleting SQS Queue (https://sqs.us-east-1.amazonaws.com/ACCOUNT/plg14555111-b): operation error SQS: DeleteQueue, https response error StatusCode: 403, RequestID: e4b6fabd-10b0-589f-aa86-99e3a279015d, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:deletequeue on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-b because no identity-based policy allows the sqs:deletequeue action
+
+Resources:
+    2 errored
+
+Duration: 2s
+

@@ -1,0 +1,11 @@
+== bucket plg-gate-14555111
+== stack B up as the caller
+== policy and role plg-gate-14555111
+== running plunge as arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate
+== 1. up of stack A as the role (create, tag matches)
+== 2. update of stack A's queue as the role
+== 3. update of stack B's queue as the role
+== 4. destroy of stack B as the role
+== 5. up of stack C as the role (create, tag does not match)
+== 6. direct API controls as the role
+== cleanup: stacks, queues, role, policy, bucket

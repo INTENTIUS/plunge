@@ -1,0 +1,53 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+Previewing update (gate-b-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ ~  aws:sqs:Queue queue refreshing 
+ ~  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 refreshing 
+ ~  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 refreshing 
+ ~  aws:sqs:Queue queue refresh 
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111 running 
+@ previewing update.....
+ ~  aws:sqs:Queue queue update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  1 warning
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-b-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Updating (gate-b-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-gate-gate-b-14555111 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue refreshing (0s) 
+ ~  aws:sqs:Queue queue refresh (0.26s) 
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+@ updating.....
+ ~  aws:sqs:Queue queue updating (0s) [diff: ~messageRetentionSeconds]
+ ~  aws:sqs:Queue queue updating (0s) [diff: ~messageRetentionSeconds]; error:   sdk-v2/provider2.go:571: sdk.helper_schema: updating SQS Queue (https://sqs.us-east-1.amazonaws.com/ACCOUNT/plg14555111-b) attributes: operation error SQS: SetQueueAttributes, https response error StatusCode: 403, RequestID: a0d42420-3ff9-5312-bc50-477e8d3d6c91, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:setqueueattributes on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-b because no identity-based policy allows the sqs:setqueueattributes action: provider=aws@7.51.1
+ ~  aws:sqs:Queue queue updating (0s) [diff: ~messageRetentionSeconds]; error: 1 error occurred:
+ ~  aws:sqs:Queue queue **updating failed** [diff: ~messageRetentionSeconds]; error: 1 error occurred:
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111 running error: update failed
+    pulumi:pulumi:Stack plunge-gate-gate-b-14555111 **failed** 1 error; 1 warning
+Diagnostics:
+  aws:sqs:Queue (queue):
+    error:   sdk-v2/provider2.go:571: sdk.helper_schema: updating SQS Queue (https://sqs.us-east-1.amazonaws.com/ACCOUNT/plg14555111-b) attributes: operation error SQS: SetQueueAttributes, https response error StatusCode: 403, RequestID: a0d42420-3ff9-5312-bc50-477e8d3d6c91, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:setqueueattributes on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-b because no identity-based policy allows the sqs:setqueueattributes action: provider=aws@7.51.1
+    error: 1 error occurred:
+    	* updating urn:pulumi:gate-b-14555111::plunge-gate::aws:sqs/queue:Queue::queue: 1 error occurred:
+    	* updating SQS Queue (https://sqs.us-east-1.amazonaws.com/ACCOUNT/plg14555111-b) attributes: operation error SQS: SetQueueAttributes, https response error StatusCode: 403, RequestID: a0d42420-3ff9-5312-bc50-477e8d3d6c91, api error AccessDenied: User: arn:aws:sts::ACCOUNT:assumed-role/plg-gate-14555111/plunge-gate is not authorized to perform: sqs:setqueueattributes on resource: arn:aws:sqs:us-east-1:ACCOUNT:plg14555111-b because no identity-based policy allows the sqs:setqueueattributes action
+
+  pulumi:pulumi:Stack (plunge-gate-gate-b-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+    error: update failed
+
+Resources:
+    1 unchanged
+    2 errored
+
+Duration: 3s
+

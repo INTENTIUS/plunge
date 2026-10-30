@@ -1,0 +1,75 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RecordStore",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:ListBucketVersions",
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetEncryptionConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::plg-gate-14555111"
+    },
+    {
+      "Sid": "RecordStoreObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion",
+        "s3:GetObjectTagging",
+        "s3:PutObjectTagging"
+      ],
+      "Resource": "arn:aws:s3:::plg-gate-14555111/*"
+    },
+    {
+      "Sid": "ReadQueues",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:ListQueues",
+        "sqs:GetQueueUrl",
+        "sqs:GetQueueAttributes",
+        "sqs:ListQueueTags",
+        "cloudformation:ListResources",
+        "cloudformation:GetResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ChangeOnlyThisStack",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:SetQueueAttributes",
+        "sqs:DeleteQueue",
+        "sqs:UntagQueue"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/plunge-stack": "plunge-gate/gate-a-14555111"
+        }
+      }
+    },
+    {
+      "Sid": "CreateOnlyIntoThisStack",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:CreateQueue",
+        "sqs:TagQueue"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/plunge-stack": "plunge-gate/gate-a-14555111"
+        }
+      }
+    }
+  ]
+}

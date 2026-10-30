@@ -1,0 +1,43 @@
+warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+Previewing update (gate-a-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 refreshing warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue refreshing 
+ ~  aws:sqs:Queue queue refresh 
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+@ previewing update.....
+ ~  aws:sqs:Queue queue update [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-a-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 to update
+    1 unchanged
+
+Updating (gate-a-14555111):
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+ ~  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ ~  pulumi:pulumi:Stack plunge-gate-gate-a-14555111 refreshing (0s) warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+ ~  aws:sqs:Queue queue refreshing (0s) 
+ ~  aws:sqs:Queue queue refresh (0.31s) 
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111 running warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+@ updating.....
+ ~  aws:sqs:Queue queue updating (0s) [diff: ~messageRetentionSeconds]
+@ updating.............................
+ ~  aws:sqs:Queue queue updated (25s) [diff: ~messageRetentionSeconds]
+    pulumi:pulumi:Stack plunge-gate-gate-a-14555111  1 warning
+Diagnostics:
+  pulumi:pulumi:Stack (plunge-gate-gate-a-14555111):
+    warning: using pulumi-language-yaml from $PATH at /opt/homebrew/bin/pulumi-language-yaml expected /private/tmp/claude-501/scratch-plg/bin/plunge/pulumi-language-yaml
+
+Resources:
+    ~ 1 updated
+    1 unchanged
+
+Duration: 29s
+

@@ -55,8 +55,9 @@ it would replace it.
 
 ## Who may change a resource
 
-The cloud's own policy can condition on the marker. None has run against
-plunge's markers yet; each platform's Gate page shows the shape and [#45](https://github.com/INTENTIUS/plunge/issues/45)
+The cloud's own policy can condition on the marker. Only AWS has a recorded
+run, for SQS queues ([AWS Gate](/plunge/aws/gate/)). The other platforms'
+Gate pages show the shape and [#45](https://github.com/INTENTIUS/plunge/issues/45)
 holds the run.
 
 Source: `pkg/backend/plunge/markers/keys.go` (the keys and digests),
