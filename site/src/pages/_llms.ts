@@ -28,7 +28,7 @@ export async function pages() {
 
 export const PREAMBLE = `# plunge
 
-> Pulumi with per-resource locking.
+> Per-resource locking for Pulumi.
 
 The source, and the reference material the site links to, is at https://github.com/INTENTIUS/plunge.
 

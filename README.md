@@ -1,6 +1,6 @@
 # plunge
 
-Pulumi with per-resource locking.
+Per-resource locking for Pulumi.
 
 The engine plywood can run with `engine: plunge`.
 
