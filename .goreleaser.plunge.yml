@@ -2,7 +2,7 @@
 #
 # Differences from upstream:
 # - The CLI binary is `plunge`, built from pkg/cmd/pulumi (the Go package path is upstream's).
-# - Two versions are stamped: plunge's own (PLUNGE_VERSION) and the Pulumi-compatible one
+# - Two versions are stamped: plunge's own (CHANT_RELEASE_LABEL) and the Pulumi-compatible one
 #   (PULUMI_VERSION) that SDKs and plugins check. scripts/plunge-version.sh prints both.
 # - Language hosts keep their protocol names (pulumi-language-*), since the engine and SDKs look
 #   them up by those names.
@@ -14,12 +14,13 @@
 # pkg/util/plugin.go (knownLanguageRuntimes).
 #
 #   ./scripts/prep-for-goreleaser.sh
-#   PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/plunge-version.sh plunge) \
-#     goreleaser release -f .goreleaser.plunge.yml
+#   PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) CHANT_RELEASE_LABEL=$(./scripts/plunge-version.sh plunge) \
+#     goreleaser release --snapshot --clean -f .goreleaser.plunge.yml
 #
-# Release tags are plunge-vX.Y.Z (INTENTIUS/plunge#33). plunge-release.yml passes the tag as
-# GORELEASER_CURRENT_TAG and PLUNGE_VERSION=X.Y.Z (scripts/plunge-version.sh drops the prefix). The tag
-# isn't semver with its prefix, so goreleaser warns and goes on; nothing below reads .Version or .Tag.
+# Releases are cut by `chant release` (chant.config.ts, INTENTIUS/plunge#70). chant runs this file in
+# snapshot mode, so the snapshot version is the release label X.Y.Z, and uploads the archives and the
+# checksums file under the tag plunge-vX.Y.Z (INTENTIUS/plunge#33). The tag isn't semver with its prefix, and
+# nothing below reads .Version or .Tag.
 dist: goreleaser
 version: 2
 
@@ -41,7 +42,7 @@ builds:
   ldflags:
     - -w -s
     - -X github.com/pulumi/pulumi/sdk/v3/go/common/version.Version=v{{.Env.PULUMI_VERSION}}
-    - -X github.com/pulumi/pulumi/pkg/v3/plunge.Version=v{{.Env.PLUNGE_VERSION}}
+    - -X github.com/pulumi/pulumi/pkg/v3/plunge.Version=v{{ trimprefix .Env.CHANT_RELEASE_LABEL "v" }}
   mod_timestamp: '{{ .CommitTimestamp }}'
   tags:
     - osusergo
@@ -87,13 +88,13 @@ archives:
     - src: 'bin/{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}/*'
       dst: '.'
       strip_parent: true
-  # Named from PLUNGE_VERSION, not .Tag: this tree carries upstream's tags (v3.*, pkg/v3.*, sdk/v3.*),
-  # so outside a plunge tag push git describe finds pulumi's version, and a monorepo tag puts a slash
-  # in the name. A plunge-vX.Y.Z tag gives PLUNGE_VERSION X.Y.Z, so the archive is plunge-vX.Y.Z-<os>-<arch>.
-  name_template: '{{ .ProjectName }}-v{{ .Env.PLUNGE_VERSION }}-{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}'
+  # Named from the release label, not .Tag: this tree carries upstream's tags (v3.*, pkg/v3.*, sdk/v3.*),
+  # so git describe finds pulumi's version, and a monorepo tag puts a slash in the name. The label X.Y.Z
+  # gives the archive plunge-vX.Y.Z-<os>-<arch>.
+  name_template: '{{ .ProjectName }}-v{{ trimprefix .Env.CHANT_RELEASE_LABEL "v" }}-{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}'
 
 snapshot:
-  version_template: "{{ .Env.PLUNGE_VERSION }}-SNAPSHOT"
+  version_template: "{{ .Env.CHANT_RELEASE_LABEL }}"
 
 checksum:
-  name_template: "{{ .ProjectName }}-v{{ .Env.PLUNGE_VERSION }}-checksums.txt"
+  name_template: "{{ .ProjectName }}-v{{ trimprefix .Env.CHANT_RELEASE_LABEL \"v\" }}-checksums.txt"
