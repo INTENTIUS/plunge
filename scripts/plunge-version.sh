@@ -7,7 +7,7 @@
 #   scripts/plunge-version.sh ldflags  the -X flags that stamp both into the binary
 #
 # plunge's version comes from PLUNGE_VERSION, else .plunge-version with "-dev.0" appended. PLUNGE_VERSION
-# may be a release tag: plunge-vX.Y.Z (the form plunge-release.yml triggers on, INTENTIUS/plunge#33), or
+# may be a release tag: plunge-vX.Y.Z (the tag `chant release` makes, INTENTIUS/plunge#33), or
 # vX.Y.Z or X.Y.Z; the prefix is dropped either way.
 #
 # The Pulumi-compatible version is the newest upstream pulumi/pulumi release merged into this tree. It

@@ -33,5 +33,5 @@ plunge_language_hosts:
 plunge_snapshot:
 	./scripts/prep-for-goreleaser.sh local
 	PULUMI_VERSION=$(shell ./scripts/plunge-version.sh pulumi) \
-	PLUNGE_VERSION=$(shell ./scripts/plunge-version.sh plunge) \
+	CHANT_RELEASE_LABEL=$(shell ./scripts/plunge-version.sh plunge) \
 		goreleaser release -f .goreleaser.plunge.yml --snapshot --clean --skip=validate

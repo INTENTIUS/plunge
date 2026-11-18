@@ -132,16 +132,17 @@ HCL on first use, at the versions in `pkg/util/plugin.go` (`knownLanguageRuntime
 A host neither bundled nor on `PATH` is fetched as upstream fetches it: stock pulumi's build at
 plunge's Pulumi-compatible version, the same code while plunge's hosts match upstream's.
 
-Pushing a `plunge-vX.Y.Z` tag runs `.github/workflows/plunge-release.yml`; a bare `vX.Y.Z` tag, upstream
-pulumi's naming, doesn't (INTENTIUS/plunge#33). goreleaser's release mode refuses the `plunge-v` prefix,
-so the workflow runs goreleaser with `.goreleaser.plunge.yml` in snapshot mode and publishes the
-`plunge-vX.Y.Z-<os>-<arch>` archives and checksums with `gh release create` under the pushed tag, with
-the Windows binaries unsigned. The first was `plunge-v0.1.0`, on 2026-10-27. The snapshot build below
-lists the same artifacts and publishes nothing.
+A release is cut by `chant release`, configured in `chant.config.ts`. Dispatch
+`.github/workflows/plunge-chant-release.yml` with the version (`0.3.0`, or `auto` to take it from the
+conventional commits since the last release). It checks that the commit's checks passed, tags the commit
+`plunge-vX.Y.Z` (a bare `vX.Y.Z` tag is upstream pulumi's naming and is never made, INTENTIUS/plunge#33), builds
+with `.goreleaser.plunge.yml` in snapshot mode, and publishes the `plunge-vX.Y.Z-<os>-<arch>` archives and
+checksums as a GitHub release, with the Windows binaries unsigned. The first was `plunge-v0.1.0`, on 2026-10-27.
+The snapshot build below lists the same artifacts and publishes nothing.
 
 ```sh
 ./scripts/prep-for-goreleaser.sh
-PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) PLUNGE_VERSION=$(./scripts/plunge-version.sh plunge) \
+PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi) CHANT_RELEASE_LABEL=$(./scripts/plunge-version.sh plunge) \
   goreleaser release -f .goreleaser.plunge.yml --snapshot --clean
 ```
 
