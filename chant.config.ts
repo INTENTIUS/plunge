@@ -1,6 +1,6 @@
 // plunge's release, run by `chant release` (INTENTIUS/plunge#70). Regenerate the workflow with
 //
-//   npx --yes @intentius/chant@0.124.104 release workflow
+//   npx --yes @intentius/chant@0.124.105 release workflow
 //
 // Dispatch .github/workflows/plunge-chant-release.yml with the label (`0.3.0`, or `auto`). The cut pushes
 // the tag plunge-v<label> and the publish job makes the GitHub release.
@@ -20,7 +20,7 @@ export default {
       trigger: "dispatch",
       gate: "head",
       file: ".github/workflows/plunge-chant-release.yml",
-      chant: "npx --yes @intentius/chant@0.124.104",
+      chant: "npx --yes @intentius/chant@0.124.105",
       // The doctor has known false failures in the cut job until the next chant release.
       doctor: false,
       env: {
