@@ -21,8 +21,6 @@ export default {
       gate: "head",
       file: ".github/workflows/plunge-chant-release.yml",
       chant: "npx --yes @intentius/chant@0.124.105",
-      // The doctor has known false failures in the cut job until the next chant release.
-      doctor: false,
       env: {
         // scripts/prep-for-goreleaser.sh downloads the dotnet and yaml hosts with gh, and the release target reads it.
         GITHUB_TOKEN: "${{ github.token }}",

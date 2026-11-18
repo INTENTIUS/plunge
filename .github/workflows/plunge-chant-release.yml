@@ -68,6 +68,7 @@ jobs:
           cache-dependency-path: "pkg/go.sum\nsdk/go.sum\n"
       - run: "echo \"PULUMI_VERSION=$(./scripts/plunge-version.sh pulumi)\" >> \"$GITHUB_ENV\""
       - run: "./scripts/prep-for-goreleaser.sh"
+      - run: npx --yes @intentius/chant@0.124.105 release doctor --from cut
       - name: goreleaser v2.19.0
         run: "mkdir -p \"$RUNNER_TEMP/goreleaser\" && curl -fsSL -o \"$RUNNER_TEMP/goreleaser/goreleaser.tar.gz\" https://github.com/goreleaser/goreleaser/releases/download/v2.19.0/goreleaser_Linux_x86_64.tar.gz && echo \"ebc3194ad1d1b1787614405285a0039665cd4c5bd3305215a1b201600f90630b  $RUNNER_TEMP/goreleaser/goreleaser.tar.gz\" | sha256sum -c - && tar -xzf \"$RUNNER_TEMP/goreleaser/goreleaser.tar.gz\" -C \"$RUNNER_TEMP/goreleaser\" goreleaser && echo \"CHANT_GORELEASER=$RUNNER_TEMP/goreleaser/goreleaser\" >> \"$GITHUB_ENV\""
       - run: git fetch origin 'refs/tags/ci/*:refs/tags/ci/*'
