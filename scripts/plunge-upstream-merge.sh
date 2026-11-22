@@ -42,7 +42,7 @@
 #   BASE      integration branch to branch from   (default: main)
 #   UPSTREAM  upstream remote name                (default: upstream)
 #   OUT       report directory                    (default: plunge-upstream-merge-out)
-#   HOST_GOTOOLCHAIN  GOTOOLCHAIN for the language-host modules (default: go1.27.1)
+#   HOST_GOTOOLCHAIN  GOTOOLCHAIN for the language-host modules (default: go1.27.4)
 #
 # Output in $OUT:
 #   report.md     the report the workflow posts as an issue
@@ -67,7 +67,7 @@ BASE="${BASE:-main}"
 UPSTREAM="${UPSTREAM:-upstream}"
 UPSTREAM_URL="https://github.com/pulumi/pulumi.git"
 OUT="${OUT:-plunge-upstream-merge-out}"
-HOST_GOTOOLCHAIN="${HOST_GOTOOLCHAIN:-go1.27.1}"
+HOST_GOTOOLCHAIN="${HOST_GOTOOLCHAIN:-go1.27.4}"
 PUSH=0
 
 for arg in "$@"; do
@@ -216,7 +216,7 @@ is_go_mod() {
 }
 
 # version_lt <a> <b>: true when version a sorts before b. Takes module versions (v1.2.3, pseudo-versions,
-# +incompatible) and go directives (1.27.1). Pre-release parts compare as strings, which orders
+# +incompatible) and go directives (1.27.4). Pre-release parts compare as strings, which orders
 # pseudo-versions by their timestamp.
 version_lt() {
   local a="${1#v}" b="${2#v}" ap="" bp="" i

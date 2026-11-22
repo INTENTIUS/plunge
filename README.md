@@ -179,7 +179,7 @@ fails if one did), and rebuild. The Pulumi-compatible version follows `CHANGELOG
 setting the `upstream` push URL to `no-push://`, cuts `upstream-merge/<date>-<upstream sha>` from
 `origin/integration/pulumi-engine` (or `BASE`), merges with a merge commit, moves any new upstream
 workflow into `.github/upstream-workflows/` in its own commit, and builds `sdk`, `pkg`, `sdk/pcl`, the
-three language hosts (with `GOTOOLCHAIN=go1.27.1`) and `bin/plunge`. Conflicts confined to upstream's
+three language hosts (with `GOTOOLCHAIN=go1.27.4`) and `bin/plunge`. Conflicts confined to upstream's
 generated Automation API or go.mod/go.sum files take upstream's side, then it re-applies
 `scripts/plunge-go-mod-fork.txt` and runs `go mod tidy` in each module `scripts/tidy.sh` covers. Any
 other conflict aborts the merge with the file list, for a human. `--push` pushes only
