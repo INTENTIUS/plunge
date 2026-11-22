@@ -47,15 +47,30 @@ download_release() {
   fi
 }
 
+# The sha256 of each archive is in scripts/language-provider-checksums.txt, copied from the checksums file
+# published with the release. Update it together with the tags below.
+CHECKSUMS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/language-provider-checksums.txt"
+
+verify_archive() {
+  local filename="$1"
+  local line
+  line="$(grep -F "  ${filename}" "${CHECKSUMS}" || true)"
+  if [ -z "${line}" ]; then
+    echo "no checksum for ${filename} in ${CHECKSUMS}" >&2
+    return 1
+  fi
+  echo "${line}" | shasum -a 256 -c -
+}
+
 # Each entry is "lang tag [owner]". The owner defaults to "pulumi" when omitted.
 #
 # Note: the HCL and Java language runtimes are not bundled. Their pinned versions live in
 # pkg/util/plugin.go (knownLanguageRuntimes) and the CLI fetches them on demand.
 LANGUAGES=(
   # renovate: datasource=github-releases depName=pulumi/pulumi-dotnet
-  "dotnet v3.116.0"
+  "dotnet v3.120.0"
   # renovate: datasource=github-releases depName=pulumi/pulumi-yaml
-  "yaml v1.38.13"
+  "yaml v1.39.2"
 )
 
 for i in "${LANGUAGES[@]}"; do
@@ -101,6 +116,7 @@ for i in "${LANGUAGES[@]}"; do
         mkdir -p "${OUTDIR}"
 
         download_release "${PULUMI_OWNER}" "${PULUMI_LANG}" "${TAG}" "${ARCHIVE}.tar.gz"
+        verify_archive "${ARCHIVE}.tar.gz"
         tar -xzvf "${ARCHIVE}.tar.gz" -C "${OUTDIR}" "pulumi-language-${PULUMI_LANG}${DIST_EXT}"
       done
     done

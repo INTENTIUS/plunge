@@ -1,6 +1,6 @@
 module github.com/pulumi/pulumi/sdk/pcl/v3
 
-go 1.27.1
+go 1.27.4
 
 replace (
 	github.com/atotto/clipboard => github.com/tgummerer/clipboard v0.0.0-20241001131231-d02d263e614e

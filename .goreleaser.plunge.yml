@@ -21,8 +21,15 @@
 # snapshot mode, so the snapshot version is the release label X.Y.Z, and uploads the archives and the
 # checksums file under the tag plunge-vX.Y.Z (INTENTIUS/plunge#33). The tag isn't semver with its prefix, and
 # nothing below reads .Version or .Tag.
+#
+# chant builds from a clean export of the release commit, and bin/ is untracked, so the hosts that the
+# workflow's prep step put in the checkout are not there. The hook below fills bin/ inside that export.
 dist: goreleaser
 version: 2
+
+before:
+  hooks:
+    - ./scripts/prep-for-goreleaser.sh
 
 project_name: plunge
 
